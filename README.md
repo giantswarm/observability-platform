@@ -62,7 +62,3 @@ Some apps have restrictions on how they can be deployed.
 Not following these limitations will most likely result in a broken deployment.
 
 - _add limitation_
-
-## Credit
-
-- {APP HELM REPOSITORY}
