@@ -1,9 +1,11 @@
 # Object Storage
 
 The observability platform stores metrics, alerting state, recording rules and logs in
-Azure Blob Storage, which is the only backend it supports. This guide provisions that
-storage with the Azure CLI and hands it to the platform chart, which configures Mimir
-and Loki from it.
+object storage.
+
+**Azure Blob Storage is the only backend supported for now.** No other provider is wired
+into the chart. This guide provisions an Azure storage account with the Azure CLI and
+hands it to the platform chart, which configures Mimir and Loki from it.
 
 ## Layout
 
