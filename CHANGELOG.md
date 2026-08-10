@@ -12,4 +12,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - changed: Regenerated `.circleci` config with `devctl gen circleci` — adopt the dynamic-config setup workflow (`config.yml` + `workflows.yml`) and bump the architect orb to v9.5.2.
 - changed: `app.giantswarm.io` label group was changed to `application.giantswarm.io`
 
+- fixed: Added `.ats/main.yaml` skipping all app-test-suite scenarios, so the `execute-chart-tests` job no longer fails on an unset `--smoke-tests-cluster-type`. The chart has no `tests/ats` suite yet.
+
 [Unreleased]: https://github.com/giantswarm/observability-platform/tree/main
