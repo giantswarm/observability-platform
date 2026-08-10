@@ -19,8 +19,7 @@
 Giant Swarm offers a observability-platform App which can be installed in workload clusters.
 Here, we define the observability-platform chart with its templates and default configuration.
 
-**Work in progress.** Tracked internally in [giantswarm/giantswarm#36783](https://github.com/giantswarm/giantswarm/issues/36783),
-part of the Standalone Observability Platform epic ([#36346](https://github.com/giantswarm/giantswarm/issues/36346)).
+**Work in progress.** This chart is under active development and its interface may still change.
 
 **What is this app?**
 
