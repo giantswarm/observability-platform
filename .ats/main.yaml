@@ -1,0 +1,5 @@
+# We disable all app-test-suite tests until we write proper ones in tests/ats
+#
+# When tests are added, drop the matching entry from skip-steps and set the
+# cluster type for that scenario, e.g. `smoke-tests-cluster-type: kind`.
+skip-steps: [smoke, functional, upgrade]
