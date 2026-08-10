@@ -12,8 +12,6 @@
 
 </div>
 
-# observability-platform chart
-
 Giant Swarm offers a observability-platform App which can be installed in workload clusters.
 Here, we define the observability-platform chart with its templates and default configuration.
 
