@@ -90,8 +90,7 @@ Standalone, it has been installed and verified on a vanilla EKS cluster.
 Some apps have restrictions on how they can be deployed.
 Not following these limitations will most likely result in a broken deployment.
 
-- Azure Blob is the only supported object storage backend. On-premises installations have no storage
-  story yet.
+- Azure Blob is the only supported object storage backend for now.
 - One sizing profile, tuned for a small cluster. There is no answer yet for real ingest volume.
 - Exposing Grafana is the customer's responsibility — the chart creates no ingress and no TLS.
 - Turning Mimir or Loki off leaves Grafana with a datasource pointing at nothing.
