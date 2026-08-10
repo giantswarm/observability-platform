@@ -1,7 +1,4 @@
-# This chart has no app-test-suite test suite yet (there is no tests/ats
-# directory), so every test scenario is skipped. Without this, ATS defaults to
-# `--steps all` and fails in the smoke scenario pre-run because no
-# `*-tests-cluster-type` is configured.
+# We disable all app-test-suite tests until we write proper ones in tests/ats
 #
 # When tests are added, drop the matching entry from skip-steps and set the
 # cluster type for that scenario, e.g. `smoke-tests-cluster-type: kind`.
