@@ -1,8 +1,8 @@
-<p align="center">
+<div align="center">
 
   # Observability Platform
 
-</p>
+</div>
 
 <div align="center">
 
@@ -11,8 +11,6 @@
   [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/giantswarm/observability-platform/badge)](https://scorecard.dev/viewer/?uri=github.com/giantswarm/observability-platform)
 
 </div>
-
-[Guide about how to manage an app on Giant Swarm](https://handbook.giantswarm.io/docs/dev-and-releng/app-developer-processes/adding_app_to_appcatalog/)
 
 # observability-platform chart
 
