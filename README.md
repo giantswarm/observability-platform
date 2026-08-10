@@ -1,5 +1,16 @@
-[![CircleCI](https://dl.circleci.com/status-badge/img/gh/giantswarm/observability-platform/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/giantswarm/observability-platform/tree/main)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/giantswarm/observability-platform/badge)](https://securityscorecards.dev/viewer/?uri=github.com/giantswarm/observability-platform)
+<p align="center">
+
+  # Observability Platform
+
+</p>
+
+<div align="center">
+
+  [![CircleCI](https://dl.circleci.com/status-badge/img/gh/giantswarm/observability-platform/tree/main.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/giantswarm/observability-platform/tree/main)
+  [![GitHub Release](https://img.shields.io/github/v/release/giantswarm/observability-platform)](https://github.com/giantswarm/observability-platform/releases/latest)
+  [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/giantswarm/observability-platform/badge)](https://scorecard.dev/viewer/?uri=github.com/giantswarm/observability-platform)
+
+</div>
 
 [Guide about how to manage an app on Giant Swarm](https://handbook.giantswarm.io/docs/dev-and-releng/app-developer-processes/adding_app_to_appcatalog/)
 
