@@ -1,0 +1,21 @@
+dependencies:
+- name: grafana
+  repository: https://giantswarm.github.io/giantswarm-catalog/
+  version: 2.38.0
+- name: loki
+  repository: https://giantswarm.github.io/giantswarm-catalog/
+  version: 0.45.0
+- name: mimir
+  repository: https://giantswarm.github.io/control-plane-catalog/
+  version: 0.30.0
+- name: observability-operator
+  repository: https://giantswarm.github.io/control-plane-catalog/
+  version: 0.72.2
+- name: observability-platform-api
+  repository: https://giantswarm.github.io/control-plane-catalog/
+  version: 0.4.0
+- name: tempo
+  repository: https://giantswarm.github.io/control-plane-catalog/
+  version: 0.18.0
+digest: sha256:f3e3ba7e8e89cdeb67ad28c9221b2d92fef567e0efcd3440a147662118b7647d
+generated: "2026-08-10T20:05:41.07812133Z"
