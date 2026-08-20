@@ -3,3 +3,4 @@ generate-metadata: true
 chart-dir: ./helm/observability-platform
 destination: ./build
 ct-config: ./.circleci/ct-config.yaml
+kubelinter-config: .abs/.kube-linter.yaml
