@@ -1,12 +1,13 @@
-# This file is a Helm values file for the observability-platform chart.
-#
-# To learn more about how to configure your app on your cluster
-# and override the default values in here, visit:
-#
-#   https://docs.giantswarm.io/tutorials/fleet-management/app-platform/app-configuration/#basic-values-merging-example
-#
-image:
-  name: "giantswarm/observability-platform"
-  tag: ""
-registry:
-  domain: gsoci.azurecr.io
+# Component toggles. Each one drives the matching `condition:` in Chart.yaml.
+mimir:
+  enabled: true
+loki:
+  enabled: true
+grafana:
+  enabled: true
+observabilityOperator:
+  enabled: true
+tempo:
+  enabled: false
+observabilityPlatformApi:
+  enabled: false
