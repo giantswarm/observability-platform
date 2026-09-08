@@ -1,25 +1,43 @@
 {
-    "$schema": "http://json-schema.org/schema#",
-    "type": "object",
-    "properties": {
-        "image": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string"
-                },
-                "tag": {
-                    "type": "string"
-                }
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "observability-platform values",
+  "type": "object",
+  "properties": {
+    "global": {
+      "type": "object",
+      "properties": {
+        "domain": { "type": "string" },
+        "storageClass": { "type": "string" },
+        "tenant": { "type": "string", "minLength": 1 },
+        "objectStorage": {
+          "type": "object",
+          "required": ["existingSecret", "azure", "buckets"],
+          "properties": {
+            "existingSecret": {
+              "type": "string",
+              "const": "observability-platform-object-storage",
+              "description": "Fixed: the Mimir and Loki values name this Secret from static values, which Helm will not let the umbrella compute. Create your credentials Secret with this name."
+            },
+            "azure": {
+              "type": "object",
+              "$comment": "accountName is required only when Mimir or Loki is enabled. That depends on sibling toggles, so the check lives in the objectStorage.validate helper instead.",
+              "properties": {
+                "accountName": { "type": "string" }
+              }
+            },
+            "buckets": {
+              "type": "object",
+              "required": ["mimirBlocks", "mimirAlertmanager", "mimirRuler", "loki"],
+              "properties": {
+                "mimirBlocks": { "type": "string", "minLength": 1 },
+                "mimirAlertmanager": { "type": "string", "minLength": 1 },
+                "mimirRuler": { "type": "string", "minLength": 1 },
+                "loki": { "type": "string", "minLength": 1 }
+              }
             }
-        },
-        "registry": {
-            "type": "object",
-            "properties": {
-                "domain": {
-                    "type": "string"
-                }
-            }
+          }
         }
+      }
     }
+  }
 }
