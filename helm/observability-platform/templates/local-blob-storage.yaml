@@ -1,0 +1,190 @@
+{{/*
+Local blob storage: Azurite, the Azure Storage emulator, standing in for a real storage
+account. Development only - see doc/LOCAL_DEV.md.
+
+Gated on a consumer as well as the toggle: without Mimir or Loki there is no storage
+ConfigMap for the init Job to read its endpoint from, and nothing to serve.
+*/}}
+{{- if and .Values.localBlobStorage.enabled (or .Values.mimir.enabled .Values.loki.enabled) }}
+{{- include "observability-platform.objectStorage.validate" . }}
+{{- $name := include "observability-platform.localBlobStorage.serviceName" . }}
+{{- $port := include "observability-platform.localBlobStorage.port" . | int }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "labels.common" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "labels.selector" . | nindent 6 }}
+      app.kubernetes.io/component: {{ $name }}
+  template:
+    metadata:
+      labels:
+        {{- include "labels.selector" . | nindent 8 }}
+        app.kubernetes.io/component: {{ $name }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        # The data directory is an emptyDir, which the kubelet group-owns to fsGroup - the
+        # only reason the uid-1000 user in this image can write to it.
+        fsGroup: 1000
+      containers:
+        - name: {{ $name }}
+          image: {{ .Values.localBlobStorage.azurite.image | quote }}
+          # Explicit, rather than relying on the image's entrypoint. Blob only: Mimir and
+          # Loki need no queue or table service.
+          command: ["azurite-blob"]
+          args:
+            - --blobHost
+            - 0.0.0.0
+            - --blobPort
+            - {{ $port | quote }}
+            - --location
+            - /data
+            # Without this, Azurite reads the account name from the request's host name
+            # rather than its path, because the endpoint is a DNS name and not an IP - so
+            # every request against `azurite.<ns>.svc.cluster.local/devstoreaccount1`
+            # fails to resolve an account. See
+            # https://learn.microsoft.com/azure/storage/common/storage-use-azurite
+            - --disableProductStyleUrl
+          ports:
+            - name: blob
+              containerPort: {{ $port }}
+          # TCP, not HTTP: every blob endpoint requires authentication, so an HTTP probe
+          # would read a 403 as unhealthy.
+          readinessProbe:
+            tcpSocket:
+              port: blob
+          livenessProbe:
+            tcpSocket:
+              port: blob
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        # No PVC on purpose: this is a development backend, and its data is expected to
+        # not survive the pod.
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  # Fixed name: it is the host in the connection string built by
+  # `observability-platform.objectStorage.connectionString`.
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "labels.common" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  ports:
+    - name: blob
+      port: {{ $port }}
+      targetPort: blob
+  selector:
+    {{- include "labels.selector" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  # The credentials Secret the chart otherwise only consumes - see
+  # `global.objectStorage.existingSecret`. Created here, with an empty key, because it has
+  # to be both present and empty: `extraEnvFrom` names it without `optional`, so a missing
+  # Secret leaves every Mimir and Loki pod in CreateContainerConfigError - and Mimir
+  # refuses an account key and a connection string together, so a non-empty key would fail
+  # its storage validation. The emulator's key travels in the connection string instead.
+  name: {{ .Values.global.objectStorage.existingSecret }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "labels.common" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+type: Opaque
+stringData:
+  AZURE_STORAGE_KEY: ""
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $name }}-init
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "labels.common" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}-init
+  annotations:
+    # post-install rather than pre-install: the Deployment this waits for is part of the
+    # release, so it does not exist yet at pre-install. `before-hook-creation` is what
+    # makes `helm upgrade` work - a Job of a fixed name cannot be patched in place.
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 6
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        {{- include "labels.selector" . | nindent 8 }}
+        app.kubernetes.io/component: {{ $name }}-init
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: init
+          image: {{ .Values.localBlobStorage.init.image | quote }}
+          # The endpoint and the container names come from the same ConfigMap the
+          # components read, so this cannot create containers under names they will not
+          # look for.
+          envFrom:
+            - configMapRef:
+                name: observability-platform-object-storage
+          env:
+            - name: AZURE_CORE_COLLECT_TELEMETRY
+              value: "false"
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+
+              # The Deployment is created alongside this hook, so Azurite is usually not
+              # answering yet.
+              echo "waiting for azurite"
+              until az storage container list \
+                  --connection-string "$OBS_AZURE_CONNECTION_STRING" -o none 2>/dev/null; do
+                sleep 2
+              done
+
+              # Azurite creates no containers of its own, and neither Mimir nor Loki
+              # creates a missing one - the first flush fails with ContainerNotFound.
+              # `create` is idempotent, so re-running this on upgrade is a no-op.
+              for container in \
+                  "$OBS_BUCKET_MIMIR_BLOCKS" \
+                  "$OBS_BUCKET_MIMIR_ALERTMANAGER" \
+                  "$OBS_BUCKET_MIMIR_RULER" \
+                  "$OBS_BUCKET_LOKI"; do
+                echo "creating container $container"
+                az storage container create --name "$container" \
+                  --connection-string "$OBS_AZURE_CONNECTION_STRING" -o none
+              done
+
+              echo "done"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+{{- end }}

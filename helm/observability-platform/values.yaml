@@ -15,14 +15,27 @@ global:
   tenant: default
   objectStorage:
     # -- Name of the Secret holding the storage account key. Consumed, never
-    # created. This name is fixed: the subcharts reference it from static values,
-    # which Helm will not let the umbrella compute. Create your Secret with this
-    # name and one key, `AZURE_STORAGE_KEY`. The key name has to be a valid
+    # created - except under `localBlobStorage.enabled`, which creates it with an empty
+    # key, for the reason given there. This name is fixed: the subcharts reference it from
+    # static values, which Helm will not let the umbrella compute. Create your Secret with
+    # this name and one key, `AZURE_STORAGE_KEY`. The key name has to be a valid
     # environment variable name, because that is how it reaches the pods.
     existingSecret: observability-platform-object-storage
     azure:
-      # -- Storage account holding the containers below. Required.
+      # -- Storage account holding the containers below. Required, unless
+      # `connectionString` or `localBlobStorage.enabled` is set.
       accountName: ""
+      # -- Full Azure Blob connection string. Overrides the endpoint the clients derive
+      # from `accountName`, and is the only way to reach an endpoint that is not Azure's:
+      # Mimir and Loki both build `https://<account>.<suffix>` otherwise, with the scheme
+      # hardcoded. Leave empty for real Azure; `localBlobStorage.enabled` computes it for
+      # you, and setting both fails the render.
+      #
+      # It embeds the account key, and it travels in a ConfigMap rather than the
+      # credentials Secret, so do not put a real account's connection string here. Mimir
+      # also rejects an account key and a connection string together, so
+      # `AZURE_STORAGE_KEY` in the Secret has to be empty whenever this is set.
+      connectionString: ""
     # -- Existing containers, one per consumer.
     buckets:
       mimirBlocks: mimir-blocks
@@ -62,6 +75,17 @@ tempo:
     enabled: false
 observabilityPlatformApi:
   enabled: false
+# Azurite, the Azure Storage emulator, as the blob backend instead of a real storage
+# account. Development only - see doc/LOCAL_DEV.md. Unlike the toggles above, this one
+# drives no `condition:` in Chart.yaml: Azurite is not a dependency, it is this chart's
+# own templates/local-blob-storage.yaml.
+localBlobStorage:
+  enabled: false
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:3.37.0
+  # Job that creates the containers, which Azurite does not create itself.
+  init:
+    image: mcr.microsoft.com/azure-cli:2.90.0
 
 # ---------------------------------------------------------------------------
 # Vanilla-cluster overrides
@@ -200,6 +224,11 @@ mimir:
             azure:
               account_name: ${OBS_AZURE_ACCOUNT_NAME}
               account_key: ${AZURE_STORAGE_KEY}
+              # Empty on the real-Azure path, where the client derives its endpoint from
+              # the account name instead. Mimir refuses an account key and a connection
+              # string together, so whatever sets this has to empty `AZURE_STORAGE_KEY` -
+              # see `global.objectStorage.azure.connectionString`.
+              connection_string: ${OBS_AZURE_CONNECTION_STRING}
         blocks_storage:
           backend: azure
           azure:
@@ -261,6 +290,10 @@ loki:
           # parses its config strictly, so an unknown key stops it from starting.
           accountName: ${OBS_AZURE_ACCOUNT_NAME}
           accountKey: ${AZURE_STORAGE_KEY}
+          # See the note on Mimir's `connection_string` above. Empty is ignored: the
+          # client only reads it when it is non-empty, and otherwise falls back to the
+          # account name.
+          connectionString: ${OBS_AZURE_CONNECTION_STRING}
 
 # ---------------------------------------------------------------------------
 # What global.* cannot reach

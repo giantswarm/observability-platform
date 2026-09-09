@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add `localBlobStorage.enabled`, running the Azurite emulator in-cluster as the blob
+  backend so the platform can be installed with no Azure account. Adds a Deployment,
+  Service, the credentials Secret and a container-creating Job, and computes the
+  connection string that points Mimir and Loki at it. Development only — see
+  `doc/LOCAL_DEV.md`.
+- Add `global.objectStorage.azure.connectionString`, delivered to Mimir and Loki as
+  `connection_string`. Overrides the endpoint both clients would otherwise derive from the
+  account name, which is the only way to reach an endpoint that is not Azure's.
+- Add `doc/LOCAL_DEV.md`, covering the local Azurite backend, its limitations, and why the
+  credentials Secret it creates holds an empty key.
 - Add `doc/OBJECT_STORAGE.md`, walking through provisioning the Azure Blob Storage account, containers and credentials secret that Mimir and Loki need.
 - Add `doc/EKS_CLUSTER.md`, walking through creating the AWS EKS cluster the platform runs on with `eksctl` — node sizing, the `gp3` default StorageClass the CSI driver needs, metrics-server, measured resource usage and teardown.
 - Add Artifact Hub metadata (`artifacthub.io/license`, `artifacthub.io/links`) in the chart template ([roadmap#3940](https://github.com/giantswarm/roadmap/issues/3940)).
