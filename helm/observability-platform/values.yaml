@@ -198,6 +198,13 @@ mimir:
   # Do NOT move this to the top-level `global`, which would inject the storage
   # credentials into every pod in the release.
   global:
+    # issue 03, and the one entry in that set that is not a missing CRD: the wrapper sets
+    # `coredns`, the DNS Service name on a Giant Swarm installation. kind and EKS both name
+    # it `kube-dns`, which is also the upstream mimir-distributed default. The gateway's
+    # nginx resolves this name at startup and exits with `host not found in resolver` when
+    # it does not exist, so it is a crashloop rather than a cosmetic difference. Set it
+    # back through raw pass-through when installing onto a Giant Swarm installation.
+    dnsService: kube-dns
     extraEnvFrom:
       - configMapRef:
           name: observability-platform-object-storage

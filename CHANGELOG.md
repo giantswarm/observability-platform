@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add Artifact Hub metadata (`artifacthub.io/license`, `artifacthub.io/links`) in the chart template ([roadmap#3940](https://github.com/giantswarm/roadmap/issues/3940)).
 - Add the `observability-platform` umbrella chart skeleton with its six component dependencies — `grafana`, `loki`, `mimir`, `observability-operator`, `observability-platform-api` and `tempo` — each gated by a `<component>.enabled` condition in `values.yaml`. `tempo` and `observability-platform-api` default to off.
 
+### Fixed
+
+- Set `mimir.global.dnsService` back to `kube-dns`. The wrapper defaults it to `coredns`,
+  the DNS Service name on a Giant Swarm installation, which left the Mimir gateway's nginx
+  exiting with `host not found in resolver` on kind and EKS. Tempo's wrapper carries the
+  same default and has no override yet, but is disabled by default.
+
 ### Changed
 
 - Set project description and update header of the README

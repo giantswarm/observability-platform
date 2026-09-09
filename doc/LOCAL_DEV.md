@@ -164,13 +164,18 @@ regardless:
 
 | Symptom                                                          | Cause                                                                                       |
 | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `mimir-gateway` in `CrashLoopBackOff`                            | Its nginx config names the resolver `coredns.kube-system.svc.cluster.local`. On kind the DNS service is `kube-dns`, so nginx exits with `host not found in resolver` |
 | `loki-chunks-cache-0`, `loki-results-cache-0` `ImagePullBackOff` | `gsoci.azurecr.io/memcached:1.6.41-alpine` and `gsoci.azurecr.io/prom/memcached-exporter:v0.16.0` do not exist in that registry |
 | Second replicas of `loki-backend`, `loki-write`, `loki-read`, `loki-gateway` `Pending` | `Insufficient memory` — the sizing profile wants more than one kind node provides |
 
-The first two are the same class of Giant Swarm installation assumption as the `issue 03`
-overrides in `values.yaml`, and neither has an override yet. Give the node more memory, or
-accept the single replicas, for the third.
+The first is the same class of Giant Swarm installation assumption as the `issue 03`
+overrides in `values.yaml`, and has no override yet. Give the node more memory, or accept
+the single replicas, for the second.
+
+Two more of that class are already handled. `mimir.global.dnsService` is set back to
+`kube-dns`, because the wrapper's `coredns` is the Service name on a Giant Swarm
+installation and the Mimir gateway's nginx crashloops with `host not found in resolver`
+without it. Tempo's wrapper carries the same `coredns` default and has no override, but it
+is disabled by default — expect the same failure from its gateway if you turn it on.
 
 ## Why the key is empty
 
