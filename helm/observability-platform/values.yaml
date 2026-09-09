@@ -35,6 +35,9 @@ global:
 # ---------------------------------------------------------------------------
 grafana:
   enabled: true
+  # cilium.io/v2 CiliumNetworkPolicy
+  ciliumNetworkPolicy:
+    enabled: false
   grafana:
     # Pin the service name: the operator's `grafana.url` and its datasource URLs
     # below name it as a literal, because Helm will not let this chart compute a
@@ -44,8 +47,37 @@ observabilityOperator:
   enabled: true
 tempo:
   enabled: false
+  tempo:
+    metaMonitoring:
+      # monitoring.coreos.com/v1 ServiceMonitor
+      serviceMonitor:
+        enabled: false
+  # monitoring.coreos.com/v1 PodMonitor. vulture is a GS trace canary that also
+  # hardcodes `-tempo-org-id=giantswarm`; pointing that at `global.tenant` would
+  # mean a values string this chart cannot compute, so the whole canary is off
+  # rather than just its PodMonitor. Tempo is disabled by
+  # default, so this only matters once a customer turns it on.
+  vulture:
+    enabled: false
 observabilityPlatformApi:
   enabled: false
+
+# ---------------------------------------------------------------------------
+# Vanilla-cluster overrides
+#
+# Every wrapper default touched here assumes a Giant Swarm installation: Cilium,
+# the Prometheus Operator or a VerticalPodAutoscaler CRD. Each is a hard `helm
+# install` failure on a cluster without the CRD named beside it, not a cosmetic
+# difference. The set is deliberately scattered next to the component it belongs
+# to rather than gathered in one block, since Mimir and Loki already have blocks
+# above for storage; each override names the CRD it avoids in the comment beside
+# it.
+#
+# One object is left with no override that can reach it:
+# observability-operator's PodMonitor, which its chart emits with no guard at
+# all. Until that is fixed upstream, a vanilla cluster needs the Prometheus
+# Operator CRDs present.
+# ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
 # Standalone profile for observability-operator.
@@ -56,7 +88,22 @@ observabilityPlatformApi:
 # release's own services.
 # ---------------------------------------------------------------------------
 observability-operator:
+  # autoscaling.k8s.io/v1 VerticalPodAutoscaler
+  verticalPodAutoscaler:
+    enabled: false
+  # TODO: re-enable once this chart has a real issuer to offer.
+  # cert-manager.io/v1 Certificate, and a `selfsigned-giantswarm` ClusterIssuer
+  # that only exists on a Giant Swarm installation - see
+  # `managementCluster.clusterIssuer` below. Disabling the webhook loses CR
+  # validation.
+  webhook:
+    enabled: false
   operator:
+    # cert-manager.io/v1 Certificate for the metrics endpoint - same missing
+    # ClusterIssuer as the webhook above. This template has no other guard, so
+    # it renders `issuerRef.name: ""` if left on.
+    metricsServerCertificate:
+      enabled: false
     controllers:
       # Reconciles CAPI Cluster CRs - no `cluster.x-k8s.io` CRDs on a standalone
       # install. Verified against the controller source that the agentCredential
@@ -132,6 +179,16 @@ mimir:
   mimir:
     # Pin the service name - see "Deterministic names" under grafana above.
     fullnameOverride: mimir
+    # autoscaling.k8s.io/v1 VerticalPodAutoscaler, one per component
+    ingester:
+      verticalAutoscaling:
+        enabled: false
+    ruler:
+      verticalAutoscaling:
+        enabled: false
+    store_gateway:
+      verticalAutoscaling:
+        enabled: false
     mimir:
       structuredConfig:
         common:
@@ -165,6 +222,16 @@ loki:
   loki:
     # Pin the service name - see "Deterministic names" under grafana above.
     fullnameOverride: loki
+    # monitoring.coreos.com/v1 ServiceMonitor
+    monitoring:
+      serviceMonitor:
+        enabled: false
+    # cilium.io/v2 CiliumNetworkPolicy, twelve of them. `enabled: false` alone
+    # is not enough - the coredns and egress-world policies are gated on their
+    # own sub-flags AND the flavor, so the flavor has to move too.
+    networkPolicy:
+      enabled: false
+      flavor: kubernetes
     loki:
       # Repeated from loki-app's own values. Overriding a list replaces it.
       schemaConfig:
