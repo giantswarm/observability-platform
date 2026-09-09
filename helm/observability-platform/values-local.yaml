@@ -1,0 +1,105 @@
+# ---------------------------------------------------------------------------
+# Local development sizing profile.
+#
+#   helm install observability-platform helm/observability-platform \
+#     --namespace monitoring \
+#     --values helm/observability-platform/values-local.yaml \
+#     --set localBlobStorage.enabled=true
+#
+# The default profile asks for 36 Gi of memory across 21 workloads, so on a
+# single-node kind cluster most of the second replicas never leave Pending with
+# `Insufficient memory`. This brings it to roughly 5 Gi, which fits.
+#
+# It cannot be folded into `localBlobStorage.enabled`: replicas and resources are
+# subchart values, and Helm will not let this chart compute those - the same reason
+# the storage parameters travel through a ConfigMap. A values file is the only thing
+# that can reach them, which is also how mimir-distributed ships its own small.yaml
+# and large.yaml profiles.
+#
+# Two rules kept throughout, so this stays a sizing change and nothing more:
+#
+#   - Only `requests` come down. Scheduling is what was broken, and requests are what
+#     the scheduler reads; `limits` are left as the wrappers set them, so nothing here
+#     is more likely to be OOMKilled than it was on the default profile.
+#   - Ingester and store-gateway keep all three zones. One replica per zone is what
+#     Mimir's replication factor of 3 needs; collapsing the zones would change
+#     replication behaviour rather than sizing.
+#
+# Do not use this anywhere real. It has no headroom for ingest.
+# ---------------------------------------------------------------------------
+
+loki:
+  loki:
+    # 11 Gi of the 36 - the single biggest item in the default profile, and more than a
+    # third of it. They are also broken on any cluster that is not a Giant Swarm
+    # installation: gsoci.azurecr.io carries neither `memcached:1.6.41-alpine` nor
+    # `prom/memcached-exporter:v0.16.0`, so both pods sit in ImagePullBackOff holding
+    # their requests against the node. Loki runs without them.
+    chunksCache:
+      enabled: false
+    resultsCache:
+      enabled: false
+    # Autoscaling off rather than minReplicas lowered: a dev cluster wants a fixed,
+    # predictable set of pods, and the wrapper's HPAs otherwise hold these at 2.
+    write:
+      autoscaling:
+        enabled: false
+      replicas: 1
+      resources:
+        requests:
+          cpu: 100m
+          memory: 512Mi
+    read:
+      autoscaling:
+        enabled: false
+      replicas: 1
+      resources:
+        requests:
+          cpu: 100m
+          memory: 512Mi
+    backend:
+      autoscaling:
+        enabled: false
+      replicas: 1
+      resources:
+        requests:
+          cpu: 100m
+          memory: 512Mi
+    gateway:
+      autoscaling:
+        enabled: false
+      replicas: 1
+
+mimir:
+  # The wrapper's own HPA for the querier, separate from mimir-distributed's replica
+  # counts below.
+  hpa:
+    querier:
+      enabled: false
+  mimir:
+    # 4 Gi requested per zone, three zones - 12 Gi, the largest block after Loki's
+    # caches. The zones stay; only what each one asks for comes down.
+    ingester:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 512Mi
+    store_gateway:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+    distributor:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+    compactor:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+    querier:
+      replicas: 1
+    query_scheduler:
+      replicas: 1

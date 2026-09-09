@@ -67,7 +67,9 @@ helm dependency update helm/observability-platform
 
 helm install observability-platform helm/observability-platform \
   --namespace monitoring \
-  --set localBlobStorage.enabled=true
+  --values helm/observability-platform/values-local.yaml \
+  --set localBlobStorage.enabled=true \
+  --set observabilityOperator.enabled=false
 ```
 
 `localBlobStorage.enabled` computes both the account name and the connection string, so
@@ -76,11 +78,38 @@ setting `global.objectStorage.azure.accountName` or
 silently ignored. It does not need the Secret from Step 4 of
 [doc/OBJECT_STORAGE.md](./OBJECT_STORAGE.md) - it creates that itself.
 
-On a vanilla cluster you will also want `--set observabilityOperator.enabled=false`, for a
-reason unrelated to storage: the operator's chart emits a `PodMonitor` with no guard, so it
-needs the Prometheus Operator CRDs present. See the note on issue 15 in `values.yaml`, and
-[Failures that are not storage](#failures-that-are-not-storage) for what else a
-single-node kind cluster does not satisfy.
+`observabilityOperator.enabled=false` is unrelated to storage: the operator's chart emits a
+`PodMonitor` with no guard, so it needs the Prometheus Operator CRDs present. See the note
+on issue 15 in `values.yaml`.
+
+## The local sizing profile
+
+`values-local.yaml` is what makes the release fit on one node. The default profile asks for
+**36 Gi of memory across 21 workloads**; this brings it to **5 Gi**, measured on a kind node
+that then reported 17% of its memory committed. Without it most of the second replicas never
+leave `Pending` with `Insufficient memory`.
+
+It is a separate values file rather than part of `localBlobStorage.enabled` for the same
+reason the storage parameters travel through a ConfigMap: replicas and resources are
+subchart values, and Helm will not let this chart compute those. A values file is the only
+thing that can reach them - which is also how mimir-distributed ships its own `small.yaml`
+and `large.yaml`.
+
+What it does, and the two rules it keeps so that it stays a sizing change and nothing more:
+
+- Turns off Loki's `chunksCache` and `resultsCache`. They are **11 Gi of the 36** between
+  them, and they are broken on any cluster that is not a Giant Swarm installation anyway -
+  see the table below. Loki runs without them.
+- Takes every component to a single replica, turning the wrappers' HPAs off rather than
+  lowering `minReplicas`, so a dev cluster has a fixed and predictable set of pods.
+- **Lowers only `requests`, never `limits`.** Scheduling was the problem and requests are
+  what the scheduler reads, so nothing here is more likely to be OOMKilled than it was on
+  the default profile.
+- **Keeps all three Mimir ingester and store-gateway zones.** One replica per zone is what
+  Mimir's replication factor of 3 needs; collapsing the zones would change replication
+  behaviour rather than sizing.
+
+It has no headroom for ingest. Do not use it anywhere real.
 
 ## Verify
 
@@ -157,25 +186,24 @@ kubectl port-forward -n monitoring svc/grafana 3000:80
 
 ## Failures that are not storage
 
-A kind cluster with this chart's default sizing does not come up clean, and none of it is
-the emulator's doing. Observed on a one-node kind cluster with Mimir, Loki, Grafana and
-the operator disabled — Mimir's write path and Loki's write path both reached the emulator
-regardless:
+With `values-local.yaml` and the two `--set` flags above, a one-node kind cluster comes up
+clean: 21 pods Running, the init Job Complete, nothing Pending. What follows is what goes
+wrong when one of those is left off, and none of it is the emulator's doing.
 
-| Symptom                                                          | Cause                                                                                       |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `loki-chunks-cache-0`, `loki-results-cache-0` `ImagePullBackOff` | `gsoci.azurecr.io/memcached:1.6.41-alpine` and `gsoci.azurecr.io/prom/memcached-exporter:v0.16.0` do not exist in that registry |
-| Second replicas of `loki-backend`, `loki-write`, `loki-read`, `loki-gateway` `Pending` | `Insufficient memory` — the sizing profile wants more than one kind node provides |
+| Symptom                                                          | Cause                                                                                       | Handled by |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------- |
+| Second replicas of `loki-backend`, `loki-write`, `loki-read`, `loki-gateway` `Pending` | `Insufficient memory` — the default profile requests 36 Gi | `values-local.yaml` |
+| `loki-chunks-cache-0`, `loki-results-cache-0` `ImagePullBackOff` | `gsoci.azurecr.io/memcached:1.6.41-alpine` and `gsoci.azurecr.io/prom/memcached-exporter:v0.16.0` do not exist in that registry | `values-local.yaml`, which turns both caches off |
+| `mimir-gateway` in `CrashLoopBackOff` with `host not found in resolver` | The wrapper defaults `global.dnsService` to `coredns`, the Service name on a Giant Swarm installation | `values.yaml`, unconditionally — `kube-dns` |
+| Operator's `PodMonitor` fails the install                        | Emitted with no guard, so it needs the Prometheus Operator CRDs                              | `observabilityOperator.enabled=false` |
 
-The first is the same class of Giant Swarm installation assumption as the `issue 03`
-overrides in `values.yaml`, and has no override yet. Give the node more memory, or accept
-the single replicas, for the second.
+The missing memcached images are a real gap rather than a local-dev quirk: nothing on a
+vanilla cluster can pull them, so the caches are unusable outside a Giant Swarm
+installation whether or not you use this profile.
 
-Two more of that class are already handled. `mimir.global.dnsService` is set back to
-`kube-dns`, because the wrapper's `coredns` is the Service name on a Giant Swarm
-installation and the Mimir gateway's nginx crashloops with `host not found in resolver`
-without it. Tempo's wrapper carries the same `coredns` default and has no override, but it
-is disabled by default — expect the same failure from its gateway if you turn it on.
+One of that class is left: Tempo's wrapper carries the same `coredns` default with no
+override. It is disabled by default, so expect its gateway to fail the same way as Mimir's
+did if you turn it on.
 
 ## Why the key is empty
 
