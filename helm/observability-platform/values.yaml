@@ -35,12 +35,72 @@ global:
 # ---------------------------------------------------------------------------
 grafana:
   enabled: true
+  grafana:
+    # Pin the service name: the operator's `grafana.url` and its datasource URLs
+    # below name it as a literal, because Helm will not let this chart compute a
+    # subchart's value from the release name.
+    fullnameOverride: grafana
 observabilityOperator:
   enabled: true
 tempo:
   enabled: false
 observabilityPlatformApi:
   enabled: false
+
+# ---------------------------------------------------------------------------
+# Standalone profile for observability-operator.
+#
+# The wrapper defaults assume a Giant Swarm management cluster: CAPI Cluster CRs to
+# reconcile, Cronitor/Slack alerting, GS namespace layout. None of that exists here.
+# Turn off what a standalone install cannot support, and point the rest at this
+# release's own services.
+# ---------------------------------------------------------------------------
+observability-operator:
+  operator:
+    controllers:
+      # Reconciles CAPI Cluster CRs - no `cluster.x-k8s.io` CRDs on a standalone
+      # install. Verified against the controller source that the agentCredential
+      # controller does not depend on it: it watches AgentCredential and owns
+      # Secrets only, no CAPI watch.
+      cluster:
+        enabled: false
+      # Alertmanager wiring is a separate component, off by default here too.
+      alertmanager:
+        enabled: false
+  # -- Tenant the operator assigns when a resource carries no tenant label. Must
+  # match `global.tenant`, which this chart cannot propagate into subchart values;
+  # templates/operator-namespace.yaml fails the render if the two disagree.
+  defaultTenant: default
+  # There is no management cluster on a standalone install. The operator's config
+  # validation (`pkg/config/cluster.go`) requires only `name` to be non-empty, so
+  # the rest are emptied rather than carrying meaningless placeholders. `name` is
+  # the one value that has to be invented.
+  managementCluster:
+    name: observability-platform
+    baseDomain: ""
+    customer: ""
+    pipeline: ""
+    region: ""
+    # No cert-manager ClusterIssuer ships with this chart yet, so there is nothing
+    # real to name here. The wrapper default, `selfsigned-giantswarm`, names an
+    # issuer that only exists on a Giant Swarm installation.
+    clusterIssuer: ""
+  grafana:
+    # See "Deterministic names" above: this and the datasource URLs below assume
+    # this release installs into the `monitoring` namespace, matching
+    # doc/OBJECT_STORAGE.md. templates/operator-namespace.yaml fails the render if
+    # it does not.
+    url: "http://grafana.monitoring.svc.cluster.local"
+    # Only read once the platform API is on. Left empty rather than naming
+    # `gateway-giantswarm-default-https-tls`, a Secret that only exists alongside
+    # Envoy Gateway on a Giant Swarm installation.
+    gatewayTLSSecretName: ""
+    datasources:
+      lokiURL: "http://loki-gateway.monitoring.svc"
+      mimirURL: "http://mimir-gateway.monitoring.svc/prometheus"
+      mimirAlertmanagerURL: "http://mimir-alertmanager.monitoring.svc:8080"
+      mimirCardinalityURL: "http://mimir-gateway.monitoring.svc:8080/prometheus/api/v1/cardinality/"
+      tempoURL: "http://tempo-query-frontend.monitoring.svc:3200"
 
 # ---------------------------------------------------------------------------
 # Object storage delivery.
@@ -70,6 +130,8 @@ mimir:
       - secretRef:
           name: observability-platform-object-storage
   mimir:
+    # Pin the service name - see "Deterministic names" under grafana above.
+    fullnameOverride: mimir
     mimir:
       structuredConfig:
         common:
@@ -101,6 +163,8 @@ loki:
       - secretRef:
           name: observability-platform-object-storage
   loki:
+    # Pin the service name - see "Deterministic names" under grafana above.
+    fullnameOverride: loki
     loki:
       # Repeated from loki-app's own values. Overriding a list replaces it.
       schemaConfig:
