@@ -62,15 +62,12 @@ observabilityPlatformApi:
 observability-operator:
   verticalPodAutoscaler:
     enabled: false
+  # Disabling the webhook loses CR validation.
   # TODO: re-enable once this chart has a real issuer to offer.
-  # cert-manager.io/v1 Certificate, and a `selfsigned-giantswarm` ClusterIssuer
-  # that only exists on a Giant Swarm installation - see
-  # `managementCluster.clusterIssuer` below. Disabling the webhook loses CR
-  # validation.
   webhook:
     enabled: false
   operator:
-    # TODO: same missing ClusterIssuer as the webhook above.
+    # TODO: re-enable once this chart has a real issuer to offer.
     metricsServerCertificate:
       enabled: false
     controllers:
