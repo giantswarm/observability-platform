@@ -3,9 +3,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  # Fixed name: the Mimir and Loki values reference it from static values, which
-  # Helm will not let this chart compute. Keep in step with `extraEnvFrom` in
-  # values.yaml.
+  # Fixed name. The Mimir and Loki values reference it from static values. Keep in
+  # step with `extraEnvFrom` in values.yaml.
   name: observability-platform-object-storage
   namespace: {{ .Release.Namespace }}
   labels:

@@ -16,11 +16,11 @@
             "existingSecret": {
               "type": "string",
               "const": "observability-platform-object-storage",
-              "description": "Fixed: the Mimir and Loki values name this Secret from static values, which Helm will not let the umbrella compute. Create your credentials Secret with this name."
+              "description": "Fixed name. The Mimir and Loki values reference this Secret from static values. Create the credentials Secret with this name."
             },
             "azure": {
               "type": "object",
-              "$comment": "accountName is required only when Mimir or Loki is enabled. That depends on sibling toggles, so the check lives in the objectStorage.validate helper instead.",
+              "$comment": "accountName is required when Mimir or Loki is enabled. The objectStorage.validate helper checks it.",
               "properties": {
                 "accountName": { "type": "string" }
               }

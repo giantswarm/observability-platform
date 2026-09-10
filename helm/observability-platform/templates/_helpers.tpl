@@ -36,11 +36,10 @@ app.kubernetes.io/instance: {{ .Release.Name | quote }}
 {{/*
 Object storage validation.
 
-Everything unconditional - the fixed Secret name, the container names - is in
-values.schema.json, which rejects bad values before any template runs. Only the
-account name is here, because it is required exactly when Mimir or Loki is enabled
-and a schema cannot express that against sibling toggles. Disabling both has to keep
-rendering an empty release.
+The fixed Secret name and the container names live in values.schema.json, which
+rejects bad values before any template runs. The account name is required exactly
+when Mimir or Loki is enabled. A schema cannot express that against sibling
+toggles. Disabling both keeps rendering an empty release.
 */}}
 {{- define "observability-platform.objectStorage.validate" -}}
 {{- if not .Values.global.objectStorage.azure.accountName -}}
