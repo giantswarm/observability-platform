@@ -1,25 +1,38 @@
 {
-    "$schema": "http://json-schema.org/schema#",
-    "type": "object",
-    "properties": {
-        "image": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string"
-                },
-                "tag": {
-                    "type": "string"
-                }
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "observability-platform values",
+  "type": "object",
+  "properties": {
+    "global": {
+      "type": "object",
+      "properties": {
+        "domain": { "type": "string" },
+        "storageClass": { "type": "string" },
+        "tenant": { "type": "string", "minLength": 1 },
+        "objectStorage": {
+          "type": "object",
+          "required": ["azure", "buckets"],
+          "properties": {
+            "azure": {
+              "type": "object",
+              "$comment": "accountName is required when Mimir or Loki is enabled. The objectStorage.validate helper checks it.",
+              "properties": {
+                "accountName": { "type": "string" }
+              }
+            },
+            "buckets": {
+              "type": "object",
+              "required": ["mimirBlocks", "mimirAlertmanager", "mimirRuler", "loki"],
+              "properties": {
+                "mimirBlocks": { "type": "string", "minLength": 1 },
+                "mimirAlertmanager": { "type": "string", "minLength": 1 },
+                "mimirRuler": { "type": "string", "minLength": 1 },
+                "loki": { "type": "string", "minLength": 1 }
+              }
             }
-        },
-        "registry": {
-            "type": "object",
-            "properties": {
-                "domain": {
-                    "type": "string"
-                }
-            }
+          }
         }
+      }
     }
+  }
 }

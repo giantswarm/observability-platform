@@ -1,0 +1,19 @@
+{{- if or .Values.mimir.enabled .Values.loki.enabled }}
+{{- include "observability-platform.objectStorage.validate" . }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  # Fixed name. The Mimir and Loki values reference it from static values. Keep in
+  # step with `extraEnvFrom` in values.yaml.
+  name: observability-platform-object-storage
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "labels.common" . | nindent 4 }}
+data:
+  OBS_TENANT: {{ .Values.global.tenant | quote }}
+  OBS_AZURE_ACCOUNT_NAME: {{ .Values.global.objectStorage.azure.accountName | quote }}
+  OBS_BUCKET_MIMIR_BLOCKS: {{ .Values.global.objectStorage.buckets.mimirBlocks | quote }}
+  OBS_BUCKET_MIMIR_ALERTMANAGER: {{ .Values.global.objectStorage.buckets.mimirAlertmanager | quote }}
+  OBS_BUCKET_MIMIR_RULER: {{ .Values.global.objectStorage.buckets.mimirRuler | quote }}
+  OBS_BUCKET_LOKI: {{ .Values.global.objectStorage.buckets.loki | quote }}
+{{- end }}

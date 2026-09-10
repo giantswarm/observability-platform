@@ -4,3 +4,4 @@ chart-dir: ./helm/observability-platform
 destination: ./build
 ct-config: ./.circleci/ct-config.yaml
 kubelinter-config: .abs/.kube-linter.yaml
+helm-template-extra-values: .abs/validation-values.yaml

@@ -32,3 +32,17 @@ Selector labels
 app.kubernetes.io/name: {{ include "name" . | quote }}
 app.kubernetes.io/instance: {{ .Release.Name | quote }}
 {{- end -}}
+
+{{/*
+Object storage validation.
+
+The fixed Secret name and the container names live in values.schema.json, which
+rejects bad values before any template runs. The account name is required exactly
+when Mimir or Loki is enabled. A schema cannot express that against sibling
+toggles. Disabling both keeps rendering an empty release.
+*/}}
+{{- define "observability-platform.objectStorage.validate" -}}
+{{- if not .Values.global.objectStorage.azure.accountName -}}
+{{- fail "global.objectStorage.azure.accountName is empty. Set it to the Azure storage account holding the containers - see doc/OBJECT_STORAGE.md." -}}
+{{- end -}}
+{{- end -}}

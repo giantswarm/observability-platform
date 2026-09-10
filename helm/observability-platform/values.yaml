@@ -1,8 +1,34 @@
+global:
+  # -- Base domain for the platform's HTTP endpoints.
+  domain: ""
+  # -- StorageClass for component volumes. Empty uses the cluster default.
+  storageClass: ""
+  # -- Tenant that platform data is written under and read back from.
+  tenant: default
+  # -- Storage is Azure Blob only. The chart consumes an existing storage account, its
+  # containers and its key. See doc/OBJECT_STORAGE.md.
+  #
+  # Create the Secret holding the storage account key yourself, named
+  # `observability-platform-object-storage`, with one key, `AZURE_STORAGE_KEY`. Both
+  # names are fixed: the subcharts reference the Secret from static values (see
+  # `extraEnvFrom` below), and the key reaches the pods as an environment variable,
+  # so its name must be a valid variable name.
+  objectStorage:
+    azure:
+      # -- Storage account holding the containers below. Required.
+      accountName: ""
+    # -- Existing containers, one per consumer.
+    buckets:
+      mimirBlocks: mimir-blocks
+      mimirAlertmanager: mimir-alertmanager
+      mimirRuler: mimir-ruler
+      loki: loki
+
+# ---------------------------------------------------------------------------
 # Component toggles. Each one drives the matching `condition:` in Chart.yaml.
-mimir:
-  enabled: true
-loki:
-  enabled: true
+# `mimir.enabled` and `loki.enabled` live with their storage wiring further down.
+# ---------------------------------------------------------------------------
+# Component toggles. Each one drives the matching `condition:` in Chart.yaml.
 grafana:
   enabled: true
 observabilityOperator:
@@ -11,3 +37,86 @@ tempo:
   enabled: false
 observabilityPlatformApi:
   enabled: false
+
+# ---------------------------------------------------------------------------
+# Object storage delivery.
+#
+# Helm cannot compute a subchart's values, at any depth. Delivery goes:
+#
+#   1. This chart renders a ConfigMap (fixed name, see templates/objectstorage.yaml)
+#      holding the storage parameters resolved from `global.objectStorage`.
+#   2. That ConfigMap and the credentials Secret are injected as environment
+#      variables into the Mimir and Loki pods. Injection is scoped per component
+#      family, so the credentials reach Mimir and Loki only.
+#   3. The values below reference those variables as `${...}`. mimir-distributed and
+#      the upstream Loki chart pass `-config.expand-env=true` to every component,
+#      so the references expand at startup.
+#
+# The backend is a literal `azure` everywhere.
+# ---------------------------------------------------------------------------
+mimir:
+  enabled: true
+  # `global` here is scoped to Mimir and its vendored mimir-distributed chart.
+  # Do NOT move this to the top-level `global`: that injects the storage
+  # credentials into every pod in the release.
+  global:
+    extraEnvFrom:
+      - configMapRef:
+          name: observability-platform-object-storage
+      - secretRef:
+          name: observability-platform-object-storage
+  mimir:
+    mimir:
+      structuredConfig:
+        common:
+          storage:
+            backend: azure
+            azure:
+              account_name: ${OBS_AZURE_ACCOUNT_NAME}
+              account_key: ${AZURE_STORAGE_KEY}
+        blocks_storage:
+          backend: azure
+          azure:
+            container_name: ${OBS_BUCKET_MIMIR_BLOCKS}
+        alertmanager_storage:
+          backend: azure
+          azure:
+            container_name: ${OBS_BUCKET_MIMIR_ALERTMANAGER}
+        ruler_storage:
+          backend: azure
+          azure:
+            container_name: ${OBS_BUCKET_MIMIR_RULER}
+
+loki:
+  enabled: true
+  # Scoped to Loki and its vendored upstream chart. See the note under `mimir`.
+  global:
+    extraEnvFrom:
+      - configMapRef:
+          name: observability-platform-object-storage
+      - secretRef:
+          name: observability-platform-object-storage
+  loki:
+    loki:
+      # Repeated from loki-app's own values. Overriding a list replaces it.
+      schemaConfig:
+        configs:
+          - from: 2024-04-01
+            object_store: azure
+            store: tsdb
+            schema: v13
+            index:
+              prefix: index_
+              period: 24h
+      storage:
+        # The upstream chart reads `type` at template time. It must be a literal.
+        type: azure
+        bucketNames:
+          chunks: ${OBS_BUCKET_LOKI}
+          ruler: ${OBS_BUCKET_LOKI}
+          admin: ${OBS_BUCKET_LOKI}
+        azure:
+          # The upstream chart derives `container_name` from `bucketNames` and
+          # passes extra keys through verbatim. Loki rejects unknown config keys.
+          accountName: ${OBS_AZURE_ACCOUNT_NAME}
+          accountKey: ${AZURE_STORAGE_KEY}
