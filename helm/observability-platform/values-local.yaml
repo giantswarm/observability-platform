@@ -4,7 +4,11 @@
 #   helm install observability-platform helm/observability-platform \
 #     --namespace monitoring \
 #     --values helm/observability-platform/values-local.yaml \
-#     --set localBlobStorage.enabled=true
+#     --set localBlobStorage.enabled=true \
+#     --set observabilityOperator.enabled=false
+#
+# `observabilityOperator.enabled=false` is not sizing: the operator's chart emits an
+# unguarded PodMonitor, which needs the Prometheus Operator CRDs.
 #
 # The default profile asks for 36 Gi of memory across 21 workloads, so on a
 # single-node kind cluster most of the second replicas never leave Pending with

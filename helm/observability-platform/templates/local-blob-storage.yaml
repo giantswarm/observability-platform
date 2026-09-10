@@ -6,12 +6,15 @@ Gated on a consumer as well as the toggle: without Mimir or Loki there is no sto
 ConfigMap for the init Job to read its endpoint from, and nothing to serve.
 */}}
 {{- if and .Values.localBlobStorage.enabled (or .Values.mimir.enabled .Values.loki.enabled) }}
-{{- include "observability-platform.objectStorage.validate" . }}
 {{- $name := include "observability-platform.localBlobStorage.serviceName" . }}
 {{- $port := include "observability-platform.localBlobStorage.port" . | int }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  # Fixed names throughout this file, with no release prefix: the Service name is the
+  # host in the connection string built by
+  # `observability-platform.objectStorage.connectionString`, and the rest follow it. Two
+  # releases in one namespace collide.
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
@@ -65,11 +68,15 @@ spec:
           livenessProbe:
             tcpSocket:
               port: blob
+          securityContext:
+            # Azurite writes to --location only, which is the emptyDir below.
+            readOnlyRootFilesystem: true
           resources:
             requests:
               cpu: 50m
               memory: 128Mi
             limits:
+              cpu: 500m
               memory: 512Mi
           volumeMounts:
             - name: data
@@ -83,8 +90,6 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  # Fixed name: it is the host in the connection string built by
-  # `observability-platform.objectStorage.connectionString`.
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
@@ -141,6 +146,9 @@ spec:
         app.kubernetes.io/component: {{ $name }}-init
     spec:
       restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
       containers:
         - name: init
           image: {{ .Values.localBlobStorage.init.image | quote }}
@@ -153,6 +161,10 @@ spec:
           env:
             - name: AZURE_CORE_COLLECT_TELEMETRY
               value: "false"
+            # The CLI writes its configuration under $HOME, which is not writable here:
+            # the image's default is root's, and the root filesystem is read-only.
+            - name: HOME
+              value: /tmp
           command:
             - /bin/sh
             - -c
@@ -181,10 +193,19 @@ spec:
               done
 
               echo "done"
+          securityContext:
+            readOnlyRootFilesystem: true
           resources:
             requests:
               cpu: 50m
               memory: 128Mi
             limits:
+              cpu: 500m
               memory: 512Mi
+          volumeMounts:
+            - name: home
+              mountPath: /tmp
+      volumes:
+        - name: home
+          emptyDir: {}
 {{- end }}
