@@ -1,5 +1,6 @@
 {{/*
 Guards for the two observability-operator values this chart has to write as literals.
+No resource or config is created from this template.
 
 The operator reaches Grafana, Mimir and Loki over the network, so it needs their
 service URLs - and it reads the tenant to assign. Both are subchart values, which
