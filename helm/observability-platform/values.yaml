@@ -35,6 +35,8 @@ global:
 # ---------------------------------------------------------------------------
 grafana:
   enabled: true
+  ciliumNetworkPolicy:
+    enabled: false
   grafana:
     # Deterministic name: pinned, do not change. The operator's `grafana.url` and
     # the datasource URLs below name this service literally.
@@ -43,6 +45,12 @@ observabilityOperator:
   enabled: true
 tempo:
   enabled: false
+  tempo:
+    metaMonitoring:
+      serviceMonitor:
+        enabled: false
+  vulture:
+    enabled: false
 observabilityPlatformApi:
   enabled: false
 
@@ -52,7 +60,16 @@ observabilityPlatformApi:
 # Beware that some features won't work outside of a Giant Swarm management cluster.
 # ---------------------------------------------------------------------------
 observability-operator:
+  verticalPodAutoscaler:
+    enabled: false
+  # Disabling the webhook loses CR validation.
+  # TODO: re-enable once this chart has a real issuer to offer.
+  webhook:
+    enabled: false
   operator:
+    # TODO: re-enable once this chart has a real issuer to offer.
+    metricsServerCertificate:
+      enabled: false
     controllers:
       # The cluster controller generates the observability-agents config for each Giantswarm-created cluster
       # This feature is only available for GiantSwarm management clusters.
@@ -121,6 +138,15 @@ mimir:
   mimir:
     # Pin the service name - see "Deterministic names" under grafana above.
     fullnameOverride: mimir
+    ingester:
+      verticalAutoscaling:
+        enabled: false
+    ruler:
+      verticalAutoscaling:
+        enabled: false
+    store_gateway:
+      verticalAutoscaling:
+        enabled: false
     mimir:
       structuredConfig:
         common:
@@ -154,6 +180,12 @@ loki:
   loki:
     # Pin the service name - see "Deterministic names" under grafana above.
     fullnameOverride: loki
+    monitoring:
+      serviceMonitor:
+        enabled: false
+    networkPolicy:
+      enabled: false
+      flavor: kubernetes
     loki:
       # Repeated from loki-app's own values. Overriding a list replaces it.
       schemaConfig:
