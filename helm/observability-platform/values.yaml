@@ -7,12 +7,13 @@ global:
   tenant: default
   # -- Storage is Azure Blob only. The chart consumes an existing storage account, its
   # containers and its key. See doc/OBJECT_STORAGE.md.
+  #
+  # Create the Secret holding the storage account key yourself, named
+  # `observability-platform-object-storage`, with one key, `AZURE_STORAGE_KEY`. Both
+  # names are fixed: the subcharts reference the Secret from static values (see
+  # `extraEnvFrom` below), and the key reaches the pods as an environment variable,
+  # so its name must be a valid variable name.
   objectStorage:
-    # -- Name of the Secret holding the storage account key. The name is fixed:
-    # the subcharts reference it from static values. Create the Secret yourself,
-    # with this name and one key, `AZURE_STORAGE_KEY`. The key reaches the pods as
-    # an environment variable, so its name must be a valid variable name.
-    existingSecret: observability-platform-object-storage
     azure:
       # -- Storage account holding the containers below. Required.
       accountName: ""
