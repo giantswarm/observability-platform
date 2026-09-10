@@ -98,8 +98,7 @@ and `large.yaml`.
 What it does, and the two rules it keeps so that it stays a sizing change and nothing more:
 
 - Turns off Loki's `chunksCache` and `resultsCache`. They are **11 Gi of the 36** between
-  them, and they are broken on any cluster that is not a Giant Swarm installation anyway -
-  see the table below. Loki runs without them.
+  them. Loki runs without them; queries are just slower.
 - Takes every component to a single replica, turning the wrappers' HPAs off rather than
   lowering `minReplicas`, so a dev cluster has a fixed and predictable set of pods.
 - **Lowers only `requests`, never `limits`.** Scheduling was the problem and requests are
@@ -193,13 +192,8 @@ wrong when one of those is left off, and none of it is the emulator's doing.
 | Symptom                                                          | Cause                                                                                       | Handled by |
 | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------- |
 | Second replicas of `loki-backend`, `loki-write`, `loki-read`, `loki-gateway` `Pending` | `Insufficient memory` — the default profile requests 36 Gi | `values-local.yaml` |
-| `loki-chunks-cache-0`, `loki-results-cache-0` `ImagePullBackOff` | `gsoci.azurecr.io/memcached:1.6.41-alpine` and `gsoci.azurecr.io/prom/memcached-exporter:v0.16.0` do not exist in that registry | `values-local.yaml`, which turns both caches off |
 | `mimir-gateway` in `CrashLoopBackOff` with `host not found in resolver` | The wrapper defaults `global.dnsService` to `coredns`, the Service name on a Giant Swarm installation | `values.yaml`, unconditionally — `kube-dns` |
 | Operator's `PodMonitor` fails the install                        | Emitted with no guard, so it needs the Prometheus Operator CRDs                              | `observabilityOperator.enabled=false` |
-
-The missing memcached images are a real gap rather than a local-dev quirk: nothing on a
-vanilla cluster can pull them, so the caches are unusable outside a Giant Swarm
-installation whether or not you use this profile.
 
 One of that class is left: Tempo's wrapper carries the same `coredns` default with no
 override. It is disabled by default, so expect its gateway to fail the same way as Mimir's

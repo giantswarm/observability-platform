@@ -31,10 +31,7 @@
 loki:
   loki:
     # 11 Gi of the 36 - the single biggest item in the default profile, and more than a
-    # third of it. They are also broken on any cluster that is not a Giant Swarm
-    # installation: gsoci.azurecr.io carries neither `memcached:1.6.41-alpine` nor
-    # `prom/memcached-exporter:v0.16.0`, so both pods sit in ImagePullBackOff holding
-    # their requests against the node. Loki runs without them.
+    # third of it. Loki runs without them; queries are just slower.
     chunksCache:
       enabled: false
     resultsCache:
