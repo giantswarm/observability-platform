@@ -16,7 +16,7 @@
             "existingSecret": {
               "type": "string",
               "const": "observability-platform-object-storage",
-              "description": "Fixed: the Mimir and Loki values name this Secret from static values, which Helm will not let the umbrella compute. Create your credentials Secret with this name."
+              "description": "Fixed name. The Mimir and Loki values reference this Secret from static values. Create the credentials Secret with this name."
             },
             "azure": {
               "type": "object",

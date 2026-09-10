@@ -1,0 +1,27 @@
+# Values for the `helm template` validation step in the app-build-suite build.
+# Wired in via `helm-template-extra-values` in .abs/main.yaml.
+#
+# The chart deliberately refuses to render when a required value is missing or
+# when a literal disagrees with the release namespace. app-build-suite renders
+# with `helm template abs-validation <chart>` and offers no way to set the
+# namespace, so the render lands in `default`. This file supplies what that
+# render needs; it is not an example configuration.
+
+# No default: the storage account has to be named. See doc/OBJECT_STORAGE.md.
+global:
+  objectStorage:
+    azure:
+      accountName: abs-validation
+
+# values.yaml points these at the `monitoring` namespace the chart is installed
+# into, and templates/operator-namespace.yaml fails the render when they name
+# another one. Move them to the namespace the validation render uses.
+observability-operator:
+  grafana:
+    url: http://grafana.default.svc.cluster.local
+    datasources:
+      lokiURL: http://loki-gateway.default.svc
+      mimirURL: http://mimir-gateway.default.svc/prometheus
+      mimirAlertmanagerURL: http://mimir-alertmanager.default.svc:8080
+      mimirCardinalityURL: http://mimir-gateway.default.svc:8080/prometheus/api/v1/cardinality/
+      tempoURL: http://tempo-query-frontend.default.svc:3200
