@@ -58,10 +58,7 @@ observabilityPlatformApi:
 # ---------------------------------------------------------------------------
 # Standalone profile for observability-operator.
 #
-# The wrapper defaults assume a Giant Swarm management cluster: CAPI Cluster CRs to
-# reconcile, Cronitor/Slack alerting, GS namespace layout. None of that exists here.
-# Turn off what a standalone install cannot support, and point the rest at this
-# release's own services.
+# Beware that some features won't work outside of a Giant Swarm management cluster.
 # ---------------------------------------------------------------------------
 observability-operator:
   verticalPodAutoscaler:
@@ -78,10 +75,8 @@ observability-operator:
     metricsServerCertificate:
       enabled: false
     controllers:
-      # Reconciles CAPI Cluster CRs - no `cluster.x-k8s.io` CRDs on a standalone
-      # install. Verified against the controller source that the agentCredential
-      # controller does not depend on it: it watches AgentCredential and owns
-      # Secrets only, no CAPI watch.
+      # The cluster controller generates the observability-agents config for each Giantswarm-created cluster
+      # This feature is only available for GiantSwarm management clusters.
       cluster:
         enabled: false
       # Alertmanager wiring is a separate component, off by default here too.
