@@ -33,6 +33,13 @@ global:
 # Component toggles. Each one drives the matching `condition:` in Chart.yaml.
 # `mimir.enabled` and `loki.enabled` live with their storage wiring further down.
 # ---------------------------------------------------------------------------
+=======
+# Component toggles. Each one drives the matching `condition:` in Chart.yaml.
+mimir:
+  enabled: true
+loki:
+  enabled: true
+>>>>>>> origin/main
 grafana:
   enabled: true
 observabilityOperator:
@@ -41,6 +48,7 @@ tempo:
   enabled: false
 observabilityPlatformApi:
   enabled: false
+<<<<<<< HEAD
 
 # ---------------------------------------------------------------------------
 # Object storage delivery.
