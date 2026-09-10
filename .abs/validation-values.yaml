@@ -1,0 +1,8 @@
+# Values for the `helm template` validation step in the app-build-suite build.
+# The chart requires an Azure storage account name and has no default for it,
+# so rendering with values.yaml alone fails. Wired in via
+# `helm-template-extra-values` in .abs/main.yaml.
+global:
+  objectStorage:
+    azure:
+      accountName: abs-validation
