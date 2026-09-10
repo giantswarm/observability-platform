@@ -52,9 +52,8 @@ grafana:
   ciliumNetworkPolicy:
     enabled: false
   grafana:
-    # Pin the service name: the operator's `grafana.url` and its datasource URLs
-    # below name it as a literal, because Helm will not let this chart compute a
-    # subchart's value from the release name.
+    # Deterministic names: pinned, do not change. The operator's `grafana.url`
+    # and the datasource URLs below name this service as a literal.
     fullnameOverride: grafana
 observabilityOperator:
   enabled: true

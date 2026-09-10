@@ -26,7 +26,7 @@ and Alertmanager ship with the chart but are disabled by default.
 
 **Why did we add it?**
 
-To offer the Giant Swarm observability stack as a runtime-independent, self-hosted product: one
+To offer the Giant Swarm Observability Platform as a self-hosted observability stack: one
 `helm install` on any Kubernetes cluster, configured in a handful of lines rather than the ~300 a custom setup made from multiple independent charts would require.
 
 **Who can use it?**
