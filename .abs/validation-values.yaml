@@ -9,9 +9,7 @@ global:
     azure:
       accountName: abs-validation
 
-# values.yaml points these at the `monitoring` namespace the chart is installed
-# into, and templates/operator-namespace.yaml fails the render when they name
-# another one. Move them to the namespace the validation render uses.
+# app-build-suite deploys everything in the default namespace
 observability-operator:
   grafana:
     url: http://grafana.default.svc.cluster.local
