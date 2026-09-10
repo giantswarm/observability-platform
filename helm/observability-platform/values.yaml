@@ -52,8 +52,8 @@ grafana:
   ciliumNetworkPolicy:
     enabled: false
   grafana:
-    # Deterministic names: pinned, do not change. The operator's `grafana.url`
-    # and the datasource URLs below name this service as a literal.
+    # Deterministic name: pinned, do not change. The operator's `grafana.url` and
+    # the datasource URLs below name this service literally.
     fullnameOverride: grafana
 observabilityOperator:
   enabled: true
@@ -87,15 +87,12 @@ localBlobStorage:
 observability-operator:
   verticalPodAutoscaler:
     enabled: false
+  # Disabling the webhook loses CR validation.
   # TODO: re-enable once this chart has a real issuer to offer.
-  # cert-manager.io/v1 Certificate, and a `selfsigned-giantswarm` ClusterIssuer
-  # that only exists on a Giant Swarm installation - see
-  # `managementCluster.clusterIssuer` below. Disabling the webhook loses CR
-  # validation.
   webhook:
     enabled: false
   operator:
-    # TODO: same missing ClusterIssuer as the webhook above.
+    # TODO: re-enable once this chart has a real issuer to offer.
     metricsServerCertificate:
       enabled: false
     controllers:
@@ -106,33 +103,28 @@ observability-operator:
       # Alertmanager wiring is a separate component, off by default here too.
       alertmanager:
         enabled: false
-  # -- Tenant the operator assigns when a resource carries no tenant label. Must
-  # match `global.tenant`, which this chart cannot propagate into subchart values;
-  # templates/operator-namespace.yaml fails the render if the two disagree.
+  # -- Tenant the operator assigns when a resource carries no tenant label.
+  # Must match `global.tenant`.
   defaultTenant: default
-  # There is no management cluster on a standalone install. The operator's config
-  # validation (`pkg/config/cluster.go`) requires only `name` to be non-empty, so
-  # the rest are emptied rather than carrying meaningless placeholders. `name` is
-  # the one value that has to be invented.
+  # The "managementCluster" section is specific to Giant Swarm management clusters.
+  # Please don't change anything here except "name".
   managementCluster:
     name: observability-platform
     baseDomain: ""
     customer: ""
     pipeline: ""
     region: ""
-    # No cert-manager ClusterIssuer ships with this chart yet, so there is nothing
-    # real to name here. The wrapper default, `selfsigned-giantswarm`, names an
-    # issuer that only exists on a Giant Swarm installation.
+    # We don't support custom clusterIssuer yet, please keep `clusterIssuer` empty.
     clusterIssuer: ""
   grafana:
-    # See "Deterministic names" above: this and the datasource URLs below assume
-    # this release installs into the `monitoring` namespace, matching
-    # doc/OBJECT_STORAGE.md. templates/operator-namespace.yaml fails the render if
-    # it does not.
+    # Deterministic names: this URL and the datasource URLs below must match the
+    # namespace this release installs into (`monitoring` by default). Installing
+    # elsewhere means overriding all of them; the render fails otherwise.
     url: "http://grafana.monitoring.svc.cluster.local"
-    # Only read once the platform API is on. Left empty rather than naming
-    # `gateway-giantswarm-default-https-tls`, a Secret that only exists alongside
-    # Envoy Gateway on a Giant Swarm installation.
+    # -- Secret holding the client certificate the operator presents to Grafana.
+    # The operator looks it up in `gatewayTLSSecretNamespace`, falling back to a
+    # `grafana-tls` Secret in the admin secret's namespace. This chart creates
+    # neither, so there is nothing to name here yet.
     gatewayTLSSecretName: ""
     datasources:
       lokiURL: "http://loki-gateway.monitoring.svc"
