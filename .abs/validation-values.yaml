@@ -1,11 +1,7 @@
 # Values for the `helm template` validation step in the app-build-suite build.
 # Wired in via `helm-template-extra-values` in .abs/main.yaml.
 #
-# The chart deliberately refuses to render when a required value is missing or
-# when a literal disagrees with the release namespace. app-build-suite renders
-# with `helm template abs-validation <chart>` and offers no way to set the
-# namespace, so the render lands in `default`. This file supplies what that
-# render needs; it is not an example configuration.
+# These values are for app-build-suite tests. This is not an example configuration.
 
 # No default: the storage account has to be named. See doc/OBJECT_STORAGE.md.
 global:
