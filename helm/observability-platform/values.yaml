@@ -1,18 +1,12 @@
-# ---------------------------------------------------------------------------
-# Curated cross-cutting interface.
-#
-# Storage is Azure Blob only. The chart consumes an existing storage account, its
-# containers and its key. See doc/OBJECT_STORAGE.md.
-# ---------------------------------------------------------------------------
 global:
-  # -- Base domain for the platform's HTTP endpoints. Reaches nothing yet. See
-  # "What global.* cannot reach" below.
+  # -- Base domain for the platform's HTTP endpoints.
   domain: ""
-  # -- StorageClass for component volumes. Empty uses the cluster default. Only
-  # Tempo reads it. See "What global.* cannot reach" below.
+  # -- StorageClass for component volumes. Empty uses the cluster default.
   storageClass: ""
   # -- Tenant that platform data is written under and read back from.
   tenant: default
+  # -- Storage is Azure Blob only. The chart consumes an existing storage account, its
+  # containers and its key. See doc/OBJECT_STORAGE.md.
   objectStorage:
     # -- Name of the Secret holding the storage account key. The name is fixed:
     # the subcharts reference it from static values. Create the Secret yourself,
@@ -33,13 +27,7 @@ global:
 # Component toggles. Each one drives the matching `condition:` in Chart.yaml.
 # `mimir.enabled` and `loki.enabled` live with their storage wiring further down.
 # ---------------------------------------------------------------------------
-=======
 # Component toggles. Each one drives the matching `condition:` in Chart.yaml.
-mimir:
-  enabled: true
-loki:
-  enabled: true
->>>>>>> origin/main
 grafana:
   enabled: true
 observabilityOperator:
@@ -48,7 +36,6 @@ tempo:
   enabled: false
 observabilityPlatformApi:
   enabled: false
-<<<<<<< HEAD
 
 # ---------------------------------------------------------------------------
 # Object storage delivery.
@@ -132,18 +119,3 @@ loki:
           # passes extra keys through verbatim. Loki rejects unknown config keys.
           accountName: ${OBS_AZURE_ACCOUNT_NAME}
           accountKey: ${AZURE_STORAGE_KEY}
-
-# ---------------------------------------------------------------------------
-# What global.* cannot reach
-#
-# `global.storageClass` reaches two places: tempo-distributed's ingester and
-# metrics-generator StatefulSets, which fall back to it for their PVCs. Mimir and
-# Loki volumes ignore it. Leave it empty to take the cluster's default
-# StorageClass, or set each component's own value through raw pass-through.
-#
-# `global.domain` reaches nothing. The interface in spec.md declares it. Wiring it
-# up belongs with whoever turns on the components that expose HTTP.
-#
-# `global.tenant` rides in the same ConfigMap as `OBS_TENANT`. It reaches Mimir and
-# Loki while one of them is enabled. Nothing consumes it yet.
-# ---------------------------------------------------------------------------
