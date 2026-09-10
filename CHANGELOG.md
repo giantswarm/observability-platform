@@ -23,6 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed failing build-artifact CI job, added `.ats/main.yaml` skipping all app-test-suite scenarios
-- Fixed the failing `build-chart` CI job, added `.abs/.kube-linter.yaml` excluding the checks that the vendored `mimir`, `loki` and `grafana` wrappers trip. `kube-linter` lints the rendered output of the whole dependency tree, so this chart inherited 42 errors from its subcharts, two thirds of them because the wrappers set resource requests but deliberately no limits.
+- Fixed the failing `build-chart` CI job, added `.abs/.kube-linter.yaml` excluding the checks that the vendored `mimir`, `loki` and `grafana` wrappers trip.
 
 [Unreleased]: https://github.com/giantswarm/observability-platform/tree/main
