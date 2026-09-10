@@ -1,0 +1,4 @@
+---
+chart-repos:
+- giantswarm-catalog=https://giantswarm.github.io/giantswarm-catalog/
+- control-plane-catalog=https://giantswarm.github.io/control-plane-catalog/

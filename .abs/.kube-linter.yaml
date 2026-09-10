@@ -1,0 +1,26 @@
+checks:
+  exclude:
+    # kube-linter lints the rendered output of the whole dependency tree, so this
+    # chart inherits every violation of the vendored mimir, loki and grafana
+    # wrappers. None of the exclusions below are triggered by this chart's own
+    # templates.
+
+    # The wrappers set resource requests but deliberately no limits, to avoid CPU
+    # throttling and OOM kills on the ingest path. These two checks want both.
+    - unset-cpu-requirements
+    - unset-memory-requirements
+
+    # Upstream container configuration we do not control.
+    - no-read-only-root-fs
+    - run-as-non-root
+    - latest-tag
+
+    # Upstream PodDisruptionBudgets predate unhealthyPodEvictionPolicy.
+    - pdb-unhealthy-pod-eviction-policy
+
+    # Single-replica components in the one sizing profile this chart ships.
+    - no-anti-affinity
+
+    # Upstream install hooks.
+    - job-ttl-seconds-after-finished
+    - non-existent-service-account
