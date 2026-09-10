@@ -16,7 +16,7 @@ annotations:
   io.giantswarm.application.team: atlas
 dependencies:
   - name: grafana
-    version: 2.38.0
+    version: 2.40.0
     repository: https://giantswarm.github.io/giantswarm-catalog/
     condition: grafana.enabled
   - name: loki
