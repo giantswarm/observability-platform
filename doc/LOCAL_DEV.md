@@ -5,8 +5,7 @@ Azure Blob is the only object storage backend this chart supports, so by default
 [doc/OBJECT_STORAGE.md](./OBJECT_STORAGE.md).
 
 `localBlobStorage.enabled` replaces it with [Azurite](https://github.com/Azure/Azurite),
-Microsoft's Azure Storage emulator, running in the cluster. No Azure account, no
-credentials. Development only.
+Microsoft's Azure Storage emulator, running in the cluster. Use it for development.
 
 ## Prerequisites
 
@@ -22,7 +21,7 @@ kubectl create namespace monitoring
 ```
 
 The namespace must be `monitoring`. The operator's Grafana and datasource URLs are
-literals naming it, and the render fails otherwise.
+literals naming it, and the render fails on any other namespace.
 
 ```bash
 helm dependency update helm/observability-platform
@@ -36,16 +35,16 @@ helm install observability-platform helm/observability-platform \
 
 - `values-local.yaml` is a development sizing profile. It takes the release from 36 GiB of
   memory requests to 5 GiB, so it fits on one node.
-- `observabilityOperator.enabled=false` is unrelated to storage. The operator's chart emits
-  an unguarded `PodMonitor`, which needs the Prometheus Operator CRDs.
+- `observabilityOperator.enabled=false` keeps the operator out of the release. Its chart
+  emits an unguarded `PodMonitor`, which needs the Prometheus Operator CRDs.
 
-Do not set `global.objectStorage.azure.accountName` or `connectionString` as well.
-`localBlobStorage.enabled` computes both, and setting either fails the render.
+`localBlobStorage.enabled` computes the account name and the connection string. Setting
+`global.objectStorage.azure.accountName` or `connectionString` by hand fails the render.
 
 ## Verify
 
-A `post-install` hook creates the storage containers, so `helm install` does not return
-until it has finished:
+A `post-install` hook creates the storage containers, so `helm install` returns once it has
+finished:
 
 ```bash
 kubectl get job azurite-init -n monitoring
@@ -62,13 +61,13 @@ Then check the pods:
 kubectl get pods -n monitoring
 ```
 
-Expect 21 Running and nothing Pending. Mimir and Loki may restart once or twice first,
-while the emulator is still starting. Two errors are not transient:
+Expect 21 Running. Mimir and Loki may restart once or twice first, while the emulator is
+still starting. Two errors point at the storage wiring and need action:
 
 - `storage_account_key and storage_connection_string cannot both be set` - the credentials
-  Secret has a non-empty `AZURE_STORAGE_KEY`. The chart creates it empty on purpose.
-- `ContainerNotFound` after `azurite-init` completed - the container names do not match
-  what the components read.
+  Secret holds a non-empty `AZURE_STORAGE_KEY`. The chart creates it empty on purpose.
+- `ContainerNotFound` after `azurite-init` completed - the container names differ from the
+  ones the components read.
 
 To see the stored data, run the CLI against the emulator:
 
@@ -84,9 +83,9 @@ kubectl run azcli --rm -it --restart=Never -n monitoring \
 Each component writes a cluster seed at startup - `__mimir_cluster/mimir_cluster_seed.json`
 in `mimir-blocks`, `loki_cluster_seed.json` in `loki`. That is the proof the wiring works.
 
-An otherwise-empty container is normal. Mimir uploads blocks only when a block range
-closes, two hours by default. Loki flushes chunks only once something ships it logs, and
-nothing here does.
+Data arrives on each component's own schedule. Mimir uploads blocks when a block range
+closes, two hours by default. Loki flushes chunks once something ships it logs. Containers
+hold the seed alone until then.
 
 Finally, open Grafana:
 
@@ -96,12 +95,10 @@ kubectl port-forward -n monitoring svc/grafana 3000:80
 
 ## Limits
 
-- **No persistence.** The emulator's data directory is an `emptyDir`. Restart the pod and
-  the data is gone.
-- **Not a fidelity test.** Azurite has no lifecycle management, access tiers or
-  immutability, so retention and tiering cannot be validated here.
-- **No headroom.** The sizing profile is enough for a canary's worth of ingest, nothing
-  more.
+- **Storage lives in an `emptyDir`.** Restarting the emulator discards the data.
+- **Azurite implements the Blob API.** Retention, tiering and immutability behaviour needs a
+  real storage account to validate.
+- **The sizing profile suits a canary's worth of ingest.**
 
 ## Teardown
 

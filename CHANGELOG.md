@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add `localBlobStorage.enabled`, running the Azurite emulator in-cluster as the blob backend so the platform installs with no Azure account. Development only — see `doc/LOCAL_DEV.md`.
-- Add `global.objectStorage.azure.connectionString`, delivered to Mimir and Loki as `connection_string` — the only way to point either at an endpoint that is not Azure's.
+- Add `localBlobStorage.enabled`, running the Azurite emulator in-cluster as the blob backend for development — see `doc/LOCAL_DEV.md`.
+- Add `global.objectStorage.azure.connectionString`, delivered to Mimir and Loki as `connection_string`, which sets the blob endpoint they connect to.
 - Add `values-local.yaml`, a development sizing profile taking the release from 36 Gi of memory requests down to 5 Gi so it fits on a single-node cluster.
 - Add `doc/LOCAL_DEV.md`, covering the local Azurite backend, the sizing profile and their limitations.
 - Add `doc/OBJECT_STORAGE.md`, walking through provisioning the Azure Blob Storage account, containers and credentials secret that Mimir and Loki need.
