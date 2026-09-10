@@ -14,14 +14,28 @@ global:
   # -- Tenant that platform data is written under and read back from.
   tenant: default
   objectStorage:
-    # -- Name of the Secret holding the storage account key. The name is fixed:
-    # the subcharts reference it from static values. Create the Secret yourself,
-    # with this name and one key, `AZURE_STORAGE_KEY`. The key reaches the pods as
-    # an environment variable, so its name must be a valid variable name.
+    # -- Name of the Secret holding the storage account key. Consumed, never
+    # created - except under `localBlobStorage.enabled`, which creates it with an
+    # empty key. The name is fixed: the subcharts reference it from static values.
+    # Create the Secret yourself, with this name and one key, `AZURE_STORAGE_KEY`.
+    # The key reaches the pods as an environment variable, so its name must be a
+    # valid variable name.
     existingSecret: observability-platform-object-storage
     azure:
-      # -- Storage account holding the containers below. Required.
+      # -- Storage account holding the containers below. Required, unless
+      # `connectionString` or `localBlobStorage.enabled` is set.
       accountName: ""
+      # -- Full Azure Blob connection string. Overrides the endpoint the clients
+      # derive from `accountName`, and is the only way to reach an endpoint that is
+      # not Azure's: Mimir and Loki both build `https://<account>.<suffix>`
+      # otherwise, with the scheme hardcoded. Leave empty for real Azure;
+      # `localBlobStorage.enabled` computes it, and setting both fails the render.
+      #
+      # It embeds the account key, and it travels in a ConfigMap rather than the
+      # credentials Secret, so it is for emulators, not a real account. Mimir also
+      # rejects an account key and a connection string together, so
+      # `AZURE_STORAGE_KEY` must be empty whenever this is set.
+      connectionString: ""
     # -- Existing containers, one per consumer.
     buckets:
       mimirBlocks: mimir-blocks
@@ -53,6 +67,17 @@ tempo:
     enabled: false
 observabilityPlatformApi:
   enabled: false
+# Azurite, the Azure Storage emulator, as the blob backend instead of a real
+# storage account. Development only. See doc/LOCAL_DEV.md. Unlike the toggles
+# above, this drives no `condition:` in Chart.yaml: Azurite is not a dependency,
+# it is this chart's own templates/local-blob-storage.yaml.
+localBlobStorage:
+  enabled: false
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:3.37.0
+  # Job that creates the containers, which Azurite does not create itself.
+  init:
+    image: mcr.microsoft.com/azure-cli:2.90.0
 
 # ---------------------------------------------------------------------------
 # Standalone profile for observability-operator.
@@ -130,6 +155,12 @@ mimir:
   # Do NOT move this to the top-level `global`: that injects the storage
   # credentials into every pod in the release.
   global:
+    # The wrapper sets `coredns`, the DNS Service name on a Giant Swarm
+    # installation. kind and EKS both name it `kube-dns`, which is also the
+    # upstream mimir-distributed default. The gateway's nginx resolves this name at
+    # startup and exits with `host not found in resolver` when it does not exist.
+    # Set it back through raw pass-through on a Giant Swarm installation.
+    dnsService: kube-dns
     extraEnvFrom:
       - configMapRef:
           name: observability-platform-object-storage
@@ -155,6 +186,11 @@ mimir:
             azure:
               account_name: ${OBS_AZURE_ACCOUNT_NAME}
               account_key: ${AZURE_STORAGE_KEY}
+              # Empty on the real-Azure path, where the client derives its endpoint
+              # from the account name. Mimir refuses an account key and a connection
+              # string together, so whatever sets this must empty
+              # `AZURE_STORAGE_KEY`. See `global.objectStorage.azure.connectionString`.
+              connection_string: ${OBS_AZURE_CONNECTION_STRING}
         blocks_storage:
           backend: azure
           azure:
@@ -209,6 +245,9 @@ loki:
           # passes extra keys through verbatim. Loki rejects unknown config keys.
           accountName: ${OBS_AZURE_ACCOUNT_NAME}
           accountKey: ${AZURE_STORAGE_KEY}
+          # See the note on Mimir's `connection_string` above. Empty is ignored:
+          # the client reads it only when non-empty.
+          connectionString: ${OBS_AZURE_CONNECTION_STRING}
 
 # ---------------------------------------------------------------------------
 # What global.* cannot reach
