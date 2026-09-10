@@ -35,7 +35,6 @@ global:
 # ---------------------------------------------------------------------------
 grafana:
   enabled: true
-  # cilium.io/v2 CiliumNetworkPolicy
   ciliumNetworkPolicy:
     enabled: false
   grafana:
@@ -49,35 +48,12 @@ tempo:
   enabled: false
   tempo:
     metaMonitoring:
-      # monitoring.coreos.com/v1 ServiceMonitor
       serviceMonitor:
         enabled: false
-  # monitoring.coreos.com/v1 PodMonitor. vulture is a GS trace canary that also
-  # hardcodes `-tempo-org-id=giantswarm`; pointing that at `global.tenant` would
-  # mean a values string this chart cannot compute, so the whole canary is off
-  # rather than just its PodMonitor. Tempo is disabled by
-  # default, so this only matters once a customer turns it on.
   vulture:
     enabled: false
 observabilityPlatformApi:
   enabled: false
-
-# ---------------------------------------------------------------------------
-# Vanilla-cluster overrides
-#
-# Every wrapper default touched here assumes a Giant Swarm installation: Cilium,
-# the Prometheus Operator or a VerticalPodAutoscaler CRD. Each is a hard `helm
-# install` failure on a cluster without the CRD named beside it, not a cosmetic
-# difference. The set is deliberately scattered next to the component it belongs
-# to rather than gathered in one block, since Mimir and Loki already have blocks
-# above for storage; each override names the CRD it avoids in the comment beside
-# it.
-#
-# One object is left with no override that can reach it:
-# observability-operator's PodMonitor, which its chart emits with no guard at
-# all. Until that is fixed upstream, a vanilla cluster needs the Prometheus
-# Operator CRDs present.
-# ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
 # Standalone profile for observability-operator.
@@ -88,7 +64,6 @@ observabilityPlatformApi:
 # release's own services.
 # ---------------------------------------------------------------------------
 observability-operator:
-  # autoscaling.k8s.io/v1 VerticalPodAutoscaler
   verticalPodAutoscaler:
     enabled: false
   # TODO: re-enable once this chart has a real issuer to offer.
@@ -99,9 +74,7 @@ observability-operator:
   webhook:
     enabled: false
   operator:
-    # cert-manager.io/v1 Certificate for the metrics endpoint - same missing
-    # ClusterIssuer as the webhook above. This template has no other guard, so
-    # it renders `issuerRef.name: ""` if left on.
+    # TODO: same missing ClusterIssuer as the webhook above.
     metricsServerCertificate:
       enabled: false
     controllers:
@@ -179,7 +152,6 @@ mimir:
   mimir:
     # Pin the service name - see "Deterministic names" under grafana above.
     fullnameOverride: mimir
-    # autoscaling.k8s.io/v1 VerticalPodAutoscaler, one per component
     ingester:
       verticalAutoscaling:
         enabled: false
@@ -222,13 +194,9 @@ loki:
   loki:
     # Pin the service name - see "Deterministic names" under grafana above.
     fullnameOverride: loki
-    # monitoring.coreos.com/v1 ServiceMonitor
     monitoring:
       serviceMonitor:
         enabled: false
-    # cilium.io/v2 CiliumNetworkPolicy, twelve of them. `enabled: false` alone
-    # is not enough - the coredns and egress-world policies are gated on their
-    # own sub-flags AND the flavor, so the flavor has to move too.
     networkPolicy:
       enabled: false
       flavor: kubernetes
