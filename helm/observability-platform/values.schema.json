@@ -11,8 +11,13 @@
         "tenant": { "type": "string", "minLength": 1 },
         "objectStorage": {
           "type": "object",
-          "required": ["azure", "buckets"],
+          "required": ["existingSecret", "azure", "buckets"],
           "properties": {
+            "existingSecret": {
+              "type": "string",
+              "const": "observability-platform-object-storage",
+              "description": "Fixed name. The Mimir and Loki values reference this Secret from static values. Create the credentials Secret with this name."
+            },
             "azure": {
               "type": "object",
               "$comment": "accountName is required when Mimir or Loki is enabled. The objectStorage.validate helper checks it.",
