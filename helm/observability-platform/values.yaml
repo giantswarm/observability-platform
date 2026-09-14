@@ -23,16 +23,10 @@ global:
       # -- Storage account holding the containers below. Required, unless
       # `connectionString` or `localBlobStorage.enabled` is set.
       accountName: ""
-      # -- Full Azure Blob connection string. Overrides the endpoint the clients
-      # derive from `accountName`, and is the only way to reach an endpoint that is
-      # not Azure's: Mimir and Loki both build `https://<account>.<suffix>`
-      # otherwise, with the scheme hardcoded. Leave empty for real Azure;
-      # `localBlobStorage.enabled` computes it, and setting both fails the render.
-      #
-      # It embeds the account key, and it travels in a ConfigMap rather than the
-      # credentials Secret, so it is for emulators, not a real account. Mimir also
-      # rejects an account key and a connection string together, so
-      # `AZURE_STORAGE_KEY` must be empty whenever this is set.
+      # -- Full Azure Blob connection string.
+      # Mutually exclusive with `AZURE_STORAGE_KEY`.
+      # Set it if you use `localBlobStorage`
+      # Leave it empty otherwise.
       connectionString: ""
     # -- Existing containers, one per consumer.
     buckets:
