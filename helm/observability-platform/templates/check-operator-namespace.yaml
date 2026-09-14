@@ -1,0 +1,23 @@
+{{/*
+Guards for the two observability-operator values this chart has to write as literals.
+No resource or config is created from this template.
+
+The operator reaches Grafana, Mimir and Loki over the network, so it needs their
+service URLs - and it reads the tenant to assign. Both are subchart values, which
+Helm will not let this chart compute, so both are literals in values.yaml. A literal
+that silently disagrees with `global.*` or with the release namespace produces an
+operator that comes up healthy and then talks to nothing, so disagreement fails the
+render instead.
+*/}}
+{{- if .Values.observabilityOperator.enabled }}
+{{- $operator := index .Values "observability-operator" }}
+
+{{- if ne $operator.defaultTenant .Values.global.tenant }}
+{{- fail (printf "global.tenant is %q but observability-operator.defaultTenant is %q. The operator cannot read global.tenant, so the two are kept in step by hand. Set:\n\nobservability-operator:\n  defaultTenant: %s\n" .Values.global.tenant $operator.defaultTenant .Values.global.tenant) }}
+{{- end }}
+
+{{- $expected := printf "http://grafana.%s.svc.cluster.local" .Release.Namespace }}
+{{- if ne $operator.grafana.url $expected }}
+{{- fail (printf "the operator's Grafana URL is %q, but this release installs into namespace %q, so that URL and the datasource URLs beside it point at services in another namespace. Either install into the namespace they name, or override them:\n\nobservability-operator:\n  grafana:\n    url: %s\n    adminSecretNamespace: %s\n    datasources:\n      lokiURL: http://loki-gateway.%s.svc\n      mimirURL: http://mimir-gateway.%s.svc/prometheus\n      mimirAlertmanagerURL: http://mimir-alertmanager.%s.svc:8080\n      mimirCardinalityURL: http://mimir-gateway.%s.svc:8080/prometheus/api/v1/cardinality/\n      tempoURL: http://tempo-query-frontend.%s.svc:3200\n" $operator.grafana.url .Release.Namespace $expected .Release.Namespace .Release.Namespace .Release.Namespace .Release.Namespace .Release.Namespace .Release.Namespace) }}
+{{- end }}
+{{- end }}

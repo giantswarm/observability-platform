@@ -1,8 +1,21 @@
 # Values for the `helm template` validation step in the app-build-suite build.
-# The chart requires an Azure storage account name and has no default for it,
-# so rendering with values.yaml alone fails. Wired in via
-# `helm-template-extra-values` in .abs/main.yaml.
+# Wired in via `helm-template-extra-values` in .abs/main.yaml.
+#
+# These values are for app-build-suite tests. This is not an example configuration.
+
+# No default: the storage account has to be named. See doc/OBJECT_STORAGE.md.
 global:
   objectStorage:
     azure:
       accountName: abs-validation
+
+# app-build-suite deploys everything in the default namespace
+observability-operator:
+  grafana:
+    url: http://grafana.default.svc.cluster.local
+    datasources:
+      lokiURL: http://loki-gateway.default.svc
+      mimirURL: http://mimir-gateway.default.svc/prometheus
+      mimirAlertmanagerURL: http://mimir-alertmanager.default.svc:8080
+      mimirCardinalityURL: http://mimir-gateway.default.svc:8080/prometheus/api/v1/cardinality/
+      tempoURL: http://tempo-query-frontend.default.svc:3200
