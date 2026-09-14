@@ -68,7 +68,7 @@ observabilityPlatformApi:
 # Azurite, the Azure Storage emulator, as the blob backend instead of a real
 # storage account. Development only. See doc/LOCAL_DEV.md. Unlike the toggles
 # above, this drives no `condition:` in Chart.yaml: Azurite is not a dependency,
-# it is this chart's own templates/local-blob-storage.yaml.
+# it is this chart's own templates/local-blob-storage/.
 localBlobStorage:
   enabled: false
   azurite:

@@ -1,0 +1,90 @@
+{{/*
+Local blob storage: Azurite, the Azure Storage emulator, standing in for a real storage
+account. Development only - see doc/LOCAL_DEV.md.
+
+Gated on a consumer as well as the toggle: without Mimir or Loki there is no storage
+ConfigMap for the init Job to read its endpoint from, and nothing to serve. Every file in
+this directory carries the same guard.
+*/}}
+{{- if and .Values.localBlobStorage.enabled (or .Values.mimir.enabled .Values.loki.enabled) }}
+{{- $name := include "observability-platform.localBlobStorage.serviceName" . }}
+{{- $port := include "observability-platform.localBlobStorage.port" . | int }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  # Fixed names throughout this directory, with no release prefix: the Service name is the
+  # host in the connection string built by
+  # `observability-platform.objectStorage.connectionString`, and the rest follow it. Two
+  # releases in one namespace collide.
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "labels.common" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "labels.selector" . | nindent 6 }}
+      app.kubernetes.io/component: {{ $name }}
+  template:
+    metadata:
+      labels:
+        {{- include "labels.selector" . | nindent 8 }}
+        app.kubernetes.io/component: {{ $name }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        # The data directory is an emptyDir, which the kubelet group-owns to fsGroup - the
+        # only reason the uid-1000 user in this image can write to it.
+        fsGroup: 1000
+      containers:
+        - name: {{ $name }}
+          image: {{ .Values.localBlobStorage.azurite.image | quote }}
+          # Explicit, rather than relying on the image's entrypoint. Blob only: Mimir and
+          # Loki need no queue or table service.
+          command: ["azurite-blob"]
+          args:
+            - --blobHost
+            - 0.0.0.0
+            - --blobPort
+            - {{ $port | quote }}
+            - --location
+            - /data
+            # Without this, Azurite reads the account name from the request's host name
+            # rather than its path, because the endpoint is a DNS name and not an IP - so
+            # every request against `azurite.<ns>.svc.cluster.local/devstoreaccount1`
+            # fails to resolve an account. See
+            # https://learn.microsoft.com/azure/storage/common/storage-use-azurite
+            - --disableProductStyleUrl
+          ports:
+            - name: blob
+              containerPort: {{ $port }}
+          # TCP, not HTTP: every blob endpoint requires authentication, so an HTTP probe
+          # would read a 403 as unhealthy.
+          readinessProbe:
+            tcpSocket:
+              port: blob
+          livenessProbe:
+            tcpSocket:
+              port: blob
+          securityContext:
+            # Azurite writes to --location only, which is the emptyDir below.
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        # No PVC on purpose: this is a development backend, and its data is expected to
+        # not survive the pod.
+        - name: data
+          emptyDir: {}
+{{- end }}
