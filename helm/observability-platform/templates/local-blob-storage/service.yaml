@@ -1,0 +1,23 @@
+{{/*
+The Service name is the host in the connection string - see deployment.yaml.
+*/}}
+{{- if and .Values.localBlobStorage.enabled (or .Values.mimir.enabled .Values.loki.enabled) }}
+{{- $name := include "observability-platform.localBlobStorage.serviceName" . }}
+{{- $port := include "observability-platform.localBlobStorage.port" . | int }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "labels.common" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  ports:
+    - name: blob
+      port: {{ $port }}
+      targetPort: blob
+  selector:
+    {{- include "labels.selector" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+{{- end }}

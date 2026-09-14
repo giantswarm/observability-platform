@@ -20,8 +20,14 @@ global:
     # an environment variable, so its name must be a valid variable name.
     existingSecret: observability-platform-object-storage
     azure:
-      # -- Storage account holding the containers below. Required.
+      # -- Storage account holding the containers below. Required, unless
+      # `connectionString` or `localBlobStorage.enabled` is set.
       accountName: ""
+      # -- Full Azure Blob connection string.
+      # Mutually exclusive with `AZURE_STORAGE_KEY`.
+      # Set it if you use `localBlobStorage`
+      # Leave it empty otherwise.
+      connectionString: ""
     # -- Existing containers, one per consumer.
     buckets:
       mimirBlocks: mimir-blocks
@@ -53,6 +59,15 @@ tempo:
     enabled: false
 observabilityPlatformApi:
   enabled: false
+# Use a local Azurite for data storage.
+# Development only. See doc/LOCAL_DEV.md.
+localBlobStorage:
+  enabled: false
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:3.37.0
+  # Job that creates the containers, which Azurite does not create itself.
+  init:
+    image: mcr.microsoft.com/azure-cli:2.90.0
 
 # ---------------------------------------------------------------------------
 # Standalone profile for observability-operator.
@@ -128,11 +143,15 @@ mimir:
   # Do NOT move this to the top-level `global`: that injects the storage
   # credentials into every pod in the release.
   global:
+    # dnsService is usually `kube-dns`
+    # Set it to `coredns` on Giant Swarm installations.
+    dnsService: kube-dns
     extraEnvFrom:
       - configMapRef:
           name: observability-platform-object-storage
       - secretRef:
           name: observability-platform-object-storage
+          optional: true
   mimir:
     # Pin the service name - see "Deterministic names" under grafana above.
     fullnameOverride: mimir
@@ -153,6 +172,9 @@ mimir:
             azure:
               account_name: ${OBS_AZURE_ACCOUNT_NAME}
               account_key: ${AZURE_STORAGE_KEY}
+              # Mutually exclusive with `AZURE_STORAGE_KEY`.
+              # See `global.objectStorage.azure.connectionString`.
+              connection_string: ${OBS_AZURE_CONNECTION_STRING}
         blocks_storage:
           backend: azure
           azure:
@@ -175,6 +197,7 @@ loki:
           name: observability-platform-object-storage
       - secretRef:
           name: observability-platform-object-storage
+          optional: true
   loki:
     # Pin the service name - see "Deterministic names" under grafana above.
     fullnameOverride: loki
@@ -207,6 +230,9 @@ loki:
           # passes extra keys through verbatim. Loki rejects unknown config keys.
           accountName: ${OBS_AZURE_ACCOUNT_NAME}
           accountKey: ${AZURE_STORAGE_KEY}
+          # See the note on Mimir's `connection_string` above. Empty is ignored:
+          # the client reads it only when non-empty.
+          connectionString: ${OBS_AZURE_CONNECTION_STRING}
 
 # ---------------------------------------------------------------------------
 # What global.* cannot reach

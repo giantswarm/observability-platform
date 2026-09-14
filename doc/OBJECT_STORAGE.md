@@ -7,6 +7,10 @@ object storage.
 into the chart. This guide provisions an Azure storage account with the Azure CLI and
 hands it to the platform chart, which configures Mimir and Loki from it.
 
+For development you do not need any of this: `localBlobStorage.enabled` runs the Azurite
+emulator in the cluster instead, and needs no Azure account at all. See
+[LOCAL_DEV.md](./LOCAL_DEV.md).
+
 ## Layout
 
 Use **a single storage account** with **one container per component that needs one**.
@@ -167,6 +171,9 @@ az storage container list --account-name "$ACCOUNT" --account-key "$KEY" \
 
 ## Step 4 — Create the Kubernetes secret
 
+Skip this step under `localBlobStorage.enabled` — the chart creates this secret itself
+there, deliberately empty. See [LOCAL_DEV.md](./LOCAL_DEV.md).
+
 One secret, in the namespace you install the platform into. The name is fixed:
 
 ```bash
@@ -209,6 +216,9 @@ global:
       mimirRuler: mimir-ruler
       loki: loki
 ```
+
+`accountName` has one alternative: `global.objectStorage.azure.connectionString` takes a
+full connection string `https://<account>.<suffix>` — see [LOCAL_DEV.md](./LOCAL_DEV.md).
 
 The `buckets` values above are the defaults, so with the container names from this guide
 only `accountName` is actually required. Leave it out and the render fails rather than

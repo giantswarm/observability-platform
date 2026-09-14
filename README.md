@@ -85,7 +85,9 @@ Standalone, it has been installed and verified on a vanilla EKS cluster.
 Some apps have restrictions on how they can be deployed.
 Not following these limitations will most likely result in a broken deployment.
 
-- Azure Blob is the only supported object storage backend for now.
+- Azure Blob is the only supported object storage backend for now. For development,
+  `localBlobStorage.enabled` runs the Azurite emulator in-cluster instead of a real
+  storage account — see [doc/LOCAL_DEV.md](doc/LOCAL_DEV.md).
 - One sizing profile, tuned for a small cluster. There is no answer yet for real ingest volume.
 - Exposing Grafana is the customer's responsibility — the chart creates no ingress and no TLS.
 - Turning Mimir or Loki off leaves Grafana with a datasource pointing at nothing.

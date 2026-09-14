@@ -35,14 +35,40 @@ app.kubernetes.io/instance: {{ .Release.Name | quote }}
 
 {{/*
 Object storage validation.
-
-The fixed Secret name and the container names live in values.schema.json, which
-rejects bad values before any template runs. The account name is required exactly
-when Mimir or Loki is enabled. A schema cannot express that against sibling
-toggles. Disabling both keeps rendering an empty release.
 */}}
 {{- define "observability-platform.objectStorage.validate" -}}
-{{- if not .Values.global.objectStorage.azure.accountName -}}
-{{- fail "global.objectStorage.azure.accountName is empty. Set it to the Azure storage account holding the containers - see doc/OBJECT_STORAGE.md." -}}
+{{- $azure := .Values.global.objectStorage.azure -}}
+{{- if .Values.localBlobStorage.enabled -}}
+{{- if $azure.accountName -}}
+{{- fail (printf "localBlobStorage.enabled is true, so storage is the in-cluster Azurite emulator under account %q, but global.objectStorage.azure.accountName is set to %q - which nothing would read. Unset one of the two - see doc/LOCAL_DEV.md." (include "observability-platform.localBlobStorage.accountName" .) $azure.accountName) -}}
+{{- end -}}
+{{- if $azure.connectionString -}}
+{{- fail "localBlobStorage.enabled is true, which computes the connection string for the in-cluster emulator, but global.objectStorage.azure.connectionString is set as well and would be ignored. Unset one of the two - see doc/LOCAL_DEV.md." -}}
+{{- end -}}
+{{- else if not (or $azure.accountName $azure.connectionString) -}}
+{{- fail "global.objectStorage.azure.accountName is empty. Set it to the Azure storage account holding the containers, or set global.objectStorage.azure.connectionString to reach an endpoint of your own, or set localBlobStorage.enabled to run against a local Azurite emulator - see doc/OBJECT_STORAGE.md." -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Storage account name delivered to Mimir and Loki.
+*/}}
+{{- define "observability-platform.objectStorage.accountName" -}}
+{{- if .Values.localBlobStorage.enabled -}}
+{{- include "observability-platform.localBlobStorage.accountName" . -}}
+{{- else -}}
+{{- .Values.global.objectStorage.azure.accountName -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Connection string delivered to Mimir and Loki.
+*/}}
+{{- define "observability-platform.objectStorage.connectionString" -}}
+{{- if .Values.localBlobStorage.enabled -}}
+{{- $account := include "observability-platform.localBlobStorage.accountName" . -}}
+{{- printf "DefaultEndpointsProtocol=http;AccountName=%s;AccountKey=%s;BlobEndpoint=http://%s.%s.svc.cluster.local:%s/%s;" $account (include "observability-platform.localBlobStorage.accountKey" .) (include "observability-platform.localBlobStorage.serviceName" .) .Release.Namespace (include "observability-platform.localBlobStorage.port" .) $account -}}
+{{- else -}}
+{{- .Values.global.objectStorage.azure.connectionString -}}
 {{- end -}}
 {{- end -}}

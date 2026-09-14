@@ -20,9 +20,13 @@
             },
             "azure": {
               "type": "object",
-              "$comment": "accountName is required when Mimir or Loki is enabled. The objectStorage.validate helper checks it.",
+              "$comment": "accountName is required only when Mimir or Loki is enabled, and conflicts with localBlobStorage.enabled, as connectionString does. Both depend on sibling values, so those checks live in the objectStorage.validate helper instead.",
               "properties": {
-                "accountName": { "type": "string" }
+                "accountName": { "type": "string" },
+                "connectionString": {
+                  "type": "string",
+                  "description": "Full Azure Blob connection string, overriding the endpoint derived from accountName. It embeds the account key and travels in a ConfigMap rather than the credentials Secret, so it is for emulators and development endpoints, not a real storage account. Set localBlobStorage.enabled instead to have it computed for a local Azurite."
+                }
               }
             },
             "buckets": {
@@ -35,6 +39,28 @@
                 "loki": { "type": "string", "minLength": 1 }
               }
             }
+          }
+        }
+      }
+    },
+    "localBlobStorage": {
+      "type": "object",
+      "description": "Azurite, the Azure Storage emulator, as the blob backend instead of a real storage account. Development only - see doc/LOCAL_DEV.md.",
+      "required": ["enabled", "azurite", "init"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "azurite": {
+          "type": "object",
+          "required": ["image"],
+          "properties": {
+            "image": { "type": "string", "minLength": 1 }
+          }
+        },
+        "init": {
+          "type": "object",
+          "required": ["image"],
+          "properties": {
+            "image": { "type": "string", "minLength": 1 }
           }
         }
       }

@@ -1,0 +1,112 @@
+# ---------------------------------------------------------------------------
+# Local development profile.
+#
+#   helm install observability-platform helm/observability-platform \
+#     --namespace monitoring \
+#     --values helm/observability-platform/values-local.yaml
+#
+# Optimised for a small memory footprint, roughly 5 Gi for the whole release.
+#
+# Two of the values below are not sizing:
+#
+#   - `localBlobStorage.enabled` points the blob backend at Azurite.
+#   - `observabilityOperator.enabled` keeps the operator out of the release.
+#
+# Do not use this anywhere real. It has no headroom for ingest.
+# ---------------------------------------------------------------------------
+
+loki:
+  loki:
+    chunksCache:
+      enabled: false
+    resultsCache:
+      enabled: false
+    write:
+      autoscaling:
+        enabled: false
+      replicas: 1
+      resources:
+        requests:
+          cpu: 100m
+          memory: 512Mi
+    read:
+      autoscaling:
+        enabled: false
+      replicas: 1
+      resources:
+        requests:
+          cpu: 100m
+          memory: 512Mi
+    backend:
+      autoscaling:
+        enabled: false
+      replicas: 1
+      resources:
+        requests:
+          cpu: 100m
+          memory: 512Mi
+    gateway:
+      autoscaling:
+        enabled: false
+      replicas: 1
+
+mimir:
+  hpa:
+    querier:
+      enabled: false
+  mimir:
+    # One zone and one replica each, with replication_factor below to match.
+    ingester:
+      zoneAwareReplication:
+        enabled: false
+      replicas: 1
+      resources:
+        requests:
+          cpu: 100m
+          memory: 512Mi
+    store_gateway:
+      zoneAwareReplication:
+        enabled: false
+      replicas: 1
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+    distributor:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+    compactor:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+    querier:
+      replicas: 1
+    query_scheduler:
+      replicas: 1
+    mimir:
+      structuredConfig:
+        ingester:
+          ring:
+            replication_factor: 1
+            zone_awareness_enabled: false
+        store_gateway:
+          sharding_ring:
+            replication_factor: 1
+            zone_awareness_enabled: false
+
+# Azurite as the blob backend. Computes `accountName` and `connectionString`. Setting
+# either by hand on top of this profile fails the render.
+localBlobStorage:
+  enabled: true
+
+# The operator's chart emits an unguarded PodMonitor (`templates/pod-monitor.yaml`,
+# monitoring.coreos.com/v1). A kind cluster has no CRD for it. The release fails to
+# apply. The chart offers no toggle for that one resource. A local install runs no CR
+# reconciliation.
+# TODO: install the Prometheus Operator CRDs on the kind cluster and re-enable. Or
+# guard the PodMonitor upstream.
+observabilityOperator:
+  enabled: false
