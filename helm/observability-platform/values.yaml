@@ -145,11 +145,8 @@ mimir:
   # Do NOT move this to the top-level `global`: that injects the storage
   # credentials into every pod in the release.
   global:
-    # The wrapper sets `coredns`, the DNS Service name on a Giant Swarm
-    # installation. kind and EKS both name it `kube-dns`, which is also the
-    # upstream mimir-distributed default. The gateway's nginx resolves this name at
-    # startup and exits with `host not found in resolver` when it does not exist.
-    # Set it back through raw pass-through on a Giant Swarm installation.
+    # dnsService is usually `kube-dns`
+    # Set it to `coredns` on Giant Swarm installations.
     dnsService: kube-dns
     extraEnvFrom:
       - configMapRef:
