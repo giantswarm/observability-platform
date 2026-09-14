@@ -1,10 +1,6 @@
 {{/*
 Local blob storage: Azurite, the Azure Storage emulator, standing in for a real storage
 account. Development only - see doc/LOCAL_DEV.md.
-
-Gated on a consumer as well as the toggle: without Mimir or Loki there is no storage
-ConfigMap for the init Job to read its endpoint from, and nothing to serve. Every file in
-this directory carries the same guard.
 */}}
 {{- if and .Values.localBlobStorage.enabled (or .Values.mimir.enabled .Values.loki.enabled) }}
 {{- $name := include "observability-platform.localBlobStorage.serviceName" . }}
