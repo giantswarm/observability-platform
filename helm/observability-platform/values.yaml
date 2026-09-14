@@ -79,10 +79,8 @@ observability-operator:
     # namespace this release installs into (`monitoring` by default). Installing
     # elsewhere means overriding all of them; the render fails otherwise.
     url: "http://grafana.monitoring.svc.cluster.local"
-    # -- Secret holding the client certificate the operator presents to Grafana.
-    # The operator looks it up in `gatewayTLSSecretNamespace`, falling back to a
-    # `grafana-tls` Secret in the admin secret's namespace. This chart creates
-    # neither, so there is nothing to name here yet.
+    # -- Secret holding the client TLS certificate for Grafana.
+    # This is currently not supported, so there is nothing to name here yet.
     gatewayTLSSecretName: ""
     datasources:
       lokiURL: "http://loki-gateway.monitoring.svc"
