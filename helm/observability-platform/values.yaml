@@ -197,8 +197,6 @@ loki:
           name: observability-platform-object-storage
       - secretRef:
           name: observability-platform-object-storage
-          # Optional: `localBlobStorage` reaches the emulator through the connection
-          # string in the ConfigMap, with no Secret in the release.
           optional: true
   loki:
     # Pin the service name - see "Deterministic names" under grafana above.
