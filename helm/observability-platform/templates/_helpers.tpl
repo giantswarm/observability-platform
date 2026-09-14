@@ -63,12 +63,6 @@ Storage account name delivered to Mimir and Loki.
 
 {{/*
 Connection string delivered to Mimir and Loki.
-
-Empty on the real-Azure path, where both clients derive `https://<account>.<suffix>` and
-ignore this. For the emulator it is the only way to reach the endpoint at all, because
-that derivation hardcodes https and puts the account in the host name. The account name
-repeats in the BlobEndpoint path deliberately: that is what makes the URL path-style,
-which is also why the Deployment passes --disableProductStyleUrl.
 */}}
 {{- define "observability-platform.objectStorage.connectionString" -}}
 {{- if .Values.localBlobStorage.enabled -}}
