@@ -35,13 +35,6 @@ app.kubernetes.io/instance: {{ .Release.Name | quote }}
 
 {{/*
 Object storage validation.
-
-Everything unconditional - the fixed Secret name, the container names - is in
-values.schema.json, which rejects bad values before any template runs. What is left here
-is conditional on sibling values, which a schema cannot express: the account name is
-required exactly when Mimir or Loki is enabled, and `localBlobStorage.enabled` computes
-both the account name and the connection string, so either one set by hand beside it would
-be silently ignored. Disabling both components has to keep rendering an empty release.
 */}}
 {{- define "observability-platform.objectStorage.validate" -}}
 {{- $azure := .Values.global.objectStorage.azure -}}
