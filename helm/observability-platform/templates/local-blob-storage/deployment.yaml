@@ -8,10 +8,6 @@ account. Development only - see doc/LOCAL_DEV.md.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  # Fixed names throughout this directory, with no release prefix: the Service name is the
-  # host in the connection string built by
-  # `observability-platform.objectStorage.connectionString`, and the rest follow it. Two
-  # releases in one namespace collide.
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
