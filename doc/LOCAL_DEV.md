@@ -31,16 +31,6 @@ helm install observability-platform helm/observability-platform \
   --values helm/observability-platform/values-local.yaml
 ```
 
-`values-local.yaml` is the development profile. It does three things:
-
-- Cuts memory requests from 36 GiB to 5 GiB, so the release fits on one node.
-- Sets `localBlobStorage.enabled`, which computes the account name and connection
-  string. Setting `global.objectStorage.azure.accountName` or `connectionString` by hand
-  on top of it fails the render.
-- Sets `observabilityOperator.enabled=false`, keeping the operator out of the release.
-  Its chart emits an unguarded `PodMonitor`, which needs the Prometheus Operator CRDs.
-  A local install therefore does not exercise the operator's CR reconciliation.
-
 ## Verify
 
 A `post-install` hook creates the storage containers, so `helm install` returns once it
