@@ -171,10 +171,8 @@ mimir:
             azure:
               account_name: ${OBS_AZURE_ACCOUNT_NAME}
               account_key: ${AZURE_STORAGE_KEY}
-              # Empty on the real-Azure path, where the client derives its endpoint
-              # from the account name. Mimir refuses an account key and a connection
-              # string together, so whatever sets this must empty
-              # `AZURE_STORAGE_KEY`. See `global.objectStorage.azure.connectionString`.
+              # Mutually exclusive with `AZURE_STORAGE_KEY`.
+              # See `global.objectStorage.azure.connectionString`.
               connection_string: ${OBS_AZURE_CONNECTION_STRING}
         blocks_storage:
           backend: azure
