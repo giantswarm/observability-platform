@@ -218,12 +218,7 @@ global:
 ```
 
 `accountName` has one alternative: `global.objectStorage.azure.connectionString` takes a
-full connection string, which overrides the endpoint the clients would derive from the
-account name. That is the only way to reach an endpoint that is not Azure's, since both
-Mimir and Loki build `https://<account>.<suffix>` with the scheme hardcoded. It embeds the
-account key and travels in a ConfigMap rather than the secret above, so it is meant for
-emulators and development endpoints — see [LOCAL_DEV.md](./LOCAL_DEV.md) — not for a real
-storage account.
+full connection string `https://<account>.<suffix>` — see [LOCAL_DEV.md](./LOCAL_DEV.md).
 
 The `buckets` values above are the defaults, so with the container names from this guide
 only `accountName` is actually required. Leave it out and the render fails rather than
