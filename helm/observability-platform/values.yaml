@@ -14,12 +14,10 @@ global:
   # -- Tenant that platform data is written under and read back from.
   tenant: default
   objectStorage:
-    # -- Name of the Secret holding the storage account key. Consumed, never
-    # created - except under `localBlobStorage.enabled`, which creates it with an
-    # empty key. The name is fixed: the subcharts reference it from static values.
-    # Create the Secret yourself, with this name and one key, `AZURE_STORAGE_KEY`.
-    # The key reaches the pods as an environment variable, so its name must be a
-    # valid variable name.
+    # -- Name of the Secret holding the storage account key. The name is fixed:
+    # the subcharts reference it from static values. Create the Secret yourself,
+    # with this name and one key, `AZURE_STORAGE_KEY`. The key reaches the pods as
+    # an environment variable, so its name must be a valid variable name.
     existingSecret: observability-platform-object-storage
     azure:
       # -- Storage account holding the containers below. Required, unless
@@ -125,6 +123,58 @@ observability-operator:
     # The operator looks it up in `gatewayTLSSecretNamespace`, falling back to a
     # `grafana-tls` Secret in the admin secret's namespace. This chart creates
     # neither, so there is nothing to name here yet.
+    gatewayTLSSecretName: ""
+    datasources:
+      lokiURL: "http://loki-gateway.monitoring.svc"
+      mimirURL: "http://mimir-gateway.monitoring.svc/prometheus"
+      mimirAlertmanagerURL: "http://mimir-alertmanager.monitoring.svc:8080"
+      mimirCardinalityURL: "http://mimir-gateway.monitoring.svc:8080/prometheus/api/v1/cardinality/"
+      tempoURL: "http://tempo-query-frontend.monitoring.svc:3200"
+
+# ---------------------------------------------------------------------------
+# Standalone profile for observability-operator.
+#
+# Beware that some features won't work outside of a Giant Swarm management cluster.
+# ---------------------------------------------------------------------------
+observability-operator:
+  verticalPodAutoscaler:
+    enabled: false
+  # Disabling the webhook loses CR validation.
+  # TODO: re-enable once this chart has a real issuer to offer.
+  webhook:
+    enabled: false
+  operator:
+    # TODO: re-enable once this chart has a real issuer to offer.
+    metricsServerCertificate:
+      enabled: false
+    controllers:
+      # The cluster controller generates the observability-agents config for each Giantswarm-created cluster
+      # This feature is only available for GiantSwarm management clusters.
+      cluster:
+        enabled: false
+      # Alertmanager wiring is a separate component, off by default here too.
+      alertmanager:
+        enabled: false
+  # -- Tenant the operator assigns when a resource carries no tenant label.
+  # Must match `global.tenant`.
+  defaultTenant: default
+  # The "managementCluster" section is specific to Giant Swarm management clusters.
+  # Please don't change anything here except "name".
+  managementCluster:
+    name: observability-platform
+    baseDomain: ""
+    customer: ""
+    pipeline: ""
+    region: ""
+    # We don't support custom clusterIssuer yet, please keep `clusterIssuer` empty.
+    clusterIssuer: ""
+  grafana:
+    # Deterministic names: this URL and the datasource URLs below must match the
+    # namespace this release installs into (`monitoring` by default). Installing
+    # elsewhere means overriding all of them; the render fails otherwise.
+    url: "http://grafana.monitoring.svc.cluster.local"
+    # -- Secret holding the client TLS certificate for Grafana.
+    # This is currently not supported, so there is nothing to name here yet.
     gatewayTLSSecretName: ""
     datasources:
       lokiURL: "http://loki-gateway.monitoring.svc"
