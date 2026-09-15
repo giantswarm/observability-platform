@@ -28,7 +28,7 @@ dependencies:
     repository: https://giantswarm.github.io/control-plane-catalog/
     condition: mimir.enabled
   - name: observability-operator
-    version: 0.72.2
+    version: 0.78.0
     repository: https://giantswarm.github.io/control-plane-catalog/
     condition: observabilityOperator.enabled
   - name: observability-platform-api
