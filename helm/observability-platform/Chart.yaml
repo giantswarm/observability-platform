@@ -24,7 +24,7 @@ dependencies:
     repository: https://giantswarm.github.io/giantswarm-catalog/
     condition: loki.enabled
   - name: mimir
-    version: 0.30.0
+    version: 0.30.1
     repository: https://giantswarm.github.io/control-plane-catalog/
     condition: mimir.enabled
   - name: observability-operator
