@@ -14,7 +14,7 @@ All paths are served at `observability.<global.domain>`.
 | Backend | Write | Read |
 | --- | --- | --- |
 | Mimir | `/prometheus/api/v1/push`, `/otlp/v1/metrics` | `/prometheus/api/v1/{query,query_range,series,labels,...}` |
-| Loki | `/loki/api/v1/push`, `/otlp/v1/logs`, OTLP gRPC | `/loki/api/v1/{query,query_range,series,labels,...}` |
+| Loki | `/loki/api/v1/push`, `/otlp/v1/logs` | `/loki/api/v1/{query,query_range,series,labels,...}` |
 
 Every request needs:
 
@@ -22,6 +22,9 @@ Every request needs:
 - `X-Scope-OrgID: <tenant>`
 
 A request missing either one gets a `401`.
+
+The API chart 0.5.0 also renders a Loki GRPCRoute. Loki serves no OTLP over gRPC. Calls
+through the GRPCRoute fail with `Unimplemented`. Use OTLP over HTTP.
 
 ## Prerequisites
 
@@ -234,6 +237,8 @@ API=http://localhost:8080
 AUTH=(-H "Host: observability.local.test" -H "Authorization: Bearer $TOKEN" -H "X-Scope-OrgID: default")
 ```
 
+The Host header, or the gRPC `:authority`, may carry the `:8080` port.
+
 Push a metric through OTLP:
 
 ```bash
@@ -278,6 +283,7 @@ curl -sS -o /dev/null -w '%{http_code}\n' -H "Host: observability.local.test" -H
 - A client can send any `X-Scope-OrgID`. Nothing binds the tenant to the token.
 - Tempo is not exposed. Its Service names are not pinned.
 - Ingest authentication is JWT only.
+- OTLP over gRPC does not work for Loki.
 
 ## Teardown
 
