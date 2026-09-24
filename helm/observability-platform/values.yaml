@@ -52,6 +52,8 @@ observabilityOperator:
 tempo:
   enabled: false
   tempo:
+    # Pin the service name - see "Deterministic names" under grafana above.
+    fullnameOverride: tempo
     metaMonitoring:
       serviceMonitor:
         enabled: false
