@@ -5,8 +5,8 @@
 # containers and its key. See doc/OBJECT_STORAGE.md.
 # ---------------------------------------------------------------------------
 global:
-  # -- Base domain for the platform's HTTP endpoints. Reaches nothing yet. See
-  # "What global.* cannot reach" below.
+  # -- Base domain for the platform's HTTP endpoints. The API is served at
+  # `observability.<domain>`. Required when `observabilityPlatformApi.enabled`.
   domain: ""
   # -- StorageClass for component volumes. Empty uses the cluster default. Only
   # Tempo reads it. See "What global.* cannot reach" below.
@@ -120,6 +120,37 @@ observability-operator:
       mimirAlertmanagerURL: "http://mimir-alertmanager.monitoring.svc:8080"
       mimirCardinalityURL: "http://mimir-gateway.monitoring.svc:8080/prometheus/api/v1/cardinality/"
       tempoURL: "http://tempo-query-frontend.monitoring.svc:3200"
+
+# ---------------------------------------------------------------------------
+# Observability Platform API: authenticated external ingest and read.
+#
+# Renders Gateway API routes plus Envoy Gateway filters and SecurityPolicies.
+# Prerequisites: Envoy Gateway and a Gateway that accepts routes from this
+# release's namespace. See doc/EXTERNAL_API.md.
+#
+# Every request needs a JWT from one of `auth.jwt.providers` and an
+# `X-Scope-OrgID` header naming the tenant.
+# ---------------------------------------------------------------------------
+observability-platform-api:
+  auth:
+    jwt:
+      # -- Trusted OIDC issuers. Required when `observabilityPlatformApi.enabled`.
+      providers: []
+  # The API chart ships legacy nginx Ingresses in the `loki` and `mimir` namespaces.
+  ingresses: []
+  # Routes live next to the backends. Service names match the pinned
+  # `fullnameOverride`s below.
+  loki:
+    enabled: true
+    namespace: monitoring
+    hostname: "observability.{{ .Values.global.domain }}"
+  mimir:
+    enabled: true
+    namespace: monitoring
+    hostname: "observability.{{ .Values.global.domain }}"
+  # Tempo service names are not pinned yet. The routes would reach nothing.
+  tempo:
+    enabled: false
 
 # ---------------------------------------------------------------------------
 # Object storage delivery.
@@ -242,8 +273,7 @@ loki:
 # Loki volumes ignore it. Leave it empty to take the cluster's default
 # StorageClass, or set each component's own value through raw pass-through.
 #
-# `global.domain` reaches nothing. The interface in spec.md declares it. Wiring it
-# up belongs with whoever turns on the components that expose HTTP.
+# `global.domain` reaches the Observability Platform API hostnames only.
 #
 # `global.tenant` rides in the same ConfigMap as `OBS_TENANT`. It reaches Mimir and
 # Loki while one of them is enabled. Nothing consumes it yet.

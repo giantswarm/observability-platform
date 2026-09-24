@@ -1,0 +1,18 @@
+{{/*
+Guards for the Observability Platform API. No resource or config is created from
+this template.
+
+Without JWT providers the API chart renders no routes and reports nothing. Without
+`global.domain` its hostnames are invalid. Both fail the render instead.
+*/}}
+{{- if .Values.observabilityPlatformApi.enabled }}
+{{- $api := index .Values "observability-platform-api" }}
+
+{{- if not .Values.global.domain }}
+{{- fail "observabilityPlatformApi.enabled is true but global.domain is empty. The API is served at observability.<global.domain> - see doc/EXTERNAL_API.md." }}
+{{- end }}
+
+{{- if not $api.auth.jwt.providers }}
+{{- fail "observabilityPlatformApi.enabled is true but observability-platform-api.auth.jwt.providers is empty, so the API chart renders no routes. Add at least one OIDC issuer - see doc/EXTERNAL_API.md." }}
+{{- end }}
+{{- end }}
