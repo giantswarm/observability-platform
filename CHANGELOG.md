@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add the Observability Platform API wiring for Loki and Mimir, served at `observability.<global.domain>`. The render fails without `global.domain` or a JWT provider.
+- Add `doc/EXTERNAL_API.md`, walking through the API prerequisites and a local kind setup with Envoy Gateway and a static JWKS issuer.
 - Add support for deploying the stack locally, with Azurite managing object storage  
 - Add `doc/OBJECT_STORAGE.md`, walking through provisioning the Azure Blob Storage account, containers and credentials secret that Mimir and Loki need.
 - Add `doc/EKS_CLUSTER.md`, walking through creating the AWS EKS cluster the platform runs on with `eksctl` — node sizing, the `gp3` default StorageClass the CSI driver needs, metrics-server, measured resource usage and teardown.
