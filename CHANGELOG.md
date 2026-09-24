@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed the Grafana Tempo datasource URL by pinning the Tempo service names with `tempo.tempo.fullnameOverride: tempo`.
 - fixed DNS resolutions by setting `mimir.global.dnsService` back to `kube-dns`.
 - Fixed failing build-artifact CI job, added `.ats/main.yaml` skipping all app-test-suite scenarios
 - Fixed the failing `build-chart` CI job, added `.abs/.kube-linter.yaml` excluding the checks that the vendored `mimir`, `loki` and `grafana` wrappers trip.
