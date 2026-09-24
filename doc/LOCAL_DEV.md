@@ -61,6 +61,9 @@ kubectl port-forward -n monitoring svc/grafana 3000:80
 
 Storage lives in an `emptyDir`: restarting the emulator discards the data.
 
+To send data from outside the cluster, set up the external API. See
+[EXTERNAL_API.md](./EXTERNAL_API.md).
+
 ## Teardown
 
 ```bash
