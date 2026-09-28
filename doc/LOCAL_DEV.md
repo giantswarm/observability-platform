@@ -59,6 +59,13 @@ Finally, open Grafana:
 kubectl port-forward -n monitoring svc/grafana 3000:80
 ```
 
+Log in at <http://localhost:3000> as `admin`. The chart generates a random password and
+stores it in the `grafana` secret:
+
+```bash
+kubectl get secret grafana -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d; echo
+```
+
 Storage lives in an `emptyDir`: restarting the emulator discards the data.
 
 ## Teardown
