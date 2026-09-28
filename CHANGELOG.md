@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The `helm.sh/chart` label is valid for long chart versions: the 63-character cut trims the whole trailing run of `-`, `.` and `_`.
+
 ### Added
 
 - Add support for deploying the stack locally, with Azurite managing object storage  
@@ -24,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed Loki ingestion on the local profile. `values-local.yaml` sets `replication_factor` to 1, matching the single `loki-write` replica.
+- Fixed the Grafana Tempo datasource URL by pinning the Tempo service names with `tempo.tempo.fullnameOverride: tempo`.
 - fixed DNS resolutions by setting `mimir.global.dnsService` back to `kube-dns`.
 - Fixed failing build-artifact CI job, added `.ats/main.yaml` skipping all app-test-suite scenarios
 - Fixed the failing `build-chart` CI job, added `.abs/.kube-linter.yaml` excluding the checks that the vendored `mimir`, `loki` and `grafana` wrappers trip.
