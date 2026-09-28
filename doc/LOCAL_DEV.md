@@ -59,6 +59,8 @@ Finally, open Grafana:
 kubectl port-forward -n monitoring svc/grafana 3000:80
 ```
 
+To send data to the stack, see [doc/ALLOY.md](./ALLOY.md).
+
 Storage lives in an `emptyDir`: restarting the emulator discards the data.
 
 ## Teardown
