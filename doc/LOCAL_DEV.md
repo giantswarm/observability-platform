@@ -59,6 +59,31 @@ Finally, open Grafana:
 kubectl port-forward -n monitoring svc/grafana 3000:80
 ```
 
+The local profile runs no operator, so Grafana has no datasources. With the port-forward
+running, add them from another terminal:
+
+```bash
+GRAFANA_PASSWORD=$(kubectl get secret grafana -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d)
+
+curl -s -u "admin:$GRAFANA_PASSWORD" -H 'Content-Type: application/json' \
+  http://localhost:3000/api/datasources -d '{
+    "name": "Mimir", "type": "prometheus", "access": "proxy",
+    "url": "http://mimir-gateway.monitoring.svc/prometheus",
+    "jsonData": {"httpHeaderName1": "X-Scope-OrgID"},
+    "secureJsonData": {"httpHeaderValue1": "default"}
+  }'
+
+curl -s -u "admin:$GRAFANA_PASSWORD" -H 'Content-Type: application/json' \
+  http://localhost:3000/api/datasources -d '{
+    "name": "Loki", "type": "loki", "access": "proxy",
+    "url": "http://loki-gateway.monitoring.svc",
+    "jsonData": {"httpHeaderName1": "X-Scope-OrgID"},
+    "secureJsonData": {"httpHeaderValue1": "default"}
+  }'
+```
+
+The `X-Scope-OrgID` value is `global.tenant`, `default` unless you override it.
+
 Storage lives in an `emptyDir`: restarting the emulator discards the data.
 
 ## Teardown
