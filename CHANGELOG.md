@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed Loki ingestion on the local profile. `values-local.yaml` sets `replication_factor` to 1, matching the single `loki-write` replica.
 - Fixed the Grafana Tempo datasource URL by pinning the Tempo service names with `tempo.tempo.fullnameOverride: tempo`.
 - fixed DNS resolutions by setting `mimir.global.dnsService` back to `kube-dns`.
 - Fixed failing build-artifact CI job, added `.ats/main.yaml` skipping all app-test-suite scenarios

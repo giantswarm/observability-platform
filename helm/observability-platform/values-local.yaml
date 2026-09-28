@@ -17,6 +17,10 @@
 
 loki:
   loki:
+    # One write replica, with replication_factor to match.
+    loki:
+      commonConfig:
+        replication_factor: 1
     chunksCache:
       enabled: false
     resultsCache:
