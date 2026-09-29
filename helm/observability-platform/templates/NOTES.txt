@@ -1,0 +1,14 @@
+{{- if .Values.grafana.enabled }}
+Open Grafana:
+
+  kubectl port-forward -n {{ .Release.Namespace }} svc/grafana 3000:80
+
+Log in at http://localhost:3000 as `admin`. The password is in the `grafana` secret:
+
+  kubectl get secret grafana -n {{ .Release.Namespace }} -o jsonpath='{.data.admin-password}' | base64 -d; echo
+{{- if not .Values.observabilityOperator.enabled }}
+
+Grafana has no datasources: the operator that provisions them is disabled. To add them, see
+https://github.com/giantswarm/observability-platform/blob/main/doc/LOCAL_DEV.md
+{{- end }}
+{{- end }}
