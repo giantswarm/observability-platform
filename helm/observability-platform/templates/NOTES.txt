@@ -1,7 +1,11 @@
 {{- if .Values.grafana.enabled }}
+{{- if eq (dig "grafana" "service" "type" "" .Values.grafana) "NodePort" }}
+Grafana listens on NodePort {{ .Values.grafana.grafana.service.nodePort }}. The kind config in doc/LOCAL_DEV.md maps it to localhost:3000.
+{{- else }}
 Open Grafana:
 
   kubectl port-forward -n {{ .Release.Namespace }} svc/grafana 3000:80
+{{- end }}
 
 Log in at http://localhost:3000 as `admin`. The password is in the `grafana` secret:
 

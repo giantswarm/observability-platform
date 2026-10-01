@@ -1,0 +1,16 @@
+global:
+  domain: localhost
+observabilityPlatformApi:
+  enabled: true
+observability-platform-api:
+  auth:
+    jwt:
+      providers:
+        - name: dev
+          issuer: http://jwks.jwt-issuer.svc.cluster.local
+          remoteJWKS:
+            uri: http://jwks.jwt-issuer.svc.cluster.local/jwks.json
+          extractFrom:
+            headers:
+              - name: Authorization
+                valuePrefix: "Bearer "

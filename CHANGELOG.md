@@ -14,9 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add the Observability Platform API wiring for Loki and Mimir
+- Add `make local-up`, `make local-token` and `make local-down`. They run the chart and the external API on kind.
+- Add kind port mappings to the local setup. Grafana is served at `localhost:3000` and the external API at `observability.localhost:8080`, without port-forwarding.
 - Add support for deploying the stack locally, with Azurite managing object storage  
 - Document logging in to Grafana in `doc/LOCAL_DEV.md`.
 - Print the Grafana port-forward and login in the `helm install` output, and flag the missing datasources when the operator is disabled.
+- Print the Grafana NodePort in place of the port-forward when Grafana runs as a NodePort Service, as on the local profile.
 - Add `doc/OBJECT_STORAGE.md`, walking through provisioning the Azure Blob Storage account, containers and credentials secret that Mimir and Loki need.
 - Add `doc/EKS_CLUSTER.md`, walking through creating the AWS EKS cluster the platform runs on with `eksctl` — node sizing, the `gp3` default StorageClass the CSI driver needs, metrics-server, measured resource usage and teardown.
 - Add Artifact Hub metadata (`artifacthub.io/license`, `artifacthub.io/links`) in the chart template ([roadmap#3940](https://github.com/giantswarm/roadmap/issues/3940)).

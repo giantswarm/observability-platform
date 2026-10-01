@@ -101,6 +101,13 @@ mimir:
             replication_factor: 1
             zone_awareness_enabled: false
 
+# NodePort 30000. The kind config in doc/LOCAL_DEV.md maps it to localhost:3000.
+grafana:
+  grafana:
+    service:
+      type: NodePort
+      nodePort: 30000
+
 # Azurite as the blob backend. Computes `accountName` and `connectionString`. Setting
 # either by hand on top of this profile fails the render.
 localBlobStorage:
