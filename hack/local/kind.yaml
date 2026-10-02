@@ -1,0 +1,10 @@
+# kind cluster for the local setup.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      # Envoy Gateway: Grafana and the external API.
+      - containerPort: 30080
+        hostPort: 8080
+        listenAddress: 127.0.0.1

@@ -1,0 +1,38 @@
+# JWKS server for the local setup. The external API checks tokens against it.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jwks
+  namespace: jwt-issuer
+spec:
+  selector:
+    matchLabels:
+      app: jwks
+  template:
+    metadata:
+      labels:
+        app: jwks
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.29-alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: jwks
+              mountPath: /usr/share/nginx/html
+      volumes:
+        - name: jwks
+          configMap:
+            name: jwks
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jwks
+  namespace: jwt-issuer
+spec:
+  selector:
+    app: jwks
+  ports:
+    - port: 80

@@ -9,31 +9,25 @@ Microsoft's Azure Storage emulator, running in the cluster.
 
 ## Prerequisites
 
-- [kind](https://kind.sigs.k8s.io/), `helm`, `kubectl`
+- [kind](https://kind.sigs.k8s.io/), `helm`, `kubectl`, `openssl`, `xxd`, `curl`
 - Around 6 GiB of memory free
+- No kind cluster named `kind`
 - Commands run from the repository root
 
 ## Install
 
 ```bash
-kind create cluster
-kubectl create namespace monitoring
+make local-up
 ```
 
-The namespace must be `monitoring`. The operator's Grafana and datasource URLs name it
-as literals, so any other namespace fails the render.
+`make local-up` creates a kind cluster and installs these components:
 
-```bash
-helm dependency update helm/observability-platform
-
-helm install observability-platform helm/observability-platform \
-  --namespace monitoring \
-  --values helm/observability-platform/values-local.yaml
-```
+- the chart in namespace `monitoring`, with `values-local.yaml`
+- the external API, with Envoy Gateway and a JWKS server. See [EXTERNAL_API.md](./EXTERNAL_API.md).
 
 ## Verify
 
-A `post-install` hook creates the storage containers, so `helm install` returns once it
+A `post-install` hook creates the storage containers, so `make local-up` returns once it
 has finished:
 
 ```bash
@@ -53,13 +47,7 @@ kubectl get pods -n monitoring
 
 Expect 21 Running. Mimir and Loki may restart once or twice while the emulator starts.
 
-Finally, open Grafana:
-
-```bash
-kubectl port-forward -n monitoring svc/grafana 3000:80
-```
-
-Log in at <http://localhost:3000> as `admin`. The chart generates a random password and
+Log in at <http://grafana.localhost:8080> as `admin`. The chart generates a random password and
 stores it in the `grafana` secret:
 
 ```bash
@@ -68,9 +56,22 @@ kubectl get secret grafana -n monitoring -o jsonpath='{.data.admin-password}' | 
 
 Storage lives in an `emptyDir`: restarting the emulator discards the data.
 
+## Send data through the external API
+
+The local setup replaces the OIDC issuer with a static JWKS served in the cluster.
+`make local-token` signs tokens with a local key. Do not use this anywhere real.
+
+```bash
+API=http://observability.localhost:8080
+AUTH=(-H "Authorization: Bearer $(make -s local-token)" -H "X-Scope-OrgID: default")
+```
+
+The requests in [EXTERNAL_API.md](./EXTERNAL_API.md#send-data) then run as written.
+
+The token expires after one hour. Run the `AUTH=` line again for a new one.
+
 ## Teardown
 
 ```bash
-helm uninstall observability-platform -n monitoring
-kind delete cluster
+make local-down
 ```

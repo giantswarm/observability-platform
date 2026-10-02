@@ -1,0 +1,28 @@
+# Chart values for the local setup. They enable the external API. They expose Grafana
+# through Envoy Gateway.
+global:
+  domain: localhost
+observabilityPlatformApi:
+  enabled: true
+observability-platform-api:
+  auth:
+    jwt:
+      providers:
+        - name: dev
+          issuer: http://jwks.jwt-issuer.svc.cluster.local
+          remoteJWKS:
+            uri: http://jwks.jwt-issuer.svc.cluster.local/jwks.json
+          extractFrom:
+            headers:
+              - name: Authorization
+                valuePrefix: "Bearer "
+grafana:
+  grafana:
+    route:
+      main:
+        enabled: true
+        hostnames:
+          - grafana.localhost
+        parentRefs:
+          - name: giantswarm-default
+            namespace: envoy-gateway-system

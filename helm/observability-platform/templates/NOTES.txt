@@ -1,9 +1,16 @@
 {{- if .Values.grafana.enabled }}
+{{- $route := dig "grafana" "route" "main" dict .Values.grafana }}
+{{- if $route.enabled }}
+Grafana is served at host {{ first $route.hostnames }} through the Gateway.
+
+Log in as `admin`. The password is in the `grafana` secret:
+{{- else }}
 Open Grafana:
 
   kubectl port-forward -n {{ .Release.Namespace }} svc/grafana 3000:80
 
 Log in at http://localhost:3000 as `admin`. The password is in the `grafana` secret:
+{{- end }}
 
   kubectl get secret grafana -n {{ .Release.Namespace }} -o jsonpath='{.data.admin-password}' | base64 -d; echo
 {{- if not .Values.observabilityOperator.enabled }}
