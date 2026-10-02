@@ -20,8 +20,7 @@ local-up: ## Create a kind cluster running the chart and the external API.
 	$(HELM) upgrade --install observability-platform helm/observability-platform \
 	  --namespace monitoring --create-namespace \
 	  --values helm/observability-platform/values-local.yaml \
-	  --values $(LOCAL)/values-api.yaml \
-	  --values $(LOCAL)/values-grafana.yaml
+	  --values $(LOCAL)/values.yaml
 
 local-token: ## Print a JWT for the external API, valid for one hour.
 	@$(LOCAL)/jwt.sh token

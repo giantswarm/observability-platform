@@ -1,7 +1,5 @@
-# External API values for the local setup. `make local-up` passes them to the chart.
-#
-# The API is served at observability.localhost. Tokens come from jwt.sh, checked against
-# the JWKS server in jwks.yaml.
+# Chart values for the local setup. They enable the external API. They expose Grafana
+# through Envoy Gateway.
 global:
   domain: localhost
 observabilityPlatformApi:
@@ -18,3 +16,13 @@ observability-platform-api:
             headers:
               - name: Authorization
                 valuePrefix: "Bearer "
+grafana:
+  grafana:
+    route:
+      main:
+        enabled: true
+        hostnames:
+          - grafana.localhost
+        parentRefs:
+          - name: giantswarm-default
+            namespace: envoy-gateway-system
