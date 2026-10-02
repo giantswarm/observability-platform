@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Local JWT issuer for the external API. Do not use this anywhere real.
+# Local JWT issuer for the external API. `make local-up` and `make local-token` run it.
+# Do not use this anywhere real.
 #
 #   jwt.sh jwks    writes the signing key and its JWKS, once
 #   jwt.sh token   prints a token valid for one hour

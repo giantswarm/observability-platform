@@ -1,4 +1,6 @@
-# Grafana behind Envoy Gateway at grafana.localhost.
+# Grafana values for the local setup. `make local-up` passes them to the chart.
+#
+# The HTTPRoute attaches Grafana to the Gateway in envoy-gateway.yaml at grafana.localhost.
 grafana:
   grafana:
     route:

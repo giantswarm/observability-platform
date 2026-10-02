@@ -1,3 +1,7 @@
+# External API values for the local setup. `make local-up` passes them to the chart.
+#
+# The API is served at observability.localhost. Tokens come from jwt.sh, checked against
+# the JWKS server in jwks.yaml.
 global:
   domain: localhost
 observabilityPlatformApi:

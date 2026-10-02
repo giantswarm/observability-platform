@@ -1,3 +1,7 @@
+# Envoy Gateway for the local setup. `make local-up` applies it.
+#
+# The `giantswarm-default` Gateway serves Grafana and the external API. Envoy listens on
+# NodePort 30080. kind.yaml maps it to localhost:8080.
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
