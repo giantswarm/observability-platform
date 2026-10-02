@@ -90,4 +90,6 @@ Not following these limitations will most likely result in a broken deployment.
   storage account — see [doc/LOCAL_DEV.md](doc/LOCAL_DEV.md).
 - One sizing profile, tuned for a small cluster. There is no answer yet for real ingest volume.
 - Exposing Grafana is the customer's responsibility — the chart creates no ingress and no TLS.
+- The external API serves plain HTTP only. It needs Envoy Gateway, a Gateway and an OIDC
+  issuer installed beforehand — see [doc/EXTERNAL_API.md](doc/EXTERNAL_API.md).
 - Turning Mimir or Loki off leaves Grafana with a datasource pointing at nothing.
