@@ -11,7 +11,7 @@ Microsoft's Azure Storage emulator, running in the cluster.
 
 - [kind](https://kind.sigs.k8s.io/), `helm`, `kubectl`, `openssl`, `xxd`, `curl`
 - Around 6 GiB of memory free
-- No kind cluster named `kind`
+- No kind cluster named `o11y-platform`
 - Commands run from the repository root
 
 ## Install
@@ -25,8 +25,8 @@ make local-up
 - the chart in namespace `monitoring`, with `values-local.yaml`
 - the external API, with Envoy Gateway and a JWKS server. See [EXTERNAL_API.md](./EXTERNAL_API.md).
 
-The kind config exposes Grafana at `localhost:3000` and the external API at
-`observability.localhost:8080`.
+Envoy Gateway serves Grafana at `grafana.localhost:8080` and the external API at
+`observability.localhost:8080`. `*.localhost` resolves to the loopback address.
 
 ## Verify
 
@@ -50,7 +50,7 @@ kubectl get pods -n monitoring
 
 Expect 21 Running. Mimir and Loki may restart once or twice while the emulator starts.
 
-Log in at <http://localhost:3000> as `admin`. The chart generates a random password and
+Log in at <http://grafana.localhost:8080> as `admin`. The chart generates a random password and
 stores it in the `grafana` secret:
 
 ```bash
@@ -63,9 +63,6 @@ Storage lives in an `emptyDir`: restarting the emulator discards the data.
 
 The local setup replaces the OIDC issuer with a static JWKS served in the cluster.
 `make local-token` signs tokens with a local key. Do not use this anywhere real.
-
-The API is served at `observability.localhost:8080`. `observability.localhost` resolves to
-the loopback address.
 
 ```bash
 API=http://observability.localhost:8080

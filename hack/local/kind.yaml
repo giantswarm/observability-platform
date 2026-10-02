@@ -1,13 +1,10 @@
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
+name: o11y-platform
 nodes:
   - role: control-plane
     extraPortMappings:
-      # Envoy Gateway: the external API. See doc/EXTERNAL_API.md.
+      # Envoy Gateway: Grafana and the external API.
       - containerPort: 30080
         hostPort: 8080
-        listenAddress: 127.0.0.1
-      # Grafana.
-      - containerPort: 30000
-        hostPort: 3000
         listenAddress: 127.0.0.1

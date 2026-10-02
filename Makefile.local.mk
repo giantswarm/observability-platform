@@ -1,8 +1,8 @@
 ##@ Local
 
 LOCAL := hack/local
-KUBECTL := kubectl --context kind-kind
-HELM := helm --kube-context kind-kind
+KUBECTL := kubectl --context kind-o11y-platform
+HELM := helm --kube-context kind-o11y-platform
 
 .PHONY: local-up local-token local-down
 
@@ -20,11 +20,12 @@ local-up: ## Create a kind cluster running the chart and the external API.
 	$(HELM) upgrade --install observability-platform helm/observability-platform \
 	  --namespace monitoring --create-namespace \
 	  --values helm/observability-platform/values-local.yaml \
-	  --values $(LOCAL)/values-api.yaml
+	  --values $(LOCAL)/values-api.yaml \
+	  --values $(LOCAL)/values-grafana.yaml
 
 local-token: ## Print a JWT for the external API, valid for one hour.
 	@$(LOCAL)/jwt.sh token
 
 local-down: ## Delete the kind cluster and the signing key.
-	kind delete cluster
+	kind delete cluster --name o11y-platform
 	rm -rf $(LOCAL)/.keys
