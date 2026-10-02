@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add the Observability Platform API wiring for Loki and Mimir
 - Add `make local-up`, `make local-token` and `make local-down`. They run the chart and the external API on kind.
-- Add a kind port mapping to the local setup. Envoy Gateway serves Grafana at `grafana.localhost:8080` and the external API at `observability.localhost:8080`, without port-forwarding.
+- Add a kind port mapping to the local setup. Envoy Gateway serves Grafana at `grafana.localhost:8080` and the external API at `observability.localhost:8080`.
 - Add support for deploying the stack locally, with Azurite managing object storage  
 - Document logging in to Grafana in `doc/LOCAL_DEV.md`.
 - Print the Grafana port-forward and login in the `helm install` output, and flag the missing datasources when the operator is disabled.

@@ -1,8 +1,8 @@
 ##@ Local
 
 LOCAL := hack/local
-KUBECTL := kubectl --context kind-o11y-platform
-HELM := helm --kube-context kind-o11y-platform
+KUBECTL := kubectl --context kind-kind
+HELM := helm --kube-context kind-kind
 
 .PHONY: local-up local-token local-down
 
@@ -27,5 +27,5 @@ local-token: ## Print a JWT for the external API, valid for one hour.
 	@$(LOCAL)/jwt.sh token
 
 local-down: ## Delete the kind cluster and the signing key.
-	kind delete cluster --name o11y-platform
+	kind delete cluster
 	rm -rf $(LOCAL)/.keys

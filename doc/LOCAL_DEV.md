@@ -11,7 +11,7 @@ Microsoft's Azure Storage emulator, running in the cluster.
 
 - [kind](https://kind.sigs.k8s.io/), `helm`, `kubectl`, `openssl`, `xxd`, `curl`
 - Around 6 GiB of memory free
-- No kind cluster named `o11y-platform`
+- No kind cluster named `kind`
 - Commands run from the repository root
 
 ## Install
@@ -24,9 +24,6 @@ make local-up
 
 - the chart in namespace `monitoring`, with `values-local.yaml`
 - the external API, with Envoy Gateway and a JWKS server. See [EXTERNAL_API.md](./EXTERNAL_API.md).
-
-Envoy Gateway serves Grafana at `grafana.localhost:8080` and the external API at
-`observability.localhost:8080`. `*.localhost` resolves to the loopback address.
 
 ## Verify
 
