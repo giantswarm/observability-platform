@@ -1,7 +1,4 @@
-# Static JWKS server for the local setup. `make local-up` applies it.
-#
-# nginx serves the `jwks` ConfigMap at http://jwks.jwt-issuer.svc.cluster.local/jwks.json.
-# `jwt.sh jwks` writes the key set. values-api.yaml points the external API at it.
+# JWKS server for the local setup. The external API checks tokens against it.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
