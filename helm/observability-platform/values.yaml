@@ -69,7 +69,7 @@ localBlobStorage:
     image: mcr.microsoft.com/azure-storage/azurite:3.37.0
   # Job that creates the containers, which Azurite does not create itself.
   init:
-    image: mcr.microsoft.com/azure-cli:2.90.0
+    image: mcr.microsoft.com/azure-cli:2.91.0
 
 # ---------------------------------------------------------------------------
 # Standalone profile for observability-operator.
