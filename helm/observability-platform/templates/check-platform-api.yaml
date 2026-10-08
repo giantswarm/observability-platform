@@ -2,17 +2,37 @@
 Guards for the Observability Platform API. No resource or config is created from
 this template.
 
-Without JWT providers the API chart renders no routes and reports nothing. Without
-`global.domain` its hostnames are invalid. Both fail the render instead.
+The API chart renders no routes without JWT providers, and reports nothing. Its
+hostnames are invalid without `global.domain`. Its route namespaces and backend
+toggles are literals in values.yaml. A literal that disagrees with the release
+namespace or with `loki.enabled` and `mimir.enabled` yields routes to nothing. All of
+these fail the render.
 */}}
 {{- if .Values.observabilityPlatformApi.enabled }}
 {{- $api := index .Values "observability-platform-api" }}
 
 {{- if not .Values.global.domain }}
-{{- fail "observabilityPlatformApi.enabled is true but global.domain is empty. The API is served at observability.<global.domain> - see doc/EXTERNAL_API.md." }}
+{{- fail "observabilityPlatformApi.enabled is true. global.domain is empty. The API is served at observability.<global.domain>. See doc/EXTERNAL_API.md." }}
 {{- end }}
 
+{{- /* TODO: drop after the API chart ships https://github.com/giantswarm/observability-platform-api/pull/104 */}}
 {{- if not $api.auth.jwt.providers }}
-{{- fail "observabilityPlatformApi.enabled is true but observability-platform-api.auth.jwt.providers is empty, so the API chart renders no routes. Add at least one OIDC issuer - see doc/EXTERNAL_API.md." }}
+{{- fail "observabilityPlatformApi.enabled is true. observability-platform-api.auth.jwt.providers is empty. The API chart renders no routes without one. Add at least one OIDC issuer. See doc/EXTERNAL_API.md." }}
+{{- end }}
+
+{{- range $backend := list "loki" "mimir" }}
+{{- $route := index $api $backend }}
+{{- if and $route.enabled (not (index $.Values $backend).enabled) }}
+{{- fail (printf "%s.enabled is false. observability-platform-api.%s.enabled is true. Its routes point at a %s that is not deployed. Set:\n\nobservability-platform-api:\n  %s:\n    enabled: false\n" $backend $backend $backend $backend) }}
+{{- end }}
+{{- if and $route.enabled (ne $route.namespace $.Release.Namespace) }}
+{{- fail (printf "observability-platform-api.%s.namespace is %q. This release installs into namespace %q. Its routes point at services in another namespace. Set:\n\nobservability-platform-api:\n  %s:\n    namespace: %s\n" $backend $route.namespace $.Release.Namespace $backend $.Release.Namespace) }}
+{{- end }}
+{{- end }}
+
+{{- range $apiVersion := list "gateway.networking.k8s.io/v1/HTTPRoute" "gateway.envoyproxy.io/v1alpha1/SecurityPolicy" }}
+{{- if not ($.Capabilities.APIVersions.Has $apiVersion) }}
+{{- fail (printf "observabilityPlatformApi.enabled is true. The cluster serves no %s. Install Envoy Gateway first. See doc/EXTERNAL_API.md." $apiVersion) }}
+{{- end }}
 {{- end }}
 {{- end }}
