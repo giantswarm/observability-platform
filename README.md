@@ -34,6 +34,19 @@ To offer the Giant Swarm Observability Platform as a self-hosted observability s
 Anyone with a Kubernetes cluster and object storage. It does not require a Giant Swarm management
 cluster.
 
+**Known limitations of the observability-operator in this chart**
+
+- The release installs into the `monitoring` namespace while the operator is enabled. The operator
+  rebuilds Grafana organizations and dashboards after a Grafana restart only there, so the render
+  fails in any other namespace.
+- `observability-operator.tracing.enabled` must match `tempo.enabled`. The render fails otherwise.
+- The operator's admission webhooks are disabled, so mistakes in `GrafanaOrganization` resources or
+  dashboard ConfigMaps show up only in the operator's logs and the resources' status.
+- Disabling Loki or Mimir leaves their datasources in Grafana, pointing at nothing.
+- The operator expects a Grafana TLS client-certificate Secret (`grafana-tls` in `monitoring`), which
+  this chart does not provide yet. Until it does, organizations, datasources and dashboards are not
+  reconciled. See [giantswarm/giantswarm#38183](https://github.com/giantswarm/giantswarm/issues/38183).
+
 ## Installing
 
 There are several ways to install this app onto a workload cluster.
