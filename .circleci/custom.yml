@@ -1,0 +1,19 @@
+# Repo-owned CircleCI jobs, deep-merged into the generated workflows.yml.
+jobs:
+  test-render:
+    docker:
+    - image: giantswarm/helm-chart-testing:v3.14.0
+    steps:
+    - checkout
+    - run: helm repo add giantswarm-catalog https://giantswarm.github.io/giantswarm-catalog/
+    - run: helm repo add control-plane-catalog https://giantswarm.github.io/control-plane-catalog/
+    - run: helm dependency build helm/observability-platform
+    - run: hack/test-render.sh
+
+workflows:
+  build:
+    jobs:
+    - test-render:
+        filters:
+          tags:
+            only: /^v.*/

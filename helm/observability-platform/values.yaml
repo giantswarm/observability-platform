@@ -95,6 +95,18 @@ observability-operator:
       # Alertmanager wiring is a separate component, off by default here too.
       alertmanager:
         enabled: false
+      # Agent credentials feed Giant Swarm gateway Secrets; the external API authenticates
+      # writes with JWTs instead, so nothing here would read them.
+      agentCredential:
+        enabled: false
+      logExport:
+        enabled: false
+    # The PodMonitor (needs the Prometheus Operator CRDs) and the Grafana SSO organization
+    # mapping (needs a generic OAuth provider in Grafana) stay at their chart default: off.
+  # -- Provision Tempo datasources and trace links. Must match `tempo.enabled`:
+  # the operator cannot read it, so the two are kept in step by hand.
+  tracing:
+    enabled: false
   # -- Tenant the operator assigns when a resource carries no tenant label.
   # Must match `global.tenant`.
   defaultTenant: default
@@ -109,9 +121,9 @@ observability-operator:
     # We don't support custom clusterIssuer yet, please keep `clusterIssuer` empty.
     clusterIssuer: ""
   grafana:
-    # Deterministic names: this URL and the datasource URLs below must match the
-    # namespace this release installs into (`monitoring` by default). Installing
-    # elsewhere means overriding all of them; the render fails otherwise.
+    # Deterministic names: this URL and the datasource URLs below name services in the
+    # `monitoring` namespace, the only namespace this release installs into while the
+    # operator is enabled. The render fails otherwise.
     url: "http://grafana.monitoring.svc.cluster.local"
     # -- Secret holding the client TLS certificate for Grafana.
     # This is currently not supported, so there is nothing to name here yet.

@@ -9,13 +9,8 @@ global:
     azure:
       accountName: abs-validation
 
-# app-build-suite deploys everything in the default namespace
-observability-operator:
-  grafana:
-    url: http://grafana.default.svc.cluster.local
-    datasources:
-      lokiURL: http://loki-gateway.default.svc
-      mimirURL: http://mimir-gateway.default.svc/prometheus
-      mimirAlertmanagerURL: http://mimir-alertmanager.default.svc:8080
-      mimirCardinalityURL: http://mimir-gateway.default.svc:8080/prometheus/api/v1/cardinality/
-      tempoURL: http://tempo-query-frontend.default.svc:3200
+# app-build-suite deploys everything in the default namespace, and the operator only
+# installs into `monitoring` (the render fails elsewhere). Its rendering is covered by
+# `make test-render` instead.
+observabilityOperator:
+  enabled: false

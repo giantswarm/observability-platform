@@ -4,7 +4,7 @@ LOCAL := hack/local
 KUBECTL := kubectl --context kind-kind
 HELM := helm --kube-context kind-kind
 
-.PHONY: local-up local-token local-down
+.PHONY: local-up local-token local-down test-render
 
 local-up: ## Create a kind cluster running the chart and the external API.
 	kind create cluster --config $(LOCAL)/kind.yaml
@@ -28,3 +28,9 @@ local-token: ## Print a JWT for the external API, valid for one hour.
 local-down: ## Delete the kind cluster and the signing key.
 	kind delete cluster
 	rm -rf $(LOCAL)/.keys
+
+##@ Test
+
+test-render: ## Run the chart render checks (operator guards and Standalone profile).
+	helm dependency build helm/observability-platform
+	hack/test-render.sh

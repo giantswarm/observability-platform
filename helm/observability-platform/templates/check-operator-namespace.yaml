@@ -1,13 +1,13 @@
 {{/*
-Guards for the two observability-operator values this chart has to write as literals.
+Guards for the observability-operator values this chart has to write as literals.
 No resource or config is created from this template.
 
 The operator reaches Grafana, Mimir and Loki over the network, so it needs their
-service URLs - and it reads the tenant to assign. Both are subchart values, which
-Helm will not let this chart compute, so both are literals in values.yaml. A literal
-that silently disagrees with `global.*` or with the release namespace produces an
-operator that comes up healthy and then talks to nothing, so disagreement fails the
-render instead.
+service URLs - and it reads the tenant to assign and whether Tempo runs. These are
+subchart values, which Helm will not let this chart compute, so they are literals in
+values.yaml. A literal that silently disagrees with `global.*`, `tempo.enabled` or the
+release namespace produces an operator that comes up healthy and then talks to
+nothing, so disagreement fails the render instead.
 */}}
 {{- if .Values.observabilityOperator.enabled }}
 {{- $operator := index .Values "observability-operator" }}
@@ -16,8 +16,21 @@ render instead.
 {{- fail (printf "global.tenant is %q but observability-operator.defaultTenant is %q. The operator cannot read global.tenant, so the two are kept in step by hand. Set:\n\nobservability-operator:\n  defaultTenant: %s\n" .Values.global.tenant $operator.defaultTenant .Values.global.tenant) }}
 {{- end }}
 
-{{- $expected := printf "http://grafana.%s.svc.cluster.local" .Release.Namespace }}
+{{- /*
+The operator only notices a recreated Grafana pod in `monitoring`, and that is how it
+rebuilds organizations and dashboards after a Grafana restart. Elsewhere it would come
+up healthy and quietly stop recovering, so the namespace is pinned.
+*/}}
+{{- if ne .Release.Namespace "monitoring" }}
+{{- fail (printf "this release installs into namespace %q, but the observability-operator only works in namespace \"monitoring\": it watches for Grafana restarts there. Install into \"monitoring\", or disable the operator with observabilityOperator.enabled: false.\n" .Release.Namespace) }}
+{{- end }}
+
+{{- $expected := "http://grafana.monitoring.svc.cluster.local" }}
 {{- if ne $operator.grafana.url $expected }}
-{{- fail (printf "the operator's Grafana URL is %q, but this release installs into namespace %q, so that URL and the datasource URLs beside it point at services in another namespace. Either install into the namespace they name, or override them:\n\nobservability-operator:\n  grafana:\n    url: %s\n    adminSecretNamespace: %s\n    datasources:\n      lokiURL: http://loki-gateway.%s.svc\n      mimirURL: http://mimir-gateway.%s.svc/prometheus\n      mimirAlertmanagerURL: http://mimir-alertmanager.%s.svc:8080\n      mimirCardinalityURL: http://mimir-gateway.%s.svc:8080/prometheus/api/v1/cardinality/\n      tempoURL: http://tempo-query-frontend.%s.svc:3200\n" $operator.grafana.url .Release.Namespace $expected .Release.Namespace .Release.Namespace .Release.Namespace .Release.Namespace .Release.Namespace .Release.Namespace) }}
+{{- fail (printf "the operator's Grafana URL is %q, but Grafana is served at %q. Remove the override:\n\nobservability-operator:\n  grafana:\n    url: %s\n" $operator.grafana.url $expected $expected) }}
+{{- end }}
+
+{{- if ne (toString $operator.tracing.enabled) (toString .Values.tempo.enabled) }}
+{{- fail (printf "tempo.enabled is %v but observability-operator.tracing.enabled is %v. The operator cannot read tempo.enabled, so the two are kept in step by hand. Set:\n\nobservability-operator:\n  tracing:\n    enabled: %v\n" .Values.tempo.enabled $operator.tracing.enabled .Values.tempo.enabled) }}
 {{- end }}
 {{- end }}
