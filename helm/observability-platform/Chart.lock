@@ -17,5 +17,5 @@ dependencies:
 - name: tempo
   repository: https://giantswarm.github.io/control-plane-catalog/
   version: 0.18.0
-digest: sha256:796f133e2af999cd1c8ebf24311873bfba2fe151a5847ef61e79a0130bd27656
-generated: "2026-10-08T12:28:03.034875875+02:00"
+digest: sha256:2c4bbd00a18c472feaa518b1f8bc0ddca251207471bc6b33fc7751012b4e60f8
+generated: "2026-10-12T11:08:27.216539126+02:00"
