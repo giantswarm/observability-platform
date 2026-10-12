@@ -101,8 +101,6 @@ observability-operator:
         enabled: false
       logExport:
         enabled: false
-    # The PodMonitor (needs the Prometheus Operator CRDs) and the Grafana SSO organization
-    # mapping (needs a generic OAuth provider in Grafana) stay at their chart default: off.
   # -- Provision Tempo datasources and trace links. Must match `tempo.enabled`:
   # the operator cannot read it, so the two are kept in step by hand.
   tracing:
