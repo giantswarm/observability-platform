@@ -1,0 +1,6 @@
+# Generic Envoy Gateway resources for the local setup. They work on any cluster that
+# provisions a LoadBalancer Service. kind adds a NodePort patch in ../kind.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - gateway.yaml

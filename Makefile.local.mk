@@ -10,7 +10,11 @@ local-up: ## Create a kind cluster running the chart and the external API.
 	kind create cluster --config $(LOCAL)/kind.yaml
 	$(HELM) upgrade --install eg oci://docker.io/envoyproxy/gateway-helm --version 1.9.1 \
 	  --namespace envoy-gateway-system --create-namespace --wait --timeout 10m
-	$(KUBECTL) apply -f $(LOCAL)/envoy-gateway.yaml
+	$(LOCAL)/tls.sh
+	$(KUBECTL) create secret tls local-https-tls -n envoy-gateway-system \
+	  --cert=$(LOCAL)/.keys/tls.crt --key=$(LOCAL)/.keys/tls.key \
+	  --dry-run=client -o yaml | $(KUBECTL) apply -f -
+	$(KUBECTL) apply -k $(LOCAL)/envoy-gateway/kind
 	$(LOCAL)/jwt.sh jwks
 	$(KUBECTL) create namespace jwt-issuer --dry-run=client -o yaml | $(KUBECTL) apply -f -
 	$(KUBECTL) create configmap jwks -n jwt-issuer --from-file=$(LOCAL)/.keys/jwks.json \
@@ -25,6 +29,6 @@ local-up: ## Create a kind cluster running the chart and the external API.
 local-token: ## Print a JWT for the external API, valid for one hour.
 	@$(LOCAL)/jwt.sh token
 
-local-down: ## Delete the kind cluster and the signing key.
+local-down: ## Delete the kind cluster, the signing key and the local CA.
 	kind delete cluster
 	rm -rf $(LOCAL)/.keys

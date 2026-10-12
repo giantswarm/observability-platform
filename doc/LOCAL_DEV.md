@@ -47,12 +47,24 @@ kubectl get pods -n monitoring
 
 Expect 21 Running. Mimir and Loki may restart once or twice while the emulator starts.
 
-Log in at <http://grafana.localhost:8080> as `admin`. The chart generates a random password and
+Log in at <https://grafana.localhost:8443> as `admin`. The chart generates a random password and
 stores it in the `grafana` secret:
 
 ```bash
 kubectl get secret grafana -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d; echo
 ```
+
+`make local-up` generates a throwaway CA and a certificate for `grafana.localhost` and
+`observability.localhost` in `hack/local/.keys/`. Envoy Gateway serves it on the `https`
+listener. Pass the CA to `curl`:
+
+```bash
+curl --cacert hack/local/.keys/ca.crt https://grafana.localhost:8443/api/health
+```
+
+Browsers warn about the certificate until you import `hack/local/.keys/ca.crt` as a trusted
+authority, or accept the warning once. `make local-down` deletes the CA: remove it from the
+browser's trust store then.
 
 Storage lives in an `emptyDir`: restarting the emulator discards the data.
 

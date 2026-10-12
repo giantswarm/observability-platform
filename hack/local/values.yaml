@@ -26,3 +26,4 @@ grafana:
         parentRefs:
           - name: giantswarm-default
             namespace: envoy-gateway-system
+            sectionName: https
