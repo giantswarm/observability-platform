@@ -60,6 +60,37 @@ tempo:
     metaMonitoring:
       serviceMonitor:
         enabled: false
+    # `defaults` reaches Tempo components only. Memcached does not read it.
+    defaults:
+      extraArgs:
+        - -config.expand-env=true
+      extraEnvFrom:
+        - configMapRef:
+            name: observability-platform-object-storage
+        - secretRef:
+            name: observability-platform-object-storage
+            optional: true
+        # The Azurite account key, under `localBlobStorage` only. Last wins.
+        - secretRef:
+            name: azurite-credentials
+            optional: true
+    # Tempo reads `X-Scope-OrgID` only with multitenancy on.
+    multitenancyEnabled: true
+    storage:
+      trace:
+        backend: azure
+        # Tempo reads no connection string.
+        azure:
+          storage_account_name: ${OBS_AZURE_ACCOUNT_NAME}
+          storage_account_key: ${AZURE_STORAGE_KEY}
+          container_name: ${OBS_BUCKET_TEMPO}
+          # A suffix not starting with `blob.` switches Tempo to Azurite path style.
+          endpoint_suffix: ${OBS_AZURE_ENDPOINT_SUFFIX}
+    metricsGenerator:
+      enabled: false
+    # The API reaches the query-frontend and the distributor directly.
+    gateway:
+      enabled: false
   vulture:
     enabled: false
 observabilityPlatformApi:
