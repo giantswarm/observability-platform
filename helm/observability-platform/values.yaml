@@ -78,7 +78,6 @@ tempo:
     storage:
       trace:
         backend: azure
-        # Tempo reads no connection string.
         azure:
           storage_account_name: ${OBS_AZURE_ACCOUNT_NAME}
           storage_account_key: ${AZURE_STORAGE_KEY}
