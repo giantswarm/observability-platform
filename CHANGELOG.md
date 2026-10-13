@@ -13,7 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Enable Tempo by default. It runs multi-tenant and stores traces in Azure Blob.
+- Add the `tempo` Azure Blob container, `OBS_BUCKET_TEMPO` and `OBS_AZURE_ENDPOINT_SUFFIX` for Tempo. Azurite creates the container on kind.
+- Run the observability-operator with only its GrafanaOrganization and Dashboard controllers.
 - Add the Observability Platform API wiring for Loki and Mimir
+- Serve Grafana over HTTPS at `https://grafana.localhost:8443` in the local kind setup.
 - Add `make local-up`, `make local-token` and `make local-down`. They run the chart and the external API on kind.
 - Add a kind port mapping to the local setup. Envoy Gateway serves Grafana at `grafana.localhost:8080` and the external API at `observability.localhost:8080`.
 - Add support for deploying the stack locally, with Azurite managing object storage  
@@ -26,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Update `observability-operator` from 0.72.2 to 0.82.0.
 - Update `observability-platform-api` from 0.4.0 to 0.5.0.
 - Set project description and update header of the README
 - Regenerated `.circleci` config with `devctl gen circleci` — adopt the dynamic-config setup workflow (`config.yml` + `workflows.yml`) and bump the architect orb to v9.5.2.
