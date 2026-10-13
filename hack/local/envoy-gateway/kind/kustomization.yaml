@@ -1,0 +1,19 @@
+# kind overlay: exposes the Envoy Service as NodePorts that kind.yaml maps to the host.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base
+  - envoy-proxy.yaml
+patches:
+  - target:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: giantswarm-default
+    patch: |-
+      - op: add
+        path: /spec/infrastructure
+        value:
+          parametersRef:
+            group: gateway.envoyproxy.io
+            kind: EnvoyProxy
+            name: kind
