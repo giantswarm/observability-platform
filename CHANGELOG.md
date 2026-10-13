@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Run the observability-operator in the Standalone profile with only its GrafanaOrganization and Dashboard controllers: the AgentCredential and LogExport controllers are disabled, and the operator now installs its own CRDs.
+- Run the observability-operator with only its GrafanaOrganization and Dashboard controllers.
 - Fail the render when the operator is enabled and the release namespace is not `monitoring`, or when `observability-operator.tracing.enabled` disagrees with `tempo.enabled`.
 - Add `make test-render` and a CircleCI job running the chart render checks.
 - Add the Observability Platform API wiring for Loki and Mimir
@@ -30,7 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Update `observability-operator` from 0.72.2 to 0.82.0.
-- Enable the observability-operator in the local kind setup. The operator no longer needs the Prometheus Operator CRDs.
 - The app-build-suite validation renders the chart with the operator disabled, since it renders in the `default` namespace.
 - Update `observability-platform-api` from 0.4.0 to 0.5.0.
 - Set project description and update header of the README
