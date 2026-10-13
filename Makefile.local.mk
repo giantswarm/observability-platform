@@ -29,6 +29,6 @@ local-up: ## Create a kind cluster running the chart and the external API.
 local-token: ## Print a JWT for the external API, valid for one hour.
 	@$(LOCAL)/jwt.sh token
 
-local-down: ## Delete the kind cluster, the signing key and the local CA.
+local-down: ## Delete the kind cluster, the signing key and the local certificate.
 	kind delete cluster
 	rm -rf $(LOCAL)/.keys

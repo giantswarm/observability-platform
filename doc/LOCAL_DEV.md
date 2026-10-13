@@ -54,17 +54,12 @@ stores it in the `grafana` secret:
 kubectl get secret grafana -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d; echo
 ```
 
-`make local-up` generates a throwaway CA and a certificate for `grafana.localhost` and
-`observability.localhost` in `hack/local/.keys/`. Envoy Gateway serves it on the `https`
-listener. Pass the CA to `curl`:
+The `https` listener serves a self-signed certificate that `make local-up` generates in
+`hack/local/.keys/`, so browsers show a security warning. For `curl`, pass the certificate:
 
 ```bash
-curl --cacert hack/local/.keys/ca.crt https://grafana.localhost:8443/api/health
+curl --cacert hack/local/.keys/tls.crt https://grafana.localhost:8443/api/health
 ```
-
-Browsers warn about the certificate until you import `hack/local/.keys/ca.crt` as a trusted
-authority, or accept the warning once. `make local-down` deletes the CA: remove it from the
-browser's trust store then.
 
 Storage lives in an `emptyDir`: restarting the emulator discards the data.
 
