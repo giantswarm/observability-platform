@@ -136,6 +136,10 @@ tempo:
         requests:
           cpu: 50m
           memory: 128Mi
+    gateway:
+      autoscaling:
+        enabled: false
+      replicas: 1
     memcached:
       enabled: false
     # The chart passes `cache` through verbatim without memcached. Empty: no cache.
