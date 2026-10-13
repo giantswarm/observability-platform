@@ -60,7 +60,6 @@ tempo:
     metaMonitoring:
       serviceMonitor:
         enabled: false
-    # `defaults` reaches Tempo components only. Memcached does not read it.
     defaults:
       extraArgs:
         - -config.expand-env=true
