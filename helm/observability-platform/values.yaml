@@ -107,7 +107,7 @@ observability-operator:
   # -- Provision Tempo datasources and trace links. Must match `tempo.enabled`:
   # the operator cannot read it, so the two are kept in step by hand.
   tracing:
-    enabled: false
+    enabled: true
   # -- Tenant the operator assigns when a resource carries no tenant label.
   # Must match `global.tenant`.
   defaultTenant: default
