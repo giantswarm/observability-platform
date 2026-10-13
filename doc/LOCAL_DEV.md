@@ -22,7 +22,7 @@ make local-up
 
 `make local-up` creates a kind cluster and installs these components:
 
-- the chart in namespace `monitoring`, with `values-local.yaml`
+- the chart in namespace `monitoring`, with `values-local.yaml`, including the observability-operator
 - the external API, with Envoy Gateway and a JWKS server. See [EXTERNAL_API.md](./EXTERNAL_API.md).
 
 ## Verify
@@ -47,11 +47,18 @@ kubectl get pods -n monitoring
 
 Expect 21 Running. Mimir and Loki may restart once or twice while the emulator starts.
 
-Log in at <http://grafana.localhost:8080> as `admin`. The chart generates a random password and
+Log in at <https://grafana.localhost:8443> as `admin`. The chart generates a random password and
 stores it in the `grafana` secret:
 
 ```bash
 kubectl get secret grafana -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d; echo
+```
+
+The `https` listener serves a self-signed certificate that `make local-up` generates in
+`hack/local/.keys/`, so browsers show a security warning. For `curl`, pass the certificate:
+
+```bash
+curl --cacert hack/local/.keys/tls.crt https://grafana.localhost:8443/api/health
 ```
 
 Storage lives in an `emptyDir`: restarting the emulator discards the data.
