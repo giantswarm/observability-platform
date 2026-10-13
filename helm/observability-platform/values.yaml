@@ -135,7 +135,8 @@ observability-operator:
 
 # ---------------------------------------------------------------------------
 # Default organization: the GrafanaOrganization the chart creates once, at install
-# time, so Grafana gets an organization with datasources for `global.tenant`.
+# time, so Grafana gets an organization whose datasources read the platform's data,
+# that is, the tenant set in `global.tenant`.
 # ---------------------------------------------------------------------------
 defaultOrganization:
   # -- Create the Default organization at install time. Needs the operator.

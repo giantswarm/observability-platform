@@ -1,6 +1,7 @@
 {{- /*
 The observability-operator only provisions Grafana datasources for declared
-GrafanaOrganization resources, so the chart declares one for `global.tenant`.
+GrafanaOrganization resources, so the chart declares one whose datasources read the
+platform's data, that is, the tenant set in `global.tenant`.
 
 It is a post-install hook because its CRD is a template of this same release: a plain
 template would fail the first install. Post-install only, with `hook-failed`, so no

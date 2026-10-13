@@ -45,7 +45,7 @@
     },
     "defaultOrganization": {
       "type": "object",
-      "description": "The GrafanaOrganization created once, at install time, for global.tenant. Owned by the user after install.",
+      "description": "The GrafanaOrganization created once, at install time, whose datasources read the tenant set in global.tenant. Owned by the user after install.",
       "properties": {
         "enabled": { "type": "boolean" },
         "displayName": { "type": "string", "minLength": 1, "not": { "const": "Shared Org" } },
