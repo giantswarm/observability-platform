@@ -37,9 +37,9 @@ cluster.
 **The Default organization**
 
 On install, the chart creates a `GrafanaOrganization` named `default`. The operator turns it into a
-Grafana organization (`defaultOrganization.displayName`, `Default` unless set) with Mimir and Loki
-datasources, plus Tempo when enabled, for `global.tenant`. Dashboard ConfigMaps reach it with the
-annotation `observability.giantswarm.io/organization: <display name>`.
+Grafana organization with Mimir and Lokidatasources, plus Tempo when enabled, for `global.tenant`. 
+Dashboard ConfigMaps reach it with the annotation `observability.giantswarm.io/organization: <display 
+name>`.
 
 After install, the Default organization is yours: changing `defaultOrganization.*` values has no
 effect on it, `helm upgrade` and `helm uninstall` never touch it, and you edit or delete it with
