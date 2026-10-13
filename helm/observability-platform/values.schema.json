@@ -16,11 +16,11 @@
             "existingSecret": {
               "type": "string",
               "const": "observability-platform-object-storage",
-              "description": "Fixed name. The Mimir and Loki values reference this Secret from static values. Create the credentials Secret with this name."
+              "description": "Fixed name. The Mimir, Loki and Tempo values reference this Secret from static values. Create the credentials Secret with this name."
             },
             "azure": {
               "type": "object",
-              "$comment": "accountName is required only when Mimir or Loki is enabled, and conflicts with localBlobStorage.enabled, as connectionString does. Both depend on sibling values, so those checks live in the objectStorage.validate helper instead.",
+              "$comment": "accountName is required only when Mimir, Loki or Tempo is enabled, and conflicts with localBlobStorage.enabled, as connectionString does. Tempo also rejects connectionString outside localBlobStorage. Both depend on sibling values, so those checks live in the objectStorage.validate helper instead.",
               "properties": {
                 "accountName": { "type": "string" },
                 "connectionString": {
