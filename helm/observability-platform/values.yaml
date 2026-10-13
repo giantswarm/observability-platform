@@ -51,7 +51,7 @@ grafana:
 observabilityOperator:
   enabled: true
 tempo:
-  enabled: true
+  enabled: false
   tempo:
     # Pin the service name - see "Deterministic names" under grafana above.
     fullnameOverride: tempo
@@ -107,7 +107,7 @@ observability-operator:
   # -- Provision Tempo datasources and trace links. Must match `tempo.enabled`:
   # the operator cannot read it, so the two are kept in step by hand.
   tracing:
-    enabled: true
+    enabled: false
   # -- Tenant the operator assigns when a resource carries no tenant label.
   # Must match `global.tenant`.
   defaultTenant: default
