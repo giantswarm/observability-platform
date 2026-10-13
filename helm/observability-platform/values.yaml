@@ -34,6 +34,7 @@ global:
       mimirAlertmanager: mimir-alertmanager
       mimirRuler: mimir-ruler
       loki: loki
+      tempo: tempo
 
 # ---------------------------------------------------------------------------
 # Component toggles. Each one drives the matching `condition:` in Chart.yaml.
@@ -50,10 +51,12 @@ grafana:
 observabilityOperator:
   enabled: true
 tempo:
-  enabled: false
+  enabled: true
   tempo:
     # Pin the service name - see "Deterministic names" under grafana above.
     fullnameOverride: tempo
+    minio:
+      enabled: false
     metaMonitoring:
       serviceMonitor:
         enabled: false
