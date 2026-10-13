@@ -10,7 +10,6 @@ global:
       accountName: abs-validation
 
 # app-build-suite deploys everything in the default namespace, and the operator only
-# installs into `monitoring` (the render fails elsewhere). Its rendering is covered by
-# `make test-render` instead.
+# installs into `monitoring` (the render fails elsewhere), so it is disabled here.
 observabilityOperator:
   enabled: false
