@@ -1,0 +1,35 @@
+{{- /*
+The observability-operator only provisions Grafana datasources for declared
+GrafanaOrganization resources, so the chart declares one for `global.tenant`.
+
+It is a post-install hook because its CRD is a template of this same release: a plain
+template would fail the first install. Post-install only, with `hook-failed`, so no
+Helm upgrade or uninstall ever deletes or recreates it: the operator's finalizer would
+delete the Grafana organization and its dashboards with it. After install it belongs
+to the user.
+*/ -}}
+{{- if and .Values.observabilityOperator.enabled .Values.defaultOrganization.enabled }}
+{{- with .Values.defaultOrganization }}
+{{- if eq .displayName "Shared Org" }}
+{{- fail "defaultOrganization.displayName cannot be \"Shared Org\": the observability-operator reserves that name for its cardinality datasources." }}
+{{- end }}
+apiVersion: observability.giantswarm.io/v1alpha2
+kind: GrafanaOrganization
+metadata:
+  name: default
+  labels:
+    {{- include "labels.common" $ | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install
+    helm.sh/hook-delete-policy: hook-failed
+spec:
+  displayName: {{ .displayName | quote }}
+  rbac:
+    admins:
+      {{- toYaml .admins | nindent 6 }}
+  tenants:
+  - name: {{ $.Values.global.tenant | quote }}
+    types:
+    - data
+{{- end }}
+{{- end }}

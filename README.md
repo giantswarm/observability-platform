@@ -34,6 +34,17 @@ To offer the Giant Swarm Observability Platform as a self-hosted observability s
 Anyone with a Kubernetes cluster and object storage. It does not require a Giant Swarm management
 cluster.
 
+**The Default organization**
+
+On install, the chart creates a `GrafanaOrganization` named `default`. The operator turns it into a
+Grafana organization (`defaultOrganization.displayName`, `Default` unless set) with Mimir and Loki
+datasources, plus Tempo when enabled, for `global.tenant`. Dashboard ConfigMaps reach it with the
+annotation `observability.giantswarm.io/organization: <display name>`.
+
+After install, the Default organization is yours: changing `defaultOrganization.*` values has no
+effect on it, `helm upgrade` and `helm uninstall` never touch it, and you edit or delete it with
+`kubectl`. Set `defaultOrganization.enabled: false` to declare all organizations yourself.
+
 **Known limitations of the observability-operator in this chart**
 
 - The release installs into the `monitoring` namespace while the operator is enabled. The operator
