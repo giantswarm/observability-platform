@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The external API routes attach only to the Gateway listener named `https`, so the API is no longer served over plain HTTP. Override their `parentRefs` if your HTTPS listener has another name.
+- The external API routes attach only to the Gateway listener named `https`, so the API is no longer served over plain HTTP.
 - Update `observability-operator` from 0.72.2 to 0.84.0.
 - Update `observability-platform-api` from 0.4.0 to 0.5.0.
 - Set project description and update header of the README
