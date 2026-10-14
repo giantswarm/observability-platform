@@ -1,13 +1,8 @@
 {{- /*
-The observability-operator only provisions Grafana datasources for declared
-GrafanaOrganization resources, so the chart declares one whose datasources read the
-platform's data, that is, the tenant set in `global.tenant`.
-
-It is a post-install hook because its CRD is a template of this same release: a plain
-template would fail the first install. Post-install only, with `hook-failed`, so no
-Helm upgrade or uninstall ever deletes or recreates it: the operator's finalizer would
-delete the Grafana organization and its dashboards with it. After install it belongs
-to the user.
+Declares the platform's default GrafanaOrganization, from which the observability-operator
+creates a Grafana organization and its datasources. It is a post-install hook so that no
+upgrade or uninstall deletes it. See
+https://github.com/giantswarm/observability-operator/blob/main/docs/grafana-organization.md
 */ -}}
 {{- if and .Values.observabilityOperator.enabled .Values.defaultOrganization.enabled }}
 {{- with .Values.defaultOrganization }}
