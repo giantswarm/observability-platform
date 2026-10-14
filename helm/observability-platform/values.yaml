@@ -150,19 +150,40 @@ observability-platform-api:
       providers: []
   # The API chart ships legacy nginx Ingresses in the `loki` and `mimir` namespaces.
   ingresses: []
+  # Every route attaches only to the Gateway listener named `https`, so bearer
+  # tokens and telemetry never travel over a plain HTTP listener on the same
+  # Gateway. If your HTTPS listener has another name, override these
+  # `parentRefs`. See doc/EXTERNAL_API.md.
+  basicAuth:
+    parentRefs:
+      - name: giantswarm-default
+        namespace: envoy-gateway-system
+        sectionName: https
   # Routes live next to the backends. Service names match the pinned
   # `fullnameOverride`s below.
   loki:
     enabled: true
     namespace: monitoring
     hostname: "observability.{{ .Values.global.domain }}"
+    parentRefs:
+      - name: giantswarm-default
+        namespace: envoy-gateway-system
+        sectionName: https
   mimir:
     enabled: true
     namespace: monitoring
     hostname: "observability.{{ .Values.global.domain }}"
+    parentRefs:
+      - name: giantswarm-default
+        namespace: envoy-gateway-system
+        sectionName: https
   # Tempo service names are not pinned yet. The routes would reach nothing.
   tempo:
     enabled: false
+    parentRefs:
+      - name: giantswarm-default
+        namespace: envoy-gateway-system
+        sectionName: https
 
 # ---------------------------------------------------------------------------
 # Object storage delivery.
