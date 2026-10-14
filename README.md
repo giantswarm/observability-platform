@@ -36,7 +36,7 @@ cluster.
 
 **The Default organization**
 
-On install, the chart creates a `GrafanaOrganization` named `default`. The operator turns it into a
+On install, the chart creates a `GrafanaOrganization` named `Shared Org`. The operator turns it into a
 Grafana organization whose Mimir, Loki and Tempo datasources read the platform's
 data, that is, the tenant set in `global.tenant` (`default` unless set). The organization is named
 after `defaultOrganization.displayName`, `Shared Org` unless set, as on Giant Swarm installations.
