@@ -4,8 +4,9 @@
 Observability Platform API. External agents write and read through it. The API chart lives
 at https://github.com/giantswarm/observability-platform-api
 
-The API renders Gateway API routes plus Envoy Gateway filters and SecurityPolicies. It
-serves plain HTTP for now. Loki and Mimir accept HTTP only.
+The API renders Gateway API routes plus Envoy Gateway filters and SecurityPolicies. The chart
+creates no Gateway, no listener and no certificate. You provide the Gateway, and TLS terminates
+at its HTTPS listener. The routes attach only to that listener.
 
 ## What it exposes
 
@@ -32,8 +33,8 @@ See https://github.com/giantswarm/observability-platform-api/pull/101
 The chart does not install these. Install them yourself.
 
 - [Envoy Gateway](https://gateway.envoyproxy.io/). It brings the Gateway API CRDs.
-- A Gateway named `giantswarm-default` in `envoy-gateway-system`. Its listener accepts
-  routes from the release namespace.
+- A Gateway with an HTTPS listener. Its hostname covers `observability.<global.domain>`, or it
+  has none. It accepts routes from the release namespace. See [Serve HTTPS](#serve-https).
 - An OIDC issuer. Envoy fetches its JWKS, so the JWKS URI must be reachable from the
   Envoy pods.
 
@@ -60,6 +61,8 @@ observability-platform-api:
                 valuePrefix: "Bearer "
 ```
 
+You also have to set the routes' `parentRefs` to your Gateway. See the next section.
+
 The render fails if `observabilityPlatformApi.enabled` is set and:
 
 - `global.domain` is empty.
@@ -71,14 +74,123 @@ The render fails if `observabilityPlatformApi.enabled` is set and:
 `helm template` runs without a cluster. Pass the CRDs with
 `--api-versions gateway.networking.k8s.io/v1/HTTPRoute --api-versions gateway.envoyproxy.io/v1alpha1/SecurityPolicy`.
 
+## Point the routes at your Gateway
+
+> [!IMPORTANT]
+> The default `parentRefs` name a Gateway called `giantswarm-default` in the
+> `envoy-gateway-system` namespace, with a listener called `https`. That is the Gateway on
+> Giant Swarm installations and in the [local setup](./LOCAL_DEV.md). On your cluster, set the
+> `parentRefs` of **every** component (`loki`, `mimir`, `tempo` and `basicAuth`) to the name
+> and namespace of your Gateway, and to the name of its HTTPS listener in `sectionName`. If they
+> don't match, the routes are never attached and the API doesn't answer.
+
+Each component has its own `parentRefs`, so each can use a different Gateway. Setting
+`parentRefs` replaces the whole default list, so give every field:
+
+```yaml
+observability-platform-api:
+  loki:
+    parentRefs:
+      - name: my-gateway             # your Gateway's name
+        namespace: my-gateway-ns     # your Gateway's namespace
+        sectionName: https           # your HTTPS listener's name
+  mimir:
+    parentRefs:
+      - name: my-gateway
+        namespace: my-gateway-ns
+        sectionName: https
+  tempo:
+    parentRefs:
+      - name: my-gateway
+        namespace: my-gateway-ns
+        sectionName: https
+  basicAuth:
+    parentRefs:
+      - name: my-gateway
+        namespace: my-gateway-ns
+        sectionName: https
+```
+
+Set them for Tempo and basic auth too, even while those routes are off, so they attach to the
+right place once you turn them on.
+
+Keep `sectionName` on an HTTPS listener. Without it, a route attaches to every listener of the
+Gateway, including a plain HTTP one, and bearer tokens and telemetry travel unencrypted.
+
+### Check that the routes are attached
+
+```bash
+kubectl get httproute,grpcroute -n monitoring \
+  -o custom-columns='ROUTE:.metadata.name,PARENT:.status.parents[*].parentRef.name,LISTENER:.status.parents[*].parentRef.sectionName,ACCEPTED:.status.parents[*].conditions[?(@.type=="Accepted")].status'
+```
+
+Every route should show `ACCEPTED` as `True`. `False` with the reason `NoMatchingParent`
+(`kubectl describe httproute <name> -n monitoring`) means no listener of that Gateway has the
+name in `sectionName`. `NotAllowedByListeners` means the listener doesn't accept routes from
+this namespace.
+
+## Serve HTTPS
+
+A minimal Gateway with an HTTPS listener named `https`:
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: my-gateway
+  namespace: my-gateway-ns
+spec:
+  gatewayClassName: envoy-gateway    # your Envoy Gateway GatewayClass
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: "*.example.com"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: my-gateway-https-tls
+      allowedRoutes:
+        namespaces:
+          from: All
+```
+
+The certificate Secret is a `kubernetes.io/tls` Secret. Put it in the Gateway's namespace. A
+Secret in another namespace also needs a `ReferenceGrant` there that allows the Gateway to read
+it.
+
+### Certificate from cert-manager
+
+cert-manager can issue the certificate from an annotation on the Gateway:
+
+```yaml
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: my-cluster-issuer
+```
+
+It creates the Secret named in the listener's `certificateRefs`. Its Gateway API support is a
+beta feature that is **off by default**: enable it in the cert-manager controller with
+`--enable-gateway-api`, or `gatewayAPI.enabled: true` in the controller configuration. See the
+[cert-manager documentation](https://cert-manager.io/docs/usage/gateway/).
+
+### Certificate from a file
+
+```bash
+kubectl create secret tls my-gateway-https-tls -n my-gateway-ns --cert=tls.crt --key=tls.key
+```
+
 ## Send data
 
 Get a JWT from your OIDC issuer. Set the API address and the request headers:
 
 ```bash
-API=http://observability.<global.domain>
+API=https://observability.<global.domain>
 AUTH=(-H "Authorization: Bearer <JWT>" -H "X-Scope-OrgID: <tenant>")
 ```
+
+In the [local setup](./LOCAL_DEV.md#send-data-through-the-external-api), use its `API` and
+`AUTH` instead. They point at the local certificate and token.
 
 Push a metric through OTLP:
 
@@ -118,10 +230,46 @@ curl -sS -o /dev/null -w '%{http_code}\n' -H "X-Scope-OrgID: <tenant>" \
 401
 ```
 
+For a Prometheus `remote_write` or an OpenTelemetry Collector, use
+`$API/prometheus/api/v1/push` or `$API/otlp/v1/metrics` with the same two headers.
+
+## Read-only basic auth
+
+For clients that can't send a JWT, such as an external Grafana, the API can also expose the
+Mimir and Loki **read** paths with basic auth, on a hostname of their own. Writes and Tempo stay
+JWT-only. Set `observability-platform-api.basicAuth.enabled`, `basicAuth.hostname`, and an
+htpasswd Secret you create yourself. The format is in the
+[API chart's basic auth docs](https://github.com/giantswarm/observability-platform-api/blob/main/docs/basic-auth.md).
+That hostname must also be covered by the listener in `basicAuth.parentRefs`.
+
+## Expose Grafana over HTTPS
+
+The chart doesn't expose Grafana. To serve it on the same Gateway, enable the Grafana chart's
+route and set Grafana's public URL:
+
+```yaml
+grafana:
+  grafana:
+    route:
+      main:
+        enabled: true
+        hostnames:
+          - grafana.example.com
+        parentRefs:
+          - name: my-gateway
+            namespace: my-gateway-ns
+            sectionName: https
+    grafana.ini:
+      server:
+        root_url: https://grafana.example.com
+```
+
+As for the API, the `parentRefs` must name your Gateway, its namespace and its HTTPS listener.
+`root_url` must be the HTTPS address, or Grafana builds redirects and links with the wrong
+scheme.
+
 ## Limitations
 
-- Plain HTTP only. No TLS.
 - A client can send any `X-Scope-OrgID`. Nothing binds the tenant to the token.
 - Tempo is not exposed.
 - Ingest authentication is JWT only.
-
