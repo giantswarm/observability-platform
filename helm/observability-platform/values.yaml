@@ -52,11 +52,6 @@ observabilityOperator:
   enabled: true
 tempo:
   enabled: true
-  # Scoped to Tempo and its vendored tempo-distributed chart. See the note under `mimir`.
-  global:
-    # The gateway's nginx resolver. tempo-app defaults to `coredns`.
-    # Set it to `coredns` on Giant Swarm installations.
-    dnsService: kube-dns
   tempo:
     # Pin the service name - see "Deterministic names" under grafana above.
     fullnameOverride: tempo
@@ -92,6 +87,9 @@ tempo:
           # A suffix not starting with `blob.` switches Tempo to Azurite path style.
           endpoint_suffix: ${OBS_AZURE_ENDPOINT_SUFFIX}
     metricsGenerator:
+      enabled: false
+    # The API reaches the query-frontend and the distributor directly.
+    gateway:
       enabled: false
   vulture:
     enabled: false
