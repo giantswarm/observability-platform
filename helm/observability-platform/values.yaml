@@ -141,9 +141,9 @@ observability-operator:
 defaultOrganization:
   # -- Create the Default organization at install time. Needs the operator.
   enabled: true
-  # -- Grafana organization name. Dashboards target it by this name.
-  # Must not be "Shared Org", which the operator reserves.
-  displayName: Default
+  # -- Grafana organization name. Dashboards target it by this name. "Shared Org" matches
+  # Giant Swarm installations and gets the operator's Mimir cardinality datasource.
+  displayName: Shared Org
   # -- Identity-provider groups granted the Admin role in the organization.
   # Unused while the operator's Grafana SSO organization mapping is off.
   admins:

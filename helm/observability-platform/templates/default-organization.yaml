@@ -11,9 +11,6 @@ to the user.
 */ -}}
 {{- if and .Values.observabilityOperator.enabled .Values.defaultOrganization.enabled }}
 {{- with .Values.defaultOrganization }}
-{{- if eq .displayName "Shared Org" }}
-{{- fail "defaultOrganization.displayName cannot be \"Shared Org\": the observability-operator reserves that name for its cardinality datasources." }}
-{{- end }}
 apiVersion: observability.giantswarm.io/v1alpha2
 kind: GrafanaOrganization
 metadata:
