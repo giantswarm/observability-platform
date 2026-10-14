@@ -24,13 +24,9 @@ Every request needs:
 
 A request missing either one gets a `401`.
 
-The API chart 0.5.0 also renders a Loki GRPCRoute, `loki-write-api-grpc`. It is not part
-of the API. Loki serves no OTLP over gRPC. The next API chart release removes the route.
-See https://github.com/giantswarm/observability-platform-api/pull/101
-
 ## Prerequisites
 
-The chart does not install these. Install them yourself.
+The chart does not install these, but the Makefile does for local kind setups (`make local-up`).
 
 - [Envoy Gateway](https://gateway.envoyproxy.io/). It brings the Gateway API CRDs.
 - A Gateway with an HTTPS listener. Its hostname covers `observability.<global.domain>`, or it
@@ -63,15 +59,7 @@ observability-platform-api:
 
 You also have to set the routes' `parentRefs` to your Gateway. See the next section.
 
-The render fails if `observabilityPlatformApi.enabled` is set and:
-
-- `global.domain` is empty.
-- `auth.jwt.providers` is empty.
-- `loki.enabled` or `mimir.enabled` is false, and its API routes are enabled.
-- The release namespace differs from the API route namespace, `monitoring` by default.
-- The cluster serves no Gateway API or Envoy Gateway CRDs.
-
-`helm template` runs without a cluster. Pass the CRDs with
+To check your values are valid, you can run `helm template` without a cluster. Pass the CRDs with
 `--api-versions gateway.networking.k8s.io/v1/HTTPRoute --api-versions gateway.envoyproxy.io/v1alpha1/SecurityPolicy`.
 
 ## Point the routes at your Gateway
