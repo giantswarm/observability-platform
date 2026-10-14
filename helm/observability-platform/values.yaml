@@ -194,9 +194,10 @@ observability-platform-api:
     enabled: true
     namespace: monitoring
     hostname: "observability.{{ .Values.global.domain }}"
-  # Tempo service names are not pinned yet. The routes would reach nothing.
   tempo:
-    enabled: false
+    enabled: true
+    namespace: monitoring
+    hostname: "observability.{{ .Values.global.domain }}"
 
 # ---------------------------------------------------------------------------
 # Object storage delivery.
