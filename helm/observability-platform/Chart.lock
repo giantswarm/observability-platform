@@ -10,12 +10,12 @@ dependencies:
   version: 0.30.1
 - name: observability-operator
   repository: https://giantswarm.github.io/control-plane-catalog/
-  version: 0.82.0
+  version: 0.84.0
 - name: observability-platform-api
   repository: https://giantswarm.github.io/control-plane-catalog/
   version: 0.5.0
 - name: tempo
   repository: https://giantswarm.github.io/control-plane-catalog/
   version: 0.18.0
-digest: sha256:2c4bbd00a18c472feaa518b1f8bc0ddca251207471bc6b33fc7751012b4e60f8
-generated: "2026-10-12T11:08:27.216539126+02:00"
+digest: sha256:93ec99ac5acd189890273911d0c16aedd7b7b2e6f40e6a9eff0d2b2f0652a338
+generated: "2026-10-13T18:18:36.962462166+02:00"
