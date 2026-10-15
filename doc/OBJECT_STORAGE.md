@@ -23,9 +23,10 @@ several accounts only adds key sets to rotate and endpoints to manage.
 | `mimir-alertmanager` | Mimir `alertmanager_storage` | Alertmanager state and configs     |
 | `mimir-ruler`        | Mimir `ruler_storage`        | Recording and alerting rule groups |
 | `loki`               | Loki chunks, index, ruler, admin | Log data                       |
+| `tempo`              | Tempo `storage.trace`        | Trace blocks                       |
 
-Tempo and Pyroscope are not covered here. When you add them, give each its own
-container in the same account.
+This chart does not deploy Pyroscope yet. Pyroscope will get its own container in the
+same account.
 
 ### Account settings
 
@@ -139,7 +140,7 @@ KEY=$(az storage account keys list \
 ```
 
 ```bash
-for c in mimir-blocks mimir-alertmanager mimir-ruler loki; do
+for c in mimir-blocks mimir-alertmanager mimir-ruler loki tempo; do
   az storage container create \
     --name "$c" \
     --account-name "$ACCOUNT" \
@@ -151,7 +152,7 @@ done
 Each call prints `{"created": true}`. It is idempotent — re-running against an existing
 container returns `created: false` rather than failing.
 
-Verify all four exist and none is public:
+Verify all five exist and none is public:
 
 ```bash
 az storage container list --account-name "$ACCOUNT" --account-key "$KEY" \
@@ -163,7 +164,8 @@ az storage container list --account-name "$ACCOUNT" --account-key "$KEY" \
   { "name": "loki",               "publicAccess": null },
   { "name": "mimir-alertmanager", "publicAccess": null },
   { "name": "mimir-blocks",       "publicAccess": null },
-  { "name": "mimir-ruler",        "publicAccess": null }
+  { "name": "mimir-ruler",        "publicAccess": null },
+  { "name": "tempo",              "publicAccess": null }
 ]
 ```
 
@@ -215,10 +217,13 @@ global:
       mimirAlertmanager: mimir-alertmanager
       mimirRuler: mimir-ruler
       loki: loki
+      tempo: tempo
 ```
 
 `accountName` has one alternative: `global.objectStorage.azure.connectionString` takes a
 full connection string `https://<account>.<suffix>` — see [LOCAL_DEV.md](./LOCAL_DEV.md).
+But Tempo does not support it. So, with `tempo.enabled`, set `accountName` and the
+secret from Step 4. The render fails on `connectionString` outside `localBlobStorage`.
 
 The `buckets` values above are the defaults, so with the container names from this guide
 only `accountName` is actually required. Leave it out and the render fails rather than
