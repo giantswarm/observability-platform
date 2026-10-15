@@ -2,11 +2,11 @@
 Guards for the Observability Platform API. No resource or config is created from
 this template.
 
-The API chart renders no routes without JWT providers, and reports nothing. Its
-hostnames are invalid without `global.domain`. Its route namespaces and backend
-toggles are literals in values.yaml. A literal that disagrees with the release
-namespace or with `loki.enabled` and `mimir.enabled` yields routes to nothing. All of
-these fail the render.
+The API chart requires:
+- JWT providers
+- `global.domain` to be set.
+- the route namespaces and backend toggles to match the release namespace.
+Any of these condition missing will fail the render.
 */}}
 {{- if .Values.observabilityPlatformApi.enabled }}
 {{- $api := index .Values "observability-platform-api" }}
