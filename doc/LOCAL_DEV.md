@@ -68,9 +68,12 @@ Storage lives in an `emptyDir`: restarting the emulator discards the data.
 The local setup replaces the OIDC issuer with a static JWKS served in the cluster.
 `make local-token` signs tokens with a local key. Do not use this anywhere real.
 
+The API answers only on the `https` listener. `AUTH` also passes the self-signed certificate
+to `curl`:
+
 ```bash
-API=http://observability.localhost:8080
-AUTH=(-H "Authorization: Bearer $(make -s local-token)" -H "X-Scope-OrgID: default")
+API=https://observability.localhost:8443
+AUTH=(--cacert hack/local/.keys/tls.crt -H "Authorization: Bearer $(make -s local-token)" -H "X-Scope-OrgID: default")
 ```
 
 The requests in [EXTERNAL_API.md](./EXTERNAL_API.md#send-data) then run as written.
