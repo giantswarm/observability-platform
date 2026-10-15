@@ -99,9 +99,6 @@ observability-platform-api:
         sectionName: https
 ```
 
-Set them for Tempo and basic auth too, even while those routes are off, so they attach to the
-right place once you turn them on.
-
 Keep `sectionName` on an HTTPS listener. Without it, a route attaches to every listener of the
 Gateway, including a plain HTTP one, and bearer tokens and telemetry travel unencrypted.
 
