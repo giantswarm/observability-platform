@@ -271,6 +271,12 @@ loki:
     networkPolicy:
       enabled: false
       flavor: kubernetes
+    memcached:
+      image:
+        repository: giantswarm/memcached
+    memcachedExporter:
+      image:
+        repository: giantswarm/memcached-exporter
     loki:
       # Repeated from loki-app's own values. Overriding a list replaces it.
       schemaConfig:
