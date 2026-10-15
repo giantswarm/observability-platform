@@ -1,7 +1,8 @@
 {{- /*
-Declares the platform's default GrafanaOrganization, from which the observability-operator
-creates a Grafana organization and its datasources. It is a post-install hook so that no
-upgrade or uninstall deletes it. See
+Declares the platform's default GrafanaOrganization. Its display name is Grafana's default
+organization name, so the observability-operator takes over Grafana's org 1 and gives it
+the platform's datasources. It is a post-install hook so that no upgrade or uninstall
+deletes it. See
 https://github.com/giantswarm/observability-operator/blob/main/docs/grafana-organization.md
 */ -}}
 {{- if and .Values.observabilityOperator.enabled .Values.defaultOrganization.enabled }}
@@ -16,7 +17,8 @@ metadata:
     helm.sh/hook: post-install
     helm.sh/hook-delete-policy: hook-failed
 spec:
-  displayName: {{ .displayName | quote }}
+  # Grafana's default organization (org 1). Any other name would create a separate org.
+  displayName: "Main Org."
   rbac:
     admins:
       {{- toYaml .admins | nindent 6 }}

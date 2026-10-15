@@ -36,16 +36,22 @@ cluster.
 
 **The Default organization**
 
-On install, the chart creates a `GrafanaOrganization` named `Shared Org`. The operator turns it into a
-Grafana organization whose Mimir, Loki and Tempo datasources read the platform's
-data, that is, the tenant set in `global.tenant` (`default` unless set). The organization is named
-after `defaultOrganization.displayName`, `Shared Org` unless set, as on Giant Swarm installations.
-Dashboard ConfigMaps reach it with the annotation `observability.giantswarm.io/organization: <display 
-name>`.
+On install, the chart creates a `GrafanaOrganization` named `default` whose display name is
+`Main Org.`, the name of Grafana's default organization. The operator therefore takes over
+Grafana's org 1 and gives it Mimir, Loki and Tempo datasources reading the platform's data, that
+is, the tenant set in `global.tenant` (`default` unless set). Dashboard ConfigMaps reach it with the
+annotation `observability.giantswarm.io/organization: Main Org.`.
 
 After install, the Default organization is yours: changing `defaultOrganization.*` values has no
-effect on it, `helm upgrade` and `helm uninstall` never touch it, and you edit or delete it with
-`kubectl`. Set `defaultOrganization.enabled: false` to declare all organizations yourself.
+effect on it, and `helm upgrade` and `helm uninstall` never touch it. Set
+`defaultOrganization.enabled: false` to declare all organizations yourself.
+
+Do not delete it. The operator would try to delete Grafana's org 1, which Grafana refuses, so the
+resource would stay stuck in deletion. If that happens, remove its finalizer:
+
+```bash
+kubectl patch grafanaorganization default --type=merge -p '{"metadata":{"finalizers":null}}'
+```
 
 **Known limitations of the observability-operator in this chart**
 
