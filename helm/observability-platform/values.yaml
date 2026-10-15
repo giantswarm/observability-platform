@@ -142,11 +142,17 @@ observability-operator:
 #
 # Every request needs a JWT from one of `auth.jwt.providers` and an
 # `X-Scope-OrgID` header naming the tenant.
+#
+# The routes use the release namespace and follow `loki.enabled` and
+# `mimir.enabled`. The values below name both as literals. The render fails when
+# they disagree.
 # ---------------------------------------------------------------------------
 observability-platform-api:
   auth:
     jwt:
       # -- Trusted OIDC issuers. Required when `observabilityPlatformApi.enabled`.
+      # WARNING: nothing binds the tenant to the token. Any valid JWT from these
+      # issuers reads and writes every tenant through `X-Scope-OrgID`.
       providers: []
   # The API chart ships legacy nginx Ingresses in the `loki` and `mimir` namespaces.
   ingresses: []
@@ -177,7 +183,6 @@ observability-platform-api:
       - name: giantswarm-default
         namespace: envoy-gateway-system
         sectionName: https
-  # Tempo service names are not pinned yet. The routes would reach nothing.
   tempo:
     enabled: false
     parentRefs:
