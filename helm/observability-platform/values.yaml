@@ -152,8 +152,7 @@ observability-platform-api:
     jwt:
       # -- Trusted OIDC issuers. Required when `observabilityPlatformApi.enabled`.
       # WARNING: nothing binds the tenant to the token. Any valid JWT from these
-      # issuers reads and writes every tenant through `X-Scope-OrgID`. Trust only
-      # issuers whose every token may access all tenants.
+      # issuers reads and writes every tenant through `X-Scope-OrgID`.
       providers: []
   # The API chart ships legacy nginx Ingresses in the `loki` and `mimir` namespaces.
   ingresses: []
