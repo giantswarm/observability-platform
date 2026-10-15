@@ -62,9 +62,6 @@ kubectl patch grafanaorganization default --type=merge -p '{"metadata":{"finaliz
 - The operator's admission webhooks are disabled, so mistakes in `GrafanaOrganization` resources or
   dashboard ConfigMaps show up only in the operator's logs and the resources' status.
 - Disabling Loki or Mimir leaves their datasources in Grafana, pointing at nothing.
-- The operator expects a Grafana TLS client-certificate Secret (`grafana-tls` in `monitoring`), which
-  this chart does not provide yet. Until it does, organizations, datasources and dashboards are not
-  reconciled. See [giantswarm/giantswarm#38183](https://github.com/giantswarm/giantswarm/issues/38183).
 
 ## Installing
 
