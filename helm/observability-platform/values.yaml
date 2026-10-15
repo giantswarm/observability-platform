@@ -184,7 +184,6 @@ observability-platform-api:
       - name: giantswarm-default
         namespace: envoy-gateway-system
         sectionName: https
-  # Tempo is not exposed yet.
   tempo:
     enabled: false
     parentRefs:
