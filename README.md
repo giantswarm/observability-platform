@@ -34,6 +34,25 @@ To offer the Giant Swarm Observability Platform as a self-hosted observability s
 Anyone with a Kubernetes cluster and object storage. It does not require a Giant Swarm management
 cluster.
 
+**The Default organization**
+
+On install, the chart creates a `GrafanaOrganization` named `default` whose display name is
+`Main Org.`, the name of Grafana's default organization. The operator therefore takes over
+Grafana's org 1 and gives it Mimir, Loki and Tempo datasources reading the platform's data, that
+is, the tenant set in `global.tenant` (`default` unless set). Dashboard ConfigMaps reach it with the
+annotation `observability.giantswarm.io/organization: Main Org.`.
+
+After install, the Default organization is yours: changing `defaultOrganization.*` values has no
+effect on it, and `helm upgrade` and `helm uninstall` never touch it. Set
+`defaultOrganization.enabled: false` to declare all organizations yourself.
+
+Do not delete it. The operator would try to delete Grafana's org 1, which Grafana refuses, so the
+resource would stay stuck in deletion. If that happens, remove its finalizer:
+
+```bash
+kubectl patch grafanaorganization default --type=merge -p '{"metadata":{"finalizers":null}}'
+```
+
 **Known limitations of the observability-operator in this chart**
 
 - The release installs into the `monitoring` namespace while the operator is enabled. The operator
@@ -43,9 +62,6 @@ cluster.
 - The operator's admission webhooks are disabled, so mistakes in `GrafanaOrganization` resources or
   dashboard ConfigMaps show up only in the operator's logs and the resources' status.
 - Disabling Loki or Mimir leaves their datasources in Grafana, pointing at nothing.
-- The operator expects a Grafana TLS client-certificate Secret (`grafana-tls` in `monitoring`), which
-  this chart does not provide yet. Until it does, organizations, datasources and dashboards are not
-  reconciled. See [giantswarm/giantswarm#38183](https://github.com/giantswarm/giantswarm/issues/38183).
 
 ## Installing
 
