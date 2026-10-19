@@ -3,8 +3,7 @@ Guards for the Observability Platform API. No resource or config is created from
 this template.
 
 Without JWT providers the API chart renders no routes and reports nothing. Without
-`global.domain` its hostnames are invalid. Both fail the render instead. So does a
-Tempo route without Tempo.
+`global.domain` its hostnames are invalid. Both fail the render instead.
 */}}
 {{- if .Values.observabilityPlatformApi.enabled }}
 {{- $api := index .Values "observability-platform-api" }}
