@@ -92,9 +92,9 @@ observability-operator:
       # This feature is only available for GiantSwarm management clusters.
       cluster:
         enabled: false
-      # Alertmanager wiring is a separate component, off by default here too.
+      # Loads the Alertmanager config Secrets into Mimir Alertmanager. See doc/ALERTING.md.
       alertmanager:
-        enabled: false
+        enabled: true
       # Agent credentials feed Giant Swarm gateway Secrets; the external API authenticates
       # writes with JWTs instead, so nothing here would read them.
       agentCredential:
@@ -109,6 +109,8 @@ observability-operator:
   # Must match `global.tenant`.
   defaultTenant: default
   alerting:
+    # Pin the service name - see "Deterministic names" under grafana below.
+    alertmanagerURL: "http://mimir-alertmanager.monitoring.svc:8080"
     alertmanagerSecret:
       # The Giant Swarm routing config. Customers provide their own.
       enabled: false

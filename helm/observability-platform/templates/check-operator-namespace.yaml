@@ -30,6 +30,11 @@ up healthy and quietly stop recovering, so the namespace is pinned.
 {{- fail (printf "the operator's Grafana URL is %q, but Grafana is served at %q. Remove the override:\n\nobservability-operator:\n  grafana:\n    url: %s\n" $operator.grafana.url $expected $expected) }}
 {{- end }}
 
+{{- $expected = "http://mimir-alertmanager.monitoring.svc:8080" }}
+{{- if ne $operator.alerting.alertmanagerURL $expected }}
+{{- fail (printf "the operator's Alertmanager URL is %q, but Mimir Alertmanager is served at %q. Remove the override:\n\nobservability-operator:\n  alerting:\n    alertmanagerURL: %s\n" $operator.alerting.alertmanagerURL $expected $expected) }}
+{{- end }}
+
 {{- if ne (toString $operator.tracing.enabled) (toString .Values.tempo.enabled) }}
 {{- fail (printf "tempo.enabled is %v but observability-operator.tracing.enabled is %v. The operator cannot read tempo.enabled, so the two are kept in step by hand. Set:\n\nobservability-operator:\n  tracing:\n    enabled: %v\n" .Values.tempo.enabled $operator.tracing.enabled .Values.tempo.enabled) }}
 {{- end }}

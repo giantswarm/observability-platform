@@ -22,7 +22,7 @@ Here, we define the observability-platform chart with its templates and default 
 A self-hosted observability stack packaged as a single umbrella chart: Mimir for metrics, Loki for
 logs, Grafana to look at them, `observability-operator` to manage organizations, datasources and
 dashboards. Mimir Alertmanager routes
-alerts. Tempo and the observability platform API ship with the chart but are disabled by default.
+alerts. See [doc/ALERTING.md](doc/ALERTING.md). Tempo and the observability platform API ship with the chart but are disabled by default.
 
 **Why did we add it?**
 
