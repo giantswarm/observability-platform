@@ -54,7 +54,7 @@ Object storage validation.
 {{- end -}}
 
 {{/*
-Storage account name delivered to Mimir and Loki.
+Storage account name delivered to Mimir, Loki and Tempo.
 */}}
 {{- define "observability-platform.objectStorage.accountName" -}}
 {{- if .Values.localBlobStorage.enabled -}}

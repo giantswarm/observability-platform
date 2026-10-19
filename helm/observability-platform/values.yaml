@@ -51,7 +51,7 @@ grafana:
 observabilityOperator:
   enabled: true
 tempo:
-  enabled: false
+  enabled: true
   tempo:
     # Pin the service name - see "Deterministic names" under grafana above.
     fullnameOverride: tempo
@@ -60,6 +60,37 @@ tempo:
     metaMonitoring:
       serviceMonitor:
         enabled: false
+    defaults:
+      extraArgs:
+        - -config.expand-env=true
+      extraEnvFrom:
+        - configMapRef:
+            name: observability-platform-object-storage
+        - secretRef:
+            name: observability-platform-object-storage
+            optional: true
+        # The Azurite account key, rendered under `localBlobStorage` only. Last wins.
+        # Tempo reads it whenever it exists: a Secret of this name in the release
+        # namespace replaces the real account key.
+        - secretRef:
+            name: azurite-credentials
+            optional: true
+    # Tempo reads `X-Scope-OrgID` only with multitenancy on.
+    multitenancyEnabled: true
+    storage:
+      trace:
+        backend: azure
+        azure:
+          storage_account_name: ${OBS_AZURE_ACCOUNT_NAME}
+          storage_account_key: ${AZURE_STORAGE_KEY}
+          container_name: ${OBS_BUCKET_TEMPO}
+          # A suffix not starting with `blob.` switches Tempo to Azurite path style.
+          endpoint_suffix: ${OBS_AZURE_ENDPOINT_SUFFIX}
+    metricsGenerator:
+      enabled: false
+    # The API reaches the query-frontend and the distributor directly.
+    gateway:
+      enabled: false
   vulture:
     enabled: false
 observabilityPlatformApi:
@@ -107,7 +138,7 @@ observability-operator:
   # -- Provision Tempo datasources and trace links. Must match `tempo.enabled`:
   # the operator cannot read it, so the two are kept in step by hand.
   tracing:
-    enabled: false
+    enabled: true
   # -- Tenant the operator assigns when a resource carries no tenant label.
   # Must match `global.tenant`.
   defaultTenant: default
@@ -196,11 +227,12 @@ observability-platform-api:
 #   1. This chart renders a ConfigMap (fixed name, see templates/objectstorage.yaml)
 #      holding the storage parameters resolved from `global.objectStorage`.
 #   2. That ConfigMap and the credentials Secret are injected as environment
-#      variables into the Mimir and Loki pods. Injection is scoped per component
-#      family, so the credentials reach Mimir and Loki only.
+#      variables into the Mimir, Loki and Tempo pods. Injection is scoped per
+#      component family, so the credentials reach Mimir, Loki and Tempo only.
 #   3. The values below reference those variables as `${...}`. mimir-distributed and
-#      the upstream Loki chart pass `-config.expand-env=true` to every component,
-#      so the references expand at startup.
+#      the upstream Loki chart pass `-config.expand-env=true` to every component.
+#      Tempo gets it from `tempo.tempo.defaults.extraArgs`. The references expand
+#      at startup.
 #
 # The backend is a literal `azure` everywhere.
 # ---------------------------------------------------------------------------
@@ -311,6 +343,6 @@ loki:
 #
 # `global.domain` reaches the Observability Platform API hostnames only.
 #
-# `global.tenant` rides in the same ConfigMap as `OBS_TENANT`. It reaches Mimir and
-# Loki while one of them is enabled. Nothing consumes it yet.
+# `global.tenant` rides in the same ConfigMap as `OBS_TENANT`. It reaches Mimir, Loki
+# and Tempo while one of them is enabled. Nothing consumes it yet.
 # ---------------------------------------------------------------------------
