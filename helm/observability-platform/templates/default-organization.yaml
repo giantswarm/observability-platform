@@ -26,5 +26,6 @@ spec:
   - name: {{ $.Values.global.tenant | quote }}
     types:
     - data
+    - alerting
 {{- end }}
 {{- end }}

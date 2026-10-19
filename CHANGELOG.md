@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Enable Mimir Alertmanager. The Mimir ruler sends alerts to it.
+- Give the default organization a Mimir Alertmanager datasource.
 - Give Grafana's default organization the platform's datasources at install time.
 - Run the observability-operator with only its GrafanaOrganization and Dashboard controllers.
 - Add the Observability Platform API wiring for Loki and Mimir
