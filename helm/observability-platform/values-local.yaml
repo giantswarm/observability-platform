@@ -103,6 +103,17 @@ mimir:
 
 tempo:
   tempo:
+    # Repeated from values.yaml. Overriding a list replaces it. The Azurite account
+    # key comes last and wins.
+    defaults:
+      extraEnvFrom:
+        - configMapRef:
+            name: observability-platform-object-storage
+        - secretRef:
+            name: observability-platform-object-storage
+            optional: true
+        - secretRef:
+            name: azurite-credentials
     # One replica each, with replication_factor to match. `affinity: ""` drops the
     # control-plane exclusion: the kind node is a control-plane node.
     distributor:

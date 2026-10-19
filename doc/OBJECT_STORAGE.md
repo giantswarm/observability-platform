@@ -25,8 +25,8 @@ several accounts only adds key sets to rotate and endpoints to manage.
 | `loki`               | Loki chunks, index, ruler, admin | Log data                       |
 | `tempo`              | Tempo `storage.trace`        | Trace blocks                       |
 
-Pyroscope is not covered here. When you add it, give it its own container in the same
-account.
+This chart does not deploy Pyroscope yet. Pyroscope will get its own container in the
+same account.
 
 ### Account settings
 
@@ -222,7 +222,7 @@ global:
 
 `accountName` has one alternative: `global.objectStorage.azure.connectionString` takes a
 full connection string `https://<account>.<suffix>` — see [LOCAL_DEV.md](./LOCAL_DEV.md).
-Tempo reads no connection string. With `tempo.enabled`, set `accountName` and the
+But Tempo does not support it. So, with `tempo.enabled`, set `accountName` and the
 secret from Step 4. The render fails on `connectionString` outside `localBlobStorage`.
 
 The `buckets` values above are the defaults, so with the container names from this guide
