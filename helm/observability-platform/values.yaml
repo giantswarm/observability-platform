@@ -194,7 +194,7 @@ observability-platform-api:
         namespace: envoy-gateway-system
         sectionName: https
   # Routes live next to the backends. Service names match the pinned
-  # `fullnameOverride`s below.
+  # `fullnameOverride`s of each backend.
   loki:
     enabled: true
     namespace: monitoring

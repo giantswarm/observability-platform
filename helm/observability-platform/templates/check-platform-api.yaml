@@ -4,7 +4,7 @@ this template.
 
 Without JWT providers the API chart renders no routes and reports nothing. Without
 `global.domain` its hostnames are invalid. Both fail the render instead. So does a
-Tempo route without Tempo, or Tempo without its route.
+Tempo route without Tempo.
 */}}
 {{- if .Values.observabilityPlatformApi.enabled }}
 {{- $api := index .Values "observability-platform-api" }}
@@ -17,7 +17,7 @@ Tempo route without Tempo, or Tempo without its route.
 {{- fail "observabilityPlatformApi.enabled is true but observability-platform-api.auth.jwt.providers is empty, so the API chart renders no routes. Add at least one OIDC issuer - see doc/EXTERNAL_API.md." }}
 {{- end }}
 
-{{- if ne (toString $api.tempo.enabled) (toString .Values.tempo.enabled) }}
-{{- fail (printf "observability-platform-api.tempo.enabled is %v but tempo.enabled is %v. The API routes Tempo traffic to the tempo-distributor and tempo-query-frontend Services. Set both to the same value." $api.tempo.enabled .Values.tempo.enabled) }}
+{{- if and $api.tempo.enabled (not .Values.tempo.enabled) }}
+{{- fail "observability-platform-api.tempo.enabled is true but tempo.enabled is false. The API routes Tempo traffic to the tempo-distributor and tempo-query-frontend Services. Enable Tempo or disable its API route." }}
 {{- end }}
 {{- end }}
