@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The local kind cluster inherits no DNS search domain from the host. A host search domain no longer slows in-cluster lookups.
 - The `helm.sh/chart` label is valid for long chart versions: the 63-character cut trims the whole trailing run of `-`, `.` and `_`.
 
 ### Added
@@ -30,7 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Update `observability-operator` from 0.72.2 to 0.82.0.
+- The external API routes attach only to the Gateway listener named `https`, so the API is no longer served over plain HTTP.
+- Update `observability-operator` from 0.72.2 to 0.84.0.
 - Update `observability-platform-api` from 0.4.0 to 0.5.0.
 - Set project description and update header of the README
 - Regenerated `.circleci` config with `devctl gen circleci` — adopt the dynamic-config setup workflow (`config.yml` + `workflows.yml`) and bump the architect orb to v9.5.2.
