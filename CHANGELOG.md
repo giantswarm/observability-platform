@@ -13,8 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Enable Mimir Alertmanager. The Mimir ruler sends alerts to it.
-- Give the default organization a Mimir Alertmanager datasource.
+- Enable Mimir Alertmanager.
+- Add alerting to the default GrafanaOrganization.
 - Give Grafana's default organization the platform's datasources at install time.
 - Run the observability-operator with only its GrafanaOrganization and Dashboard controllers.
 - Add the Observability Platform API wiring for Loki and Mimir
@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Stop rendering the observability-operator's Giant Swarm Alertmanager config Secret.
+- Disable Giant Swamr alertmanager config.
 - The external API routes attach only to the Gateway listener named `https`, so the API is no longer served over plain HTTP.
 - Update `observability-operator` from 0.72.2 to 0.84.0.
 - Update `observability-platform-api` from 0.4.0 to 0.5.0.
