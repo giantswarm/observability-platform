@@ -31,12 +31,13 @@
             },
             "buckets": {
               "type": "object",
-              "required": ["mimirBlocks", "mimirAlertmanager", "mimirRuler", "loki"],
+              "required": ["mimirBlocks", "mimirAlertmanager", "mimirRuler", "loki", "tempo"],
               "properties": {
                 "mimirBlocks": { "type": "string", "minLength": 1 },
                 "mimirAlertmanager": { "type": "string", "minLength": 1 },
                 "mimirRuler": { "type": "string", "minLength": 1 },
-                "loki": { "type": "string", "minLength": 1 }
+                "loki": { "type": "string", "minLength": 1 },
+                "tempo": { "type": "string", "minLength": 1 }
               }
             }
           }
