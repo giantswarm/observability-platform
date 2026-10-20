@@ -194,7 +194,7 @@ observability-platform-api:
         namespace: envoy-gateway-system
         sectionName: https
   # Routes live next to the backends. Service names match the pinned
-  # `fullnameOverride`s below.
+  # `fullnameOverride`s of each backend.
   loki:
     enabled: true
     namespace: monitoring
@@ -211,9 +211,10 @@ observability-platform-api:
       - name: giantswarm-default
         namespace: envoy-gateway-system
         sectionName: https
-  # Tempo service names are not pinned yet. The routes would reach nothing.
   tempo:
-    enabled: false
+    enabled: true
+    namespace: monitoring
+    hostname: "observability.{{ .Values.global.domain }}"
     parentRefs:
       - name: giantswarm-default
         namespace: envoy-gateway-system
