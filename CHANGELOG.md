@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Install the observability-operator as its own release, before this chart, with `values/observability-operator.yaml`, so its CRDs exist before this chart's resources.
+- Install the observability-operator as its own release, before this chart, with `values/observability-operator.yaml`.
 
 ### Added
 
