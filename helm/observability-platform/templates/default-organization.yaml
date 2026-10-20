@@ -23,5 +23,8 @@ spec:
   - name: {{ $.Values.global.tenant | quote }}
     types:
     - data
+    {{- if and $.Values.mimir.enabled $.Values.mimir.mimir.alertmanager.enabled }}
+    - alerting
+    {{- end }}
 {{- end }}
 {{- end }}

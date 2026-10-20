@@ -142,6 +142,10 @@ observability-operator:
   # -- Tenant the operator assigns when a resource carries no tenant label.
   # Must match `global.tenant`.
   defaultTenant: default
+  alerting:
+    alertmanagerSecret:
+      # Disable Giant Swarm alertmanager config.
+      enabled: false
   # The "managementCluster" section is specific to Giant Swarm management clusters.
   # Please don't change anything here except "name".
   managementCluster:
@@ -268,6 +272,8 @@ mimir:
   mimir:
     # Pin the service name - see "Deterministic names" under grafana above.
     fullnameOverride: mimir
+    alertmanager:
+      enabled: true
     ingester:
       verticalAutoscaling:
         enabled: false
