@@ -38,17 +38,23 @@ The chart does not install these, but the Makefile does for local kind setups (`
 
 ### Allow JWKS egress
 
-The Envoy proxy pods fetch the JWKS URI over HTTPS and refresh it in the background. They run
-in the Envoy Gateway namespace, `envoy-gateway-system` by default. Without the JWKS, every
-request gets a `401`.
+The Envoy proxy pods fetch the JWKS URI over HTTPS and refresh it every 5 minutes. They run
+in the Envoy Gateway namespace, `envoy-gateway-system` by default. They keep the last JWKS when
+a refresh fails. A proxy pod without a JWKS answers every request with a `401`. This affects new
+pods, restarted pods and issuer key rotations.
 
-If a NetworkPolicy restricts egress there, allow DNS and TCP 443 from the proxy pods:
+If a NetworkPolicy restricts egress there, allow the proxy pods to reach:
+
+- DNS
+- the JWKS URI, on TCP 443
+- the Envoy Gateway controller, on TCP 18000 for xDS
+- the backends, in the `monitoring` namespace
 
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: envoy-jwks-egress
+  name: envoy-proxy-egress
   namespace: envoy-gateway-system
 spec:
   podSelector:
@@ -58,15 +64,33 @@ spec:
   policyTypes:
     - Egress
   egress:
+    # DNS
     - ports:
         - protocol: UDP
           port: 53
         - protocol: TCP
           port: 53
+    # JWKS
     - ports:
         - protocol: TCP
           port: 443
+    # xDS from the Envoy Gateway controller
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: gateway-helm
+      ports:
+        - protocol: TCP
+          port: 18000
+    # Backends
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
 ```
+
+This policy covers the proxy pods only. The Envoy Gateway controller also needs egress to the
+Kubernetes API server.
 
 A NetworkPolicy selects IP ranges, not host names. To allow only the JWKS host, use a policy
 with FQDN rules, such as a CiliumNetworkPolicy with `toFQDNs`. An egress proxy or firewall
@@ -77,7 +101,7 @@ Check that a proxy pod reaches the JWKS URI:
 ```bash
 kubectl -n envoy-gateway-system debug -q -i --image=curlimages/curl:8.16.0 \
   "$(kubectl -n envoy-gateway-system get pod -l app.kubernetes.io/component=proxy -o name | head -1)" \
-  -- curl -sS -o /dev/null -w '%{http_code}\n' https://issuer.example.com/keys
+  -- sh -c "sleep 2; curl -sS -o /dev/null -w '%{http_code}\n' https://issuer.example.com/keys"
 ```
 
 ```
