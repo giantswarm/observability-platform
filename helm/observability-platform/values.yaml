@@ -60,6 +60,12 @@ tempo:
     metaMonitoring:
       serviceMonitor:
         enabled: false
+      # Mimir already installs the grafana-agent-operator under the same names.
+      grafanaAgent:
+        installOperator: false
+    # Its webhooks fail closed on StatefulSet updates and pod evictions in the namespace.
+    rollout_operator:
+      enabled: false
     defaults:
       extraArgs:
         - -config.expand-env=true
@@ -68,12 +74,6 @@ tempo:
             name: observability-platform-object-storage
         - secretRef:
             name: observability-platform-object-storage
-            optional: true
-        # The Azurite account key, rendered under `localBlobStorage` only. Last wins.
-        # Tempo reads it whenever it exists: a Secret of this name in the release
-        # namespace replaces the real account key.
-        - secretRef:
-            name: azurite-credentials
             optional: true
     # Tempo reads `X-Scope-OrgID` only with multitenancy on.
     multitenancyEnabled: true
@@ -194,7 +194,7 @@ observability-platform-api:
         namespace: envoy-gateway-system
         sectionName: https
   # Routes live next to the backends. Service names match the pinned
-  # `fullnameOverride`s below.
+  # `fullnameOverride`s of each backend.
   loki:
     enabled: true
     namespace: monitoring
@@ -211,9 +211,10 @@ observability-platform-api:
       - name: giantswarm-default
         namespace: envoy-gateway-system
         sectionName: https
-  # Tempo service names are not pinned yet. The routes would reach nothing.
   tempo:
-    enabled: false
+    enabled: true
+    namespace: monitoring
+    hostname: "observability.{{ .Values.global.domain }}"
     parentRefs:
       - name: giantswarm-default
         namespace: envoy-gateway-system
