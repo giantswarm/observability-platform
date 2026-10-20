@@ -177,10 +177,8 @@ observability-operator:
 # data, that is, the tenant set in `global.tenant`.
 # ---------------------------------------------------------------------------
 defaultOrganization:
-  # -- Create the Default organization. Needs the observability-operator release.
+  # -- Create the Default organization. Needs the observability-operator to be enabled.
   enabled: true
-  # -- Identity-provider groups granted the Admin role in the organization.
-  # Unused while the operator's Grafana SSO organization mapping is off.
   admins:
   - admins
 
