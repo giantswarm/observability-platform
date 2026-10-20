@@ -102,6 +102,7 @@ The cluster needs outbound HTTPS (port 443) to these endpoints:
 | Object storage | Mimir, Loki and Tempo data | `<account>.blob.core.windows.net` |
 | `gsoci.azurecr.io` | Container images | `gsoci.azurecr.io`, `*.blob.core.windows.net` |
 | `docker.io` | Container images | `registry-1.docker.io`, `auth.docker.io`, `production.cloudflare.docker.com` |
+| OIDC issuer | JWKS fetch by the Envoy proxy pods, with the external API | The host of the JWKS URI |
 
 The machine that runs `helm install` needs outbound HTTPS to the Giant Swarm Helm catalogs:
 
