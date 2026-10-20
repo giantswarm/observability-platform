@@ -168,12 +168,13 @@ observability-operator:
       tempoURL: "http://tempo-query-frontend.monitoring.svc:3200"
 
 # ---------------------------------------------------------------------------
-# Default organization: the GrafanaOrganization the chart creates once, at install
-# time. It takes over Grafana's default organization ("Main Org.", org 1) and gives it
-# datasources that read the platform's data, that is, the tenant set in `global.tenant`.
+# Default organization: a GrafanaOrganization that takes over Grafana's default
+# organization ("Main Org.", org 1) and gives it datasources that read the platform's
+# data, that is, the tenant set in `global.tenant`. It follows the release: upgrades
+# update it and uninstalling the chart deletes it.
 # ---------------------------------------------------------------------------
 defaultOrganization:
-  # -- Create the Default organization at install time. Needs the operator.
+  # -- Create the Default organization. Needs the observability-operator release.
   enabled: true
   # -- Identity-provider groups granted the Admin role in the organization.
   # Unused while the operator's Grafana SSO organization mapping is off.

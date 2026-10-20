@@ -1,11 +1,11 @@
 {{- /*
 Declares the platform's default GrafanaOrganization. Its display name is Grafana's default
 organization name, so the observability-operator takes over Grafana's org 1 and gives it
-the platform's datasources. It is a post-install hook so that no upgrade or uninstall
-deletes it. See
+the platform's datasources. The operator and its CRDs are installed as a separate release
+beforehand. See
 https://github.com/giantswarm/observability-operator/blob/main/docs/grafana-organization.md
 */ -}}
-{{- if and .Values.observabilityOperator.enabled .Values.defaultOrganization.enabled }}
+{{- if .Values.defaultOrganization.enabled }}
 {{- with .Values.defaultOrganization }}
 apiVersion: observability.giantswarm.io/v1alpha2
 kind: GrafanaOrganization
@@ -13,9 +13,6 @@ metadata:
   name: default
   labels:
     {{- include "labels.common" $ | nindent 4 }}
-  annotations:
-    helm.sh/hook: post-install
-    helm.sh/hook-delete-policy: hook-failed
 spec:
   # Grafana's default organization (org 1). Any other name would create a separate org.
   displayName: "Main Org."
