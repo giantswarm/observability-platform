@@ -9,12 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The local kind cluster inherits no DNS search domain from the host. A host search domain no longer slows in-cluster lookups.
 - The `helm.sh/chart` label is valid for long chart versions: the 63-character cut trims the whole trailing run of `-`, `.` and `_`.
 
 ### Added
 
+- Enable Tempo by default. It runs multi-tenant and stores traces in Azure Blob.
+- Add the `tempo` Azure Blob container configuration.
 - Run the observability-operator with only its GrafanaOrganization and Dashboard controllers.
 - Add the Observability Platform API wiring for Loki and Mimir
+- Route Tempo traffic through the Observability Platform API.
 - Serve Grafana over HTTPS at `https://grafana.localhost:8443` in the local kind setup.
 - Add `doc/EXTERNAL_API.md`, walking through values and requests.
 - Add `make local-up`, `make local-token` and `make local-down`. They run the chart and the external API on kind.

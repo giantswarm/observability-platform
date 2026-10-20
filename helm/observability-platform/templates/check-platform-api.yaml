@@ -15,7 +15,6 @@ Any of these condition missing will fail the render.
 {{- fail "observabilityPlatformApi.enabled is true but global.domain is empty. The API is served at observability.<global.domain> - see doc/EXTERNAL_API.md." }}
 {{- end }}
 
-{{- /* TODO: drop after the API chart ships https://github.com/giantswarm/observability-platform-api/pull/104 */}}
 {{- if not $api.auth.jwt.providers }}
 {{- fail "observabilityPlatformApi.enabled is true but observability-platform-api.auth.jwt.providers is empty, so the API chart renders no routes. Add at least one OIDC issuer - see doc/EXTERNAL_API.md." }}
 {{- end }}

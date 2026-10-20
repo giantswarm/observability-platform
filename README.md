@@ -40,6 +40,7 @@ cluster.
   rebuilds Grafana organizations and dashboards after a Grafana restart only there, so the render
   fails in any other namespace.
 - `observability-operator.tracing.enabled` must match `tempo.enabled`. The render fails otherwise.
+- `observability-platform-api.tempo.enabled` requires `tempo.enabled` while the API is enabled. The render fails otherwise.
 - The operator's admission webhooks are disabled, so mistakes in `GrafanaOrganization` resources or
   dashboard ConfigMaps show up only in the operator's logs and the resources' status.
 - Disabling Loki or Mimir leaves their datasources in Grafana, pointing at nothing.

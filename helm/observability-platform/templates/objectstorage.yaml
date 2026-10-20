@@ -1,10 +1,10 @@
-{{- if or .Values.mimir.enabled .Values.loki.enabled }}
+{{- if or .Values.mimir.enabled .Values.loki.enabled .Values.tempo.enabled }}
 {{- include "observability-platform.objectStorage.validate" . }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  # Fixed name. The Mimir and Loki values reference it from static values. Keep in
-  # step with `extraEnvFrom` in values.yaml.
+  # Fixed name. The Mimir, Loki and Tempo values reference it from static values.
+  # Keep in step with `extraEnvFrom` in values.yaml.
   name: observability-platform-object-storage
   namespace: {{ .Release.Namespace }}
   labels:
@@ -17,4 +17,6 @@ data:
   OBS_BUCKET_MIMIR_ALERTMANAGER: {{ .Values.global.objectStorage.buckets.mimirAlertmanager | quote }}
   OBS_BUCKET_MIMIR_RULER: {{ .Values.global.objectStorage.buckets.mimirRuler | quote }}
   OBS_BUCKET_LOKI: {{ .Values.global.objectStorage.buckets.loki | quote }}
+  OBS_BUCKET_TEMPO: {{ .Values.global.objectStorage.buckets.tempo | quote }}
+  OBS_AZURE_ENDPOINT_SUFFIX: {{ include "observability-platform.objectStorage.endpointSuffix" . | quote }}
 {{- end }}
