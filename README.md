@@ -36,22 +36,24 @@ cluster.
 
 **The Default organization**
 
-On install, the chart creates a `GrafanaOrganization` named `default` whose display name is
-`Main Org.`, the name of Grafana's default organization. The operator therefore takes over
-Grafana's org 1 and gives it Mimir, Loki and Tempo datasources reading the platform's data, that
-is, the tenant set in `global.tenant` (`default` unless set). Dashboard ConfigMaps reach it with the
-annotation `observability.giantswarm.io/organization: Main Org.`.
+The chart creates a `GrafanaOrganization` named `default` whose display name is `Main Org.`, the
+name of Grafana's default organization. The operator therefore takes over Grafana's org 1 and gives
+it Mimir, Loki and Tempo datasources reading the platform's data, that is, the tenant set in
+`global.tenant` (`default` unless set). Dashboard ConfigMaps reach it with the annotation
+`observability.giantswarm.io/organization: Main Org.`.
 
-After install, the Default organization is yours: changing `defaultOrganization.*` values has no
-effect on it, and `helm upgrade` and `helm uninstall` never touch it. Set
-`defaultOrganization.enabled: false` to declare all organizations yourself.
+Its CRD comes from the observability-operator release, so install the operator first and uninstall 
+it last.
 
-Do not delete it. The operator would try to delete Grafana's org 1, which Grafana refuses, so the
-resource would stay stuck in deletion. If that happens, remove its finalizer:
+After `helm uninstall`, the resource currently stays in deletion: the uninstall also removes
+Grafana's admin Secret, which the operator needs before it can process the deletion. Remove its
+finalizer: 
 
 ```bash
-kubectl patch grafanaorganization default --type=merge -p '{"metadata":{"finalizers":null}}'
+kubectl patch grafanaorganization main-org --type=merge -p '{"metadata":{"finalizers":null}}'
 ```
+
+TODO: add a finalizer to the grafana admin secret. 
 
 **Known limitations of the observability-operator in this chart**
 

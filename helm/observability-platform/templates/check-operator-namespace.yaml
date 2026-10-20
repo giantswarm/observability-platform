@@ -2,11 +2,11 @@
 Guards for the observability-operator values this chart has to write as literals.
 No resource or config is created from this template.
 
-The operator reaches Grafana, Mimir and Loki over the network, so it needs their
-service URLs - and it reads the tenant to assign and whether Tempo runs. These are
-subchart values, which Helm will not let this chart compute, so they are literals in
-values.yaml. A literal that silently disagrees with `global.*`, `tempo.enabled` or the
-release namespace produces an operator that comes up healthy and then talks to
+The operator reaches Grafana, Mimir, Loki and Tempo over the network, so it needs
+their service URLs - and it reads the tenant to assign and whether Tempo runs. These
+are subchart values, which Helm will not let this chart compute, so they are literals
+in values.yaml. A literal that silently disagrees with `global.*`, `tempo.enabled` or
+the release namespace produces an operator that comes up healthy and then talks to
 nothing, so disagreement fails the render instead.
 */}}
 {{- if .Values.observabilityOperator.enabled }}

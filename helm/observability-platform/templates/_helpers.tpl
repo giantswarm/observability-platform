@@ -48,10 +48,13 @@ Object storage validation.
 {{- else if not (or $azure.accountName $azure.connectionString) -}}
 {{- fail "global.objectStorage.azure.accountName is empty. Set it to the Azure storage account holding the containers, or set global.objectStorage.azure.connectionString to reach an endpoint of your own, or set localBlobStorage.enabled to run against a local Azurite emulator - see doc/OBJECT_STORAGE.md." -}}
 {{- end -}}
+{{- if and .Values.tempo.enabled $azure.connectionString (not .Values.localBlobStorage.enabled) -}}
+{{- fail "tempo.enabled is true and global.objectStorage.azure.connectionString is set. Tempo reads no connection string: it needs global.objectStorage.azure.accountName and the account key in the credentials Secret. Set accountName instead of connectionString, or set tempo.enabled to false - see doc/OBJECT_STORAGE.md." -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
-Storage account name delivered to Mimir and Loki.
+Storage account name delivered to Mimir, Loki and Tempo.
 */}}
 {{- define "observability-platform.objectStorage.accountName" -}}
 {{- if .Values.localBlobStorage.enabled -}}
@@ -70,5 +73,17 @@ Connection string delivered to Mimir and Loki.
 {{- printf "DefaultEndpointsProtocol=http;AccountName=%s;AccountKey=%s;BlobEndpoint=http://%s.%s.svc.cluster.local:%s/%s;" $account (include "observability-platform.localBlobStorage.accountKey" .) (include "observability-platform.localBlobStorage.serviceName" .) .Release.Namespace (include "observability-platform.localBlobStorage.port" .) $account -}}
 {{- else -}}
 {{- .Values.global.objectStorage.azure.connectionString -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Azure Blob endpoint suffix delivered to Tempo. Tempo switches to Azurite path style
+when the suffix does not start with `blob.`.
+*/}}
+{{- define "observability-platform.objectStorage.endpointSuffix" -}}
+{{- if .Values.localBlobStorage.enabled -}}
+{{- printf "%s.%s.svc.cluster.local:%s" (include "observability-platform.localBlobStorage.serviceName" .) .Release.Namespace (include "observability-platform.localBlobStorage.port" .) -}}
+{{- else -}}
+blob.core.windows.net
 {{- end -}}
 {{- end -}}
