@@ -174,8 +174,7 @@ observability-operator:
 # ---------------------------------------------------------------------------
 # Default organization: a GrafanaOrganization that takes over Grafana's default
 # organization ("Main Org.", org 1) and gives it datasources that read the platform's
-# data, that is, the tenant set in `global.tenant`. It follows the release: upgrades
-# update it and uninstalling the chart deletes it.
+# data, that is, the tenant set in `global.tenant`.
 # ---------------------------------------------------------------------------
 defaultOrganization:
   # -- Create the Default organization. Needs the observability-operator release.
