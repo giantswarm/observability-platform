@@ -70,7 +70,8 @@ To check your values are valid, you can run `helm template` without a cluster. P
 > Giant Swarm installations and in the [local setup](./LOCAL_DEV.md). On your cluster, set the
 > `parentRefs` of **every** component (`loki`, `mimir`, `tempo` and `basicAuth`) to the name
 > and namespace of your Gateway, and to the name of its HTTPS listener in `sectionName`. If they
-> don't match, the routes are never attached and the API doesn't answer.
+> don't match, the routes are never attached and the API doesn't answer. Or create a Gateway
+> that matches the defaults with [GATEWAY.md](./GATEWAY.md).
 
 Each component has its own `parentRefs`, so each can use a different Gateway. Setting
 `parentRefs` replaces the whole default list, so give every field:
@@ -116,6 +117,9 @@ this namespace.
 
 ## Serve HTTPS
 
+[GATEWAY.md](./GATEWAY.md) creates a Gateway that matches the default `parentRefs`, with a
+Let's Encrypt certificate. This section lists what any Gateway needs.
+
 A minimal Gateway with an HTTPS listener named `https`:
 
 ```yaml
@@ -158,6 +162,10 @@ It creates the Secret named in the listener's `certificateRefs`. Its Gateway API
 beta feature that is **off by default**: enable it in the cert-manager controller with
 `--enable-gateway-api`, or `gatewayAPI.enabled: true` in the controller configuration. See the
 [cert-manager documentation](https://cert-manager.io/docs/usage/gateway/).
+
+Let's Encrypt issues the wildcard hostname of the example above through a DNS-01 solver only. An
+HTTP-01 solver needs one hostname per listener and a plain HTTP listener for the challenge, as in
+[GATEWAY.md](./GATEWAY.md).
 
 ### Certificate from a file
 

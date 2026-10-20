@@ -1,6 +1,6 @@
 # Gateway
 
-The external API and Grafana are served through a Gateway you provide. This guide prepares
+The external API is served through a Gateway you provide. This guide prepares
 one on the cluster from [EKS_CLUSTER.md](EKS_CLUSTER.md):
 
 - Envoy Gateway
