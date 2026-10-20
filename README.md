@@ -42,18 +42,18 @@ it Mimir, Loki and Tempo datasources reading the platform's data, that is, the t
 `global.tenant` (`default` unless set). Dashboard ConfigMaps reach it with the annotation
 `observability.giantswarm.io/organization: Main Org.`.
 
-It is an ordinary resource of the release: `helm upgrade` applies changes to `defaultOrganization.*`
-and `helm uninstall` deletes it. Its CRD comes from the observability-operator release, so install
-the operator first and uninstall it last. Set `defaultOrganization.enabled: false` to declare all
-organizations yourself.
+Its CRD comes from the observability-operator release, so install the operator first and uninstall 
+it last.
 
 After `helm uninstall`, the resource currently stays in deletion: the uninstall also removes
 Grafana's admin Secret, which the operator needs before it can process the deletion. Remove its
-finalizer:
+finalizer: 
 
 ```bash
-kubectl patch grafanaorganization default --type=merge -p '{"metadata":{"finalizers":null}}'
+kubectl patch grafanaorganization main-org --type=merge -p '{"metadata":{"finalizers":null}}'
 ```
+
+TODO: add a finalizer to the grafana admin secret. 
 
 **Known limitations of the observability-operator in this chart**
 
