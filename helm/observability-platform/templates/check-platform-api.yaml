@@ -19,6 +19,10 @@ Any of these condition missing will fail the render.
 {{- fail "observabilityPlatformApi.enabled is true but observability-platform-api.auth.jwt.providers is empty, so the API chart renders no routes. Add at least one OIDC issuer - see doc/EXTERNAL_API.md." }}
 {{- end }}
 
+{{- if and $api.tempo.enabled (not .Values.tempo.enabled) }}
+{{- fail "observability-platform-api.tempo.enabled is true but tempo.enabled is false. The API routes Tempo traffic to the tempo-distributor and tempo-query-frontend Services. Enable Tempo or disable its API route." }}
+{{- end }}
+
 {{- range $backend := list "loki" "mimir" }}
 {{- $route := index $api $backend }}
 {{- if and $route.enabled (not (index $.Values $backend).enabled) }}
