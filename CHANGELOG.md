@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enable Mimir Alertmanager.
 - Add alerting to the default GrafanaOrganization.
 - Load Alertmanager config Secrets into Mimir Alertmanager through the observability-operator. See `doc/ALERTING.md`.
+- Add a default Alertmanager config Secret for `global.tenant`. Its config lives in `files/alertmanager/alertmanager.yaml`.
 - Add default GrafanaOrganization.
 - Enable Tempo by default. It runs multi-tenant and stores traces in Azure Blob.
 - Add the `tempo` Azure Blob container configuration.

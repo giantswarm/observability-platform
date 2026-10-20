@@ -5,15 +5,26 @@ The Mimir ruler sends alerts to Mimir Alertmanager. Alertmanager routes them to 
 Each tenant has one Alertmanager config. A tenant without a config uses the fallback config:
 one receiver with no integrations. Alerts then show in Grafana but notify no one.
 
+## Default config
+
+The chart creates the Secret `alertmanager-config` for `global.tenant`. Each file in
+`helm/observability-platform/files/alertmanager` becomes one key of the Secret. The default
+`alertmanager.yaml` routes every alert to the `default` receiver. That receiver has no
+integrations.
+
+Edit `files/alertmanager/alertmanager.yaml` to change the default config. Helm reverts direct
+edits to the Secret on the next upgrade.
+
 ## Provide a config
 
-Create a Secret in any namespace:
+Create a Secret in any namespace. For `global.tenant`, first set
+`defaultAlertmanagerConfig.enabled: false`: two Secrets for one tenant overwrite each other.
 
 ```yaml
 apiVersion: v1
 kind: Secret
 metadata:
-  name: alertmanager-config
+  name: my-alertmanager-config
   namespace: monitoring
   labels:
     observability.giantswarm.io/kind: alertmanager-config
