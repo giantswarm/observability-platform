@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Enable Mimir Alertmanager.
 - Add alerting to the default GrafanaOrganization.
-- Give Grafana's default organization the platform's datasources at install time.
+- Add default GrafanaOrganization.
 - Enable Tempo by default. It runs multi-tenant and stores traces in Azure Blob.
 - Add the `tempo` Azure Blob container configuration.
 - Run the observability-operator with only its GrafanaOrganization and Dashboard controllers.
