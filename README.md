@@ -93,6 +93,23 @@ This app has been tested to work with the following workload cluster release ver
 
 Standalone, it has been installed and verified on a vanilla EKS cluster.
 
+## Network access
+
+The cluster needs outbound HTTPS (port 443) to these endpoints:
+
+| Endpoint | Used for | Hosts |
+| --- | --- | --- |
+| Object storage | Mimir, Loki and Tempo data | `<account>.blob.core.windows.net` |
+| `gsoci.azurecr.io` | Container images | `gsoci.azurecr.io`, `*.blob.core.windows.net` |
+| `docker.io` | Container images | `registry-1.docker.io`, `auth.docker.io`, `production.cloudflare.docker.com` |
+
+The machine that runs `helm install` needs outbound HTTPS to the Giant Swarm Helm catalogs:
+
+- `https://giantswarm.github.io/giantswarm-catalog/`
+- `https://giantswarm.github.io/control-plane-catalog/`
+
+`gsoci.azurecr.io` serves image layers from Azure Blob Storage hosts. The host names vary.
+
 ## Limitations
 
 Some apps have restrictions on how they can be deployed.
