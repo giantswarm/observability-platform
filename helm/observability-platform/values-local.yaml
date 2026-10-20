@@ -7,10 +7,9 @@
 #
 # Optimised for a small memory footprint, roughly 5 Gi for the whole release.
 #
-# Two of the values below are not sizing:
-#
-#   - `localBlobStorage.enabled` points the blob backend at Azurite.
-#   - `observabilityOperator.enabled` keeps the operator out of the release.
+# One of the values below is not sizing: `localBlobStorage.enabled` points the blob
+# backend at Azurite. The observability-operator is a separate release, installed
+# first with values/observability-operator.yaml.
 #
 # Do not use this anywhere real. It has no headroom for ingest.
 # ---------------------------------------------------------------------------
