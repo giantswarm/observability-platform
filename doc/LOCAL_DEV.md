@@ -45,7 +45,9 @@ Then check the pods:
 kubectl get pods -n monitoring
 ```
 
-Expect 21 Running. Mimir and Loki may restart once or twice while the emulator starts.
+Expect 23 Running. Mimir and Loki may restart once or twice while the emulator starts.
+Tempo's ingester, querier, query-frontend and compactor restart until the hook creates the
+`tempo` container, two to four times each.
 
 Log in at <https://grafana.localhost:8443> as `admin`. The chart generates a random password and
 stores it in the `grafana` secret:
@@ -79,6 +81,18 @@ AUTH=(--cacert hack/local/.keys/tls.crt -H "Authorization: Bearer $(make -s loca
 The requests in [EXTERNAL_API.md](./EXTERNAL_API.md#send-data) then run as written.
 
 The token expires after one hour. Run the `AUTH=` line again for a new one.
+
+## View a trace in Grafana
+
+Grafana ships with no datasource. Add one for Tempo, in **Connections > Data sources > Add
+data source > Tempo**:
+
+- URL: `http://tempo-query-frontend.monitoring.svc:3200`
+- HTTP header: `X-Scope-OrgID`, value `default`
+
+Click **Save & test**. Push the span from [EXTERNAL_API.md](./EXTERNAL_API.md#send-data). In
+**Explore**, select the Tempo datasource and query the trace ID
+`5b8efff798038103d269b633813fc60c`.
 
 ## Teardown
 
