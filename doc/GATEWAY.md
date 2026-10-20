@@ -260,8 +260,9 @@ kubectl -n envoy-gateway-system describe challenge
 
 ### The `https` listener is not programmed
 
-Before issuance, the listener reports `ResolvedRefs: False`: the Secret
-`observability-https-tls` does not exist yet. It turns `True` once the Certificate is Ready.
+Before issuance, the listener reports `ResolvedRefs: False` with the reason
+`InvalidCertificateRef`: the Secret `observability-https-tls` does not exist yet. It turns
+`True` once the Certificate is Ready.
 
 ### The Gateway has no address
 
