@@ -10,7 +10,7 @@ https://github.com/giantswarm/observability-operator/blob/main/docs/grafana-orga
 apiVersion: observability.giantswarm.io/v1alpha2
 kind: GrafanaOrganization
 metadata:
-  name: default
+  name: main-org
   labels:
     {{- include "labels.common" $ | nindent 4 }}
 spec:
