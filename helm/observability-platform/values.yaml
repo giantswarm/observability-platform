@@ -127,6 +127,8 @@ observability-operator:
       cluster:
         enabled: false
       # Loads the Alertmanager config Secrets into Mimir Alertmanager. See doc/ALERTING.md.
+      # Must match `mimir.enabled` and `mimir.mimir.alertmanager.enabled`: the operator cannot
+      # read them, so the three are kept in step by hand.
       alertmanager:
         enabled: true
       # Agent credentials feed Giant Swarm gateway Secrets; the external API authenticates
@@ -144,7 +146,7 @@ observability-operator:
   defaultTenant: default
   alerting:
     # Pin the service name - see "Deterministic names" under grafana below.
-    alertmanagerURL: "http://mimir-alertmanager.monitoring.svc:8080"
+    alertmanagerURL: &mimirAlertmanagerURL "http://mimir-alertmanager.monitoring.svc:8080"
     alertmanagerSecret:
       # Disable Giant Swarm alertmanager config.
       enabled: false
@@ -169,7 +171,7 @@ observability-operator:
     datasources:
       lokiURL: "http://loki-gateway.monitoring.svc"
       mimirURL: "http://mimir-gateway.monitoring.svc/prometheus"
-      mimirAlertmanagerURL: "http://mimir-alertmanager.monitoring.svc:8080"
+      mimirAlertmanagerURL: *mimirAlertmanagerURL
       mimirCardinalityURL: "http://mimir-gateway.monitoring.svc:8080/prometheus/api/v1/cardinality/"
       tempoURL: "http://tempo-query-frontend.monitoring.svc:3200"
 

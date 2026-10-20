@@ -5,9 +5,9 @@ No resource or config is created from this template.
 The operator reaches Grafana, Mimir, Loki and Tempo over the network, so it needs
 their service URLs - and it reads the tenant to assign and whether Tempo runs. These
 are subchart values, which Helm will not let this chart compute, so they are literals
-in values.yaml. A literal that silently disagrees with `global.*`, `tempo.enabled` or
-the release namespace produces an operator that comes up healthy and then talks to
-nothing, so disagreement fails the render instead.
+in values.yaml. A literal that silently disagrees with `global.*`, `tempo.enabled`,
+`mimir.mimir.alertmanager.enabled` or the release namespace produces an operator that
+comes up healthy and then talks to nothing, so disagreement fails the render instead.
 */}}
 {{- if .Values.observabilityOperator.enabled }}
 {{- $operator := index .Values "observability-operator" }}
@@ -33,6 +33,11 @@ up healthy and quietly stop recovering, so the namespace is pinned.
 {{- $expected = "http://mimir-alertmanager.monitoring.svc:8080" }}
 {{- if ne $operator.alerting.alertmanagerURL $expected }}
 {{- fail (printf "the operator's Alertmanager URL is %q, but Mimir Alertmanager is served at %q. Remove the override:\n\nobservability-operator:\n  alerting:\n    alertmanagerURL: %s\n" $operator.alerting.alertmanagerURL $expected $expected) }}
+{{- end }}
+
+{{- $alertmanager := and .Values.mimir.enabled .Values.mimir.mimir.alertmanager.enabled }}
+{{- if ne (toString $operator.operator.controllers.alertmanager.enabled) (toString $alertmanager) }}
+{{- fail (printf "Mimir Alertmanager enabled is %v but observability-operator.operator.controllers.alertmanager.enabled is %v. The operator cannot read mimir.enabled or mimir.mimir.alertmanager.enabled, so they are kept in step by hand. Set:\n\nobservability-operator:\n  operator:\n    controllers:\n      alertmanager:\n        enabled: %v\n" $alertmanager $operator.operator.controllers.alertmanager.enabled $alertmanager) }}
 {{- end }}
 
 {{- if ne (toString $operator.tracing.enabled) (toString .Values.tempo.enabled) }}

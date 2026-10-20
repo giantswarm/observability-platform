@@ -47,7 +47,8 @@ The operator logs every load:
 kubectl logs -n monitoring -l app.kubernetes.io/name=observability-operator | grep alertmanager
 ```
 
-Read back the loaded config:
+Read back the loaded config. In Mimir, `GET /api/v1/alerts` returns the tenant's Alertmanager
+config, not its alerts:
 
 ```bash
 kubectl port-forward -n monitoring svc/mimir-alertmanager 8080 &
