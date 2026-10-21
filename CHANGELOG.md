@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Run the observability-operator with only its GrafanaOrganization and Dashboard controllers.
 - Add the Observability Platform API wiring for Loki and Mimir
 - Route Tempo traffic through the Observability Platform API.
+- Add Tempo to `doc/EXTERNAL_API.md` and `doc/LOCAL_DEV.md`.
 - Serve Grafana over HTTPS at `https://grafana.localhost:8443` in the local kind setup.
 - Add `doc/EXTERNAL_API.md`, walking through values and requests.
 - Add `make local-up`, `make local-token` and `make local-down`. They run the chart and the external API on kind.
