@@ -46,6 +46,10 @@ tracing:
 # -- Tenant the operator assigns when a resource carries no tenant label.
 # Must match the Platform chart's `global.tenant`.
 defaultTenant: default
+alerting:
+  alertmanagerSecret:
+    # -- Don't ship Giant Swarm's Alertmanager routing (Slack, PagerDuty) to standalone installs.
+    enabled: false
 # The "managementCluster" section is specific to Giant Swarm management clusters.
 # Please don't change anything here except "name".
 managementCluster:

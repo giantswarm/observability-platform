@@ -19,10 +19,10 @@ Here, we define the observability-platform chart with its templates and default 
 
 **What is this app?**
 
-A self-hosted observability stack packaged as a single umbrella chart: Mimir for metrics, Loki for
-logs, Grafana to look at them, `observability-operator` to manage organizations, datasources and
-dashboards. Mimir Alertmanager routes
-alerts. Tempo and the observability platform API ship with the chart but are disabled by default.
+A self-hosted observability stack packaged as an umbrella chart: Mimir for metrics and its
+Alertmanager for alerts, Loki for logs, Tempo for traces, and Grafana to look at them. The
+`observability-operator`, installed as its own release next to it, manages organizations, datasources
+and dashboards. The observability platform API ships with the chart but is disabled by default.
 
 **Why did we add it?**
 
@@ -36,26 +36,26 @@ cluster.
 
 **The Default organization**
 
-The chart creates a `GrafanaOrganization` named `default` whose display name is `Main Org.`, the
+The chart creates a `GrafanaOrganization` named `main-org` whose display name is `Main Org.`, the
 name of Grafana's default organization. The operator therefore takes over Grafana's org 1 and gives
 it Mimir, Loki and Tempo datasources reading the platform's data, that is, the tenant set in
-`global.tenant` (`default` unless set). Dashboard ConfigMaps reach it with the annotation
-`observability.giantswarm.io/organization: Main Org.`.
+`global.tenant` (`default` unless set). While Mimir's Alertmanager is enabled, the organization also
+gets alerting access to that tenant, with a Mimir Alertmanager datasource. Dashboard ConfigMaps reach
+it with the annotation `observability.giantswarm.io/organization: Main Org.`.
 
-Its CRD comes from the observability-operator release, so install the operator first and uninstall 
-it last.
+It is an ordinary resource of the release: `helm upgrade` applies changes to `defaultOrganization.*`.
+Its CRD comes from the observability-operator release, so install the operator first and uninstall it
+last. Set `defaultOrganization.enabled: false` to declare all organizations yourself.
 
 After `helm uninstall`, the resource currently stays in deletion: the uninstall also removes
 Grafana's admin Secret, which the operator needs before it can process the deletion. Remove its
-finalizer: 
+finalizer:
 
 ```bash
 kubectl patch grafanaorganization main-org --type=merge -p '{"metadata":{"finalizers":null}}'
 ```
 
-TODO: add a finalizer to the grafana admin secret. 
-
-**Known limitations of the observability-operator in this chart**
+**Known limitations of the observability-operator with this chart**
 
 - The observability-operator is a separate release that must be installed before this chart, with
   [`values/observability-operator.yaml`](values/observability-operator.yaml). See [Installing](#installing).
