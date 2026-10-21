@@ -100,6 +100,58 @@ mimir:
             replication_factor: 1
             zone_awareness_enabled: false
 
+tempo:
+  tempo:
+    # Repeated from values.yaml. Overriding a list replaces it. The Azurite account
+    # key comes last and wins.
+    defaults:
+      extraEnvFrom:
+        - configMapRef:
+            name: observability-platform-object-storage
+        - secretRef:
+            name: observability-platform-object-storage
+            optional: true
+        - secretRef:
+            name: azurite-credentials
+    # One replica each, with replication_factor to match. `affinity: ""` drops the
+    # control-plane exclusion: the kind node is a control-plane node.
+    distributor:
+      autoscaling:
+        enabled: false
+      replicas: 1
+      affinity: ""
+    ingester:
+      replicas: 1
+      affinity: ""
+      config:
+        replication_factor: 1
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+    querier:
+      affinity: ""
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+    queryFrontend:
+      affinity: ""
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+    compactor:
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+    memcached:
+      enabled: false
+    # The chart passes `cache` through verbatim without memcached. Empty: no cache.
+    cache:
+      caches: []
+
 # Azurite as the blob backend. Computes `accountName` and `connectionString`. Setting
 # either by hand on top of this profile fails the render.
 localBlobStorage:
