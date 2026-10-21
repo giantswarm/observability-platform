@@ -32,6 +32,7 @@ local-up: ## Create a kind cluster running the chart and the external API.
 	  --namespace monitoring --create-namespace \
 	  --values helm/observability-platform/values-local.yaml \
 	  --values $(LOCAL)/values.yaml
+	$(KUBECTL) rollout status deployment/azurite -n monitoring --timeout 5m
 
 local-token: ## Print a JWT for the external API, valid for one hour.
 	@$(LOCAL)/jwt.sh token

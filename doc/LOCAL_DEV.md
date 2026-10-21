@@ -28,16 +28,16 @@ make local-up
 
 ## Verify
 
-A `post-install` hook creates the storage containers, so `make local-up` returns once it
-has finished:
+A sidecar in the Azurite pod creates the storage containers, and the pod turns ready only
+once they exist. `make local-up` returns when it is ready:
 
 ```bash
-kubectl get job azurite-init -n monitoring
+kubectl get deployment azurite -n monitoring
 ```
 
 ```
-NAME           STATUS     COMPLETIONS   DURATION   AGE
-azurite-init   Complete   1/1           14s        30s
+NAME      READY   UP-TO-DATE   AVAILABLE   AGE
+azurite   1/1     1            1           30s
 ```
 
 Then check the pods:
@@ -64,7 +64,10 @@ The `https` listener serves a self-signed certificate that `make local-up` gener
 curl --cacert hack/local/.keys/tls.crt https://grafana.localhost:8443/api/health
 ```
 
-Storage lives in an `emptyDir`: restarting the emulator discards the data.
+Azurite keeps its data on the `azurite-data` PVC, so a restarted or recreated pod comes
+back with the stored data, and the sidecar creates any missing container again. No
+`helm upgrade` is needed. `helm uninstall` and `make local-down` delete the data.
+Set `localBlobStorage.azurite.persistence` to change the volume size or StorageClass.
 
 ## Send data through the external API
 

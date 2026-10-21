@@ -5,6 +5,8 @@ account. Development only - see doc/LOCAL_DEV.md.
 {{- if and .Values.localBlobStorage.enabled (or .Values.mimir.enabled .Values.loki.enabled .Values.tempo.enabled) }}
 {{- $name := include "observability-platform.localBlobStorage.serviceName" . }}
 {{- $port := include "observability-platform.localBlobStorage.port" . | int }}
+{{- $account := include "observability-platform.localBlobStorage.accountName" . }}
+{{- $buckets := .Values.global.objectStorage.buckets }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,6 +17,9 @@ metadata:
     app.kubernetes.io/component: {{ $name }}
 spec:
   replicas: 1
+  # The data volume is ReadWriteOnce: the old pod has to release it first.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       {{- include "labels.selector" . | nindent 6 }}
@@ -24,13 +29,17 @@ spec:
       labels:
         {{- include "labels.selector" . | nindent 8 }}
         app.kubernetes.io/component: {{ $name }}
+      annotations:
+        # The containers sidecar runs once per pod, so a renamed container needs a new pod.
+        checksum/containers: {{ list $buckets.mimirBlocks $buckets.mimirAlertmanager $buckets.mimirRuler $buckets.loki $buckets.tempo | join "," | sha256sum }}
     spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
-        # The data directory is an emptyDir, which the kubelet group-owns to fsGroup - the
-        # only reason the uid-1000 user in this image can write to it.
+        # The kubelet group-owns the data volume to fsGroup, so the uid-1000 user in this
+        # image can write to it. kind's local-path volumes are world-writable already.
         fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: {{ $name }}
           image: {{ .Values.localBlobStorage.azurite.image | quote }}
@@ -62,7 +71,7 @@ spec:
             tcpSocket:
               port: blob
           securityContext:
-            # Azurite writes to --location only, which is the emptyDir below.
+            # Azurite writes to --location only, which is the data volume below.
             readOnlyRootFilesystem: true
           resources:
             requests:
@@ -74,9 +83,83 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+        # Creates the storage containers, which Azurite does not create itself, at every
+        # pod start - so a recreated pod never serves an account without them. A sidecar
+        # and not an init container: it needs Azurite running. Its readiness gates the
+        # pod's, so the Service sends no traffic until the containers exist.
+        - name: containers
+          image: {{ .Values.localBlobStorage.init.image | quote }}
+          # The container names come from the same ConfigMap the components read, so this
+          # cannot create containers under names they will not look for.
+          envFrom:
+            - configMapRef:
+                name: observability-platform-object-storage
+          env:
+            # Overrides the ConfigMap's: Azurite over localhost, since the Service has no
+            # endpoint until this container is ready.
+            - name: OBS_AZURE_CONNECTION_STRING
+              value: {{ printf "DefaultEndpointsProtocol=http;AccountName=%s;AccountKey=%s;BlobEndpoint=http://127.0.0.1:%d/%s;" $account (include "observability-platform.localBlobStorage.accountKey" .) $port $account | quote }}
+            - name: AZURE_CORE_COLLECT_TELEMETRY
+              value: "false"
+            # The CLI writes its configuration under $HOME, which is not writable here:
+            # the image's default is root's, and the root filesystem is read-only.
+            - name: HOME
+              value: /tmp
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+
+              echo "waiting for azurite"
+              until az storage container list \
+                  --connection-string "$OBS_AZURE_CONNECTION_STRING" -o none 2>/dev/null; do
+                sleep 2
+              done
+
+              # Azurite creates no containers of its own, and neither Mimir nor Loki
+              # creates a missing one - the first flush fails with ContainerNotFound.
+              # `create` is idempotent, so containers kept on the volume are a no-op.
+              for container in \
+                  "$OBS_BUCKET_MIMIR_BLOCKS" \
+                  "$OBS_BUCKET_MIMIR_ALERTMANAGER" \
+                  "$OBS_BUCKET_MIMIR_RULER" \
+                  "$OBS_BUCKET_LOKI" \
+                  "$OBS_BUCKET_TEMPO"; do
+                echo "creating container $container"
+                az storage container create --name "$container" \
+                  --connection-string "$OBS_AZURE_CONNECTION_STRING" -o none
+              done
+
+              touch /tmp/ready
+              echo "done"
+
+              # A container that exits is restarted, so this one idles. The trap lets it
+              # stop at once: as PID 1, the shell ignores SIGTERM otherwise.
+              trap 'exit 0' TERM
+              sleep infinity &
+              wait
+          readinessProbe:
+            exec:
+              command: ["test", "-f", "/tmp/ready"]
+            periodSeconds: 5
+          securityContext:
+            readOnlyRootFilesystem: true
+          # Only the CLI calls at start need memory; the container idles afterwards.
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: home
+              mountPath: /tmp
       volumes:
-        # No PVC on purpose: this is a development backend, and its data is expected to
-        # not survive the pod.
         - name: data
+          persistentVolumeClaim:
+            claimName: {{ $name }}-data
+        - name: home
           emptyDir: {}
 {{- end }}
