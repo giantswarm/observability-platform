@@ -28,6 +28,25 @@ several accounts only adds key sets to rotate and endpoints to manage.
 This chart does not deploy Pyroscope yet. Pyroscope will get its own container in the
 same account.
 
+### The `loki` container
+
+All three Loki `bucketNames` are set to the `loki` container. The upstream Loki chart turns
+`chunks` and `ruler` into the Azure `container_name`, not into a key prefix, and does not
+read `admin`. So the chunk store and the ruler store share one container, and only Loki's
+own fixed paths keep them apart:
+
+| Path                     | Contents                                                  |
+| ------------------------ | --------------------------------------------------------- |
+| `<tenant>/`              | Chunks, one directory per tenant                          |
+| `index/`                 | TSDB index tables, and the compactor's delete requests when stored in Azure |
+| `rules/<tenant>/`        | Ruler rule groups                                         |
+| `loki_cluster_seed.json` | Cluster ID for Loki's usage reporting                     |
+
+Tenant directories sit next to `index/` and `rules/`. **Tenant IDs must not be `index` or
+`rules`**, or Loki lists that tenant's chunks as index tables or rule groups. Nothing
+enforces this: Loki accepts both names, and the external API passes `X-Scope-OrgID`
+through unchanged.
+
 ### Account settings
 
 | Setting            | Value          | Why                                                      |
@@ -242,25 +261,8 @@ variables into the Mimir and Loki pods only, and points
 `schemaConfig` and `bucketNames` at them. Both charts already run every component with
 `-config.expand-env=true`, so nothing extra is needed to expand the references.
 
-### The `loki` container
-
-All three Loki `bucketNames` are set to the `loki` container. The upstream Loki chart turns
-`chunks` and `ruler` into the Azure `container_name`, not into a key prefix, and does not
-read `admin`. So the chunk store and the ruler store share one container, and only Loki's
-own fixed paths keep them apart:
-
-| Path                     | Contents                                                  |
-| ------------------------ | --------------------------------------------------------- |
-| `<tenant>/`              | Chunks, one directory per tenant                          |
-| `index/`                 | TSDB index tables, and the compactor's delete requests    |
-| `rules/<tenant>/`        | Ruler rule groups                                         |
-| `loki_cluster_seed.json` | Cluster ID for Loki's usage reporting                     |
-
-Tenant directories sit next to `index/` and `rules/`. **Tenant IDs must not be `index` or
-`rules`**, or Loki lists that tenant's chunks as index tables or rule groups. Nothing
-enforces this: Loki accepts both names, and the external API passes `X-Scope-OrgID`
-through unchanged.
-
+All three Loki `bucketNames` point at the same `loki` container. See
+[The `loki` container](#the-loki-container).
 
 Two things the chart does not set, and you may want through raw subchart pass-through:
 

@@ -246,13 +246,14 @@ use `$API/v1/traces`.
 ## From inside the cluster
 
 Pods in the cluster can call the gateways directly, without the API and without a token.
-They still need `X-Scope-OrgID`, or Loki and Mimir answer `401` with `no org id`. These URLs
+They still need `X-Scope-OrgID`, or the backends answer `401` with `no org id`. These URLs
 assume the release runs in `monitoring`:
 
 | Backend | URL |
 | --- | --- |
 | Loki | `http://loki-gateway.monitoring.svc` |
 | Mimir | `http://mimir-gateway.monitoring.svc/prometheus` |
+| Tempo | `http://tempo-query-frontend.monitoring.svc:3200` (read), `http://tempo-distributor.monitoring.svc:4318` (OTLP write) |
 
 Push a log line and read it back from a throwaway pod:
 
@@ -312,6 +313,7 @@ scheme.
   [Tenants](#tenants).
 - Loki's Prometheus-compatible rules API is not reachable. Loki and Mimir share the
   hostname, and `/prometheus/api/v1/rules` goes to Mimir. `/prometheus/api/v1/alerts` has no
-  route. So a Grafana Loki datasource pointed at the API shows no Loki-managed alert rules.
-  Loki's own `/loki/api/v1/rules` works.
+  route. A Grafana Loki datasource pointed at the API reads its alert rules from that path,
+  so it lists the tenant's Mimir rules instead of its Loki rules. Loki's own
+  `/loki/api/v1/rules` works.
 - Ingest authentication is JWT only.
