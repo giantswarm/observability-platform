@@ -128,6 +128,14 @@ defaultOrganization:
 # Every request needs a JWT from one of `auth.jwt.providers` and an
 # `X-Scope-OrgID` header naming the tenant.
 #
+# Tenancy: the JWT only authenticates. The tenant is the client's `X-Scope-OrgID`,
+# passed through unchanged, so any valid token reads and writes every tenant. Loki
+# also answers reads for several tenants joined with `|` (`a|b`). Tenant IDs must
+# not be `index` or `rules`. See doc/EXTERNAL_API.md#tenants.
+#
+# Loki and Mimir share the hostname and `/prometheus/...` goes to Mimir, so Loki's
+# Prometheus-compatible rules API is not reachable through the API.
+#
 # The routes use the release namespace and follow `loki.enabled` and
 # `mimir.enabled`. The values below name both as literals. The render fails when
 # they disagree.

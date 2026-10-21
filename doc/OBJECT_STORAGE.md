@@ -22,7 +22,7 @@ several accounts only adds key sets to rotate and endpoints to manage.
 | `mimir-blocks`       | Mimir `blocks_storage`       | TSDB blocks (the bulk of the data) |
 | `mimir-alertmanager` | Mimir `alertmanager_storage` | Alertmanager state and configs     |
 | `mimir-ruler`        | Mimir `ruler_storage`        | Recording and alerting rule groups |
-| `loki`               | Loki chunks, index, ruler, admin | Log data                       |
+| `loki`               | Loki chunks, index, ruler    | Log data and Loki rules. See [The `loki` container](#the-loki-container) |
 | `tempo`              | Tempo `storage.trace`        | Trace blocks                       |
 
 This chart does not deploy Pyroscope yet. Pyroscope will get its own container in the
@@ -242,9 +242,25 @@ variables into the Mimir and Loki pods only, and points
 `schemaConfig` and `bucketNames` at them. Both charts already run every component with
 `-config.expand-env=true`, so nothing extra is needed to expand the references.
 
-All three Loki `bucketNames` point at the same `loki` container. They become key prefixes
-inside the container rather than separate containers, so one serves all three without
-collision.
+### The `loki` container
+
+All three Loki `bucketNames` are set to the `loki` container. The upstream Loki chart turns
+`chunks` and `ruler` into the Azure `container_name`, not into a key prefix, and does not
+read `admin`. So the chunk store and the ruler store share one container, and only Loki's
+own fixed paths keep them apart:
+
+| Path                     | Contents                                                  |
+| ------------------------ | --------------------------------------------------------- |
+| `<tenant>/`              | Chunks, one directory per tenant                          |
+| `index/`                 | TSDB index tables, and the compactor's delete requests    |
+| `rules/<tenant>/`        | Ruler rule groups                                         |
+| `loki_cluster_seed.json` | Cluster ID for Loki's usage reporting                     |
+
+Tenant directories sit next to `index/` and `rules/`. **Tenant IDs must not be `index` or
+`rules`**, or Loki lists that tenant's chunks as index tables or rule groups. Nothing
+enforces this: Loki accepts both names, and the external API passes `X-Scope-OrgID`
+through unchanged.
+
 
 Two things the chart does not set, and you may want through raw subchart pass-through:
 
