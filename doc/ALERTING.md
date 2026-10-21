@@ -49,7 +49,8 @@ stringData:
 
 - `observability.giantswarm.io/tenant` holds the Mimir tenant the config applies to. The
   operator loads the Secret only when a `GrafanaOrganization` names this tenant under
-  `spec.tenants`. The chart's default organization names `global.tenant`.
+  `spec.tenants`. The chart creates the default organization. It adds `global.tenant` to the
+  organization's `spec.tenants`.
 - `alertmanager.yaml` holds the full [Alertmanager config](https://prometheus.io/docs/alerting/latest/configuration/).
   It replaces the fallback config.
 - Every other key ending in `.tmpl` is a [notification template](https://prometheus.io/docs/alerting/latest/notifications/).
