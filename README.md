@@ -39,8 +39,6 @@ cluster.
 - The observability-operator is a separate release that must be installed before this chart, with
   [`values/observability-operator.yaml`](values/observability-operator.yaml). See [Installing](#installing).
 - The release installs into the `monitoring` namespace while `observabilityOperator.enabled` is on.
-  The operator rebuilds Grafana organizations and dashboards after a Grafana restart only there, so
-  the render fails in any other namespace.
 - The operator values must agree with this chart's: `tracing.enabled` with `tempo.enabled`,
   `defaultTenant` with `global.tenant`, and the Grafana and datasource URLs with the `monitoring`
   namespace. Nothing checks this across the two releases.
