@@ -19,9 +19,9 @@ Here, we define the observability-platform chart with its templates and default 
 
 **What is this app?**
 
-A self-hosted observability stack packaged as a single umbrella chart: Mimir for metrics, Loki for
-logs, Grafana to look at them, `observability-operator` to manage organizations, datasources and
-dashboards. Tempo, the observability platform API
+A self-hosted observability stack packaged as an umbrella chart: Mimir for metrics, Loki for
+logs, and Grafana to look at them. The `observability-operator`, installed as its own release next to
+it, manages organizations, datasources and dashboards. Tempo, the observability platform API
 and Alertmanager ship with the chart but are disabled by default.
 
 **Why did we add it?**
@@ -34,19 +34,17 @@ To offer the Giant Swarm Observability Platform as a self-hosted observability s
 Anyone with a Kubernetes cluster and object storage. It does not require a Giant Swarm management
 cluster.
 
-**Known limitations of the observability-operator in this chart**
+**Known limitations of the observability-operator with this chart**
 
-- The release installs into the `monitoring` namespace while the operator is enabled. The operator
-  rebuilds Grafana organizations and dashboards after a Grafana restart only there, so the render
-  fails in any other namespace.
-- `observability-operator.tracing.enabled` must match `tempo.enabled`. The render fails otherwise.
-- `observability-platform-api.tempo.enabled` requires `tempo.enabled` while the API is enabled. The render fails otherwise.
+- The observability-operator is a separate release that must be installed before this chart, with
+  [`values/observability-operator.yaml`](values/observability-operator.yaml). See [Installing](#installing).
+- The release installs into the `monitoring` namespace while `observabilityOperator.enabled` is on.
+- The operator values must agree with this chart's: `tracing.enabled` with `tempo.enabled`,
+  `defaultTenant` with `global.tenant`, and the Grafana and datasource URLs with the `monitoring`
+  namespace. Nothing checks this across the two releases.
 - The operator's admission webhooks are disabled, so mistakes in `GrafanaOrganization` resources or
   dashboard ConfigMaps show up only in the operator's logs and the resources' status.
 - Disabling Loki or Mimir leaves their datasources in Grafana, pointing at nothing.
-- The operator expects a Grafana TLS client-certificate Secret (`grafana-tls` in `monitoring`), which
-  this chart does not provide yet. Until it does, organizations, datasources and dashboards are not
-  reconciled. See [giantswarm/giantswarm#38183](https://github.com/giantswarm/giantswarm/issues/38183).
 
 ## Installing
 
@@ -55,7 +53,18 @@ There are several ways to install this app onto a workload cluster.
 - [Using GitOps to instantiate the App](https://docs.giantswarm.io/tutorials/continuous-deployment/apps/add-appcr/)
 - By creating an [App resource](https://docs.giantswarm.io/reference/platform-api/crd/apps.application.giantswarm.io) using the platform API as explained in [Getting started with App Platform](https://docs.giantswarm.io/tutorials/fleet-management/app-platform/).
 
-On a standalone cluster the chart is installed directly with Helm.
+On a standalone cluster, install two releases with Helm, the observability-operator first. It
+installs the CRDs this chart's resources need:
+
+```bash
+helm install observability-operator observability-operator \
+  --repo https://giantswarm.github.io/control-plane-catalog/ \
+  --namespace monitoring --create-namespace \
+  --values values/observability-operator.yaml
+helm install observability-platform helm/observability-platform --namespace monitoring
+```
+
+Uninstall in the opposite order: the platform first, then the operator.
 
 ## Configuring
 

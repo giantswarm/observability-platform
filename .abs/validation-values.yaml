@@ -9,7 +9,7 @@ global:
     azure:
       accountName: abs-validation
 
-# app-build-suite deploys everything in the default namespace, and the operator only
-# installs into `monitoring` (the render fails elsewhere), so it is disabled here.
+# app-build-suite deploys everything in the default namespace, and the chart only
+# installs into `monitoring` while an operator manages its Grafana, so that is off here.
 observabilityOperator:
   enabled: false
