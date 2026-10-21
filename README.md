@@ -57,7 +57,7 @@ kubectl patch grafanaorganization main-org --type=merge -p '{"metadata":{"finali
   [`values/observability-operator.yaml`](values/observability-operator.yaml). See [Installing](#installing).
 - The release installs into the `monitoring` namespace while `observabilityOperator.enabled` is on.
 - The operator values must agree with this chart's: `tracing.enabled` with `tempo.enabled`,
-  `operator.controllers.alertmanager.enabled` with `mimir.mimir.alertmanager.enabled`,
+  `operator.controllers.alertmanager.enabled` with `mimir.enabled` and `mimir.mimir.alertmanager.enabled`,
   `defaultTenant` with `global.tenant`, and the Grafana and datasource URLs with the `monitoring`
   namespace. Nothing checks this across the two releases.
 - The operator's admission webhooks are disabled, so mistakes in `GrafanaOrganization` resources or

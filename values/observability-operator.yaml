@@ -10,9 +10,9 @@
 #
 # It installs the operator's CRDs, which the Platform chart's resources need.
 # The values below must agree with the Platform chart's: `tracing.enabled` with
-# `tempo.enabled`, `operator.controllers.alertmanager.enabled` with Mimir Alertmanager,
-# `defaultTenant` with `global.tenant`, and the URLs with the
-# `monitoring` namespace. Nothing checks this across the two releases.
+# `tempo.enabled`, `operator.controllers.alertmanager.enabled` with `mimir.enabled`
+# and `mimir.mimir.alertmanager.enabled`, `defaultTenant` with `global.tenant`, and
+# the URLs with the `monitoring` namespace. Nothing checks this across the two releases.
 #
 # Beware that some features won't work outside of a Giant Swarm management cluster.
 # ---------------------------------------------------------------------------
