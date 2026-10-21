@@ -68,10 +68,11 @@ The operator logs every load and every rejected config:
 kubectl logs -n monitoring -l app.kubernetes.io/name=observability-operator | grep alertmanager
 ```
 
-Read back the loaded config. In Mimir, `GET /api/v1/alerts` returns the tenant's Alertmanager
-config:
+Read back the loaded config in Grafana:
 
-```bash
-kubectl port-forward -n monitoring svc/mimir-alertmanager 8080 &
-curl -H "X-Scope-OrgID: default" http://localhost:8080/api/v1/alerts
-```
+1. Open Grafana in the organization that lists the tenant.
+2. Go to **Alerting** > **Contact points**.
+3. In the **Choose Alertmanager** selector, pick **GS Mimir Alertmanager**. An organization with
+   several alerting tenants has one **GS Mimir Alertmanager (&lt;tenant&gt;)** per tenant.
+4. Check the receivers of your config.
+5. Go to **Alerting** > **Notification policies** to check its routes.
