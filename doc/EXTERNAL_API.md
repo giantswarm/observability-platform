@@ -230,6 +230,29 @@ For a Prometheus `remote_write` or an OpenTelemetry Collector, use
 `$API/prometheus/api/v1/push` or `$API/otlp/v1/metrics` with the same two headers. For traces,
 use `$API/v1/traces`.
 
+## Log push limits
+
+These apply to `/loki/api/v1/push` and `/otlp/v1/logs`, per tenant:
+
+| Limit | Value | Over it |
+| --- | --- | --- |
+| Request body on the wire, compressed or not | 16 MiB | `413` |
+| Log-line bytes in one push, after decompression | 32 MB | `429` |
+| Sustained ingest rate | 16 MB/s | `429` |
+| Log-line bytes in one push to a single stream | 15 MB | `429` |
+| One log line | 256 KB | `400` |
+
+Compress pushes with gzip (`Content-Encoding: gzip`), or use snappy-compressed protobuf as
+Alloy and Promtail do. Logs compress well, so a compressed batch stays far below 16 MiB.
+
+A `413` means the batch is too large: split it, and do not retry it as is. A `429` means the
+tenant is over its rate: retry with backoff. Alloy, Promtail and the OpenTelemetry Collector
+already retry `429`s.
+
+To change the limits, set `loki.loki.gateway.nginxConfig.clientMaxBodySize` and
+`loki.loki.loki.limits_config` in the chart values. Keep the body size at or below the burst
+(`ingestion_burst_size_mb`), or large uncompressed pushes get a `429` instead of a `413`.
+
 ## Read-only basic auth
 
 For clients that can't send a JWT, such as an external Grafana, the API can also expose the
@@ -269,3 +292,5 @@ scheme.
 
 - A client can send any `X-Scope-OrgID`. Nothing binds the tenant to the token.
 - Ingest authentication is JWT only.
+- The Loki delete API (`/loki/api/v1/delete`) is not exposed. Delete logs from inside the
+  cluster. See [OBJECT_STORAGE.md](./OBJECT_STORAGE.md#loki-retention-and-deletion).

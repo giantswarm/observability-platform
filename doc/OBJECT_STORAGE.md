@@ -246,14 +246,51 @@ All three Loki `bucketNames` point at the same `loki` container. They become key
 inside the container rather than separate containers, so one serves all three without
 collision.
 
-Two things the chart does not set, and you may want through raw subchart pass-through:
+One thing the chart does not set, and you may want through raw subchart pass-through:
 
-- **Loki retention.** `compactor.retention_enabled: true` also requires
-  `compactor.delete_request_store: azure`, otherwise deletion requests have nowhere to
-  live.
 - **A later schema period.** The chart pins `from: 2024-04-01`. A new period cannot start
   in the past relative to data already written under a different schema, so if you add
   one, date it forward.
+
+## Loki retention and deletion
+
+Loki keeps logs for **30 days** (`720h`), then its compactor deletes them from the `loki`
+container. The local profile keeps them for 72 hours. To change it, for all tenants:
+
+```yaml
+loki:
+  loki:
+    loki:
+      limits_config:
+        retention_period: 2160h   # 90 days. 0s keeps logs forever.
+```
+
+This applies to Loki only. Mimir and Tempo keep their own defaults.
+
+The compactor runs in the `loki-backend` pods. It deletes expired logs a few hours after
+their retention period ends.
+
+To delete logs earlier, use the Loki delete API. It is not exposed through the external
+API, so call it from inside the cluster, through `loki-gateway`:
+
+```bash
+kubectl -n monitoring port-forward svc/loki-gateway 3100:80 &
+
+# Request a deletion. start and end are Unix timestamps.
+curl -sS -G -X POST -H "X-Scope-OrgID: <tenant>" http://localhost:3100/loki/api/v1/delete \
+  --data-urlencode 'query={job="my-app"}' \
+  --data-urlencode "start=$(date -d '-7 days' +%s)" \
+  --data-urlencode "end=$(date +%s)"
+
+# List the tenant's delete requests.
+curl -sS -H "X-Scope-OrgID: <tenant>" http://localhost:3100/loki/api/v1/delete
+```
+
+A request can be cancelled for 24 hours (`DELETE /loki/api/v1/delete?request_id=<id>`).
+After that, the compactor deletes the matching lines. See the
+[Loki docs](https://grafana.com/docs/loki/latest/operations/storage/logs-deletion/).
+
+The delete requests are kept in the `loki` container too, under `index/`.
 
 ## Verification
 

@@ -20,6 +20,9 @@ loki:
     loki:
       commonConfig:
         replication_factor: 1
+      # Azurite keeps its data in an emptyDir anyway.
+      limits_config:
+        retention_period: 72h
     chunksCache:
       enabled: false
     resultsCache:
