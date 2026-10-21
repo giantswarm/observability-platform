@@ -43,10 +43,6 @@ it Mimir, Loki and Tempo datasources reading the platform's data, that is, the t
 gets alerting access to that tenant, with a Mimir Alertmanager datasource. Dashboard ConfigMaps reach
 it with the annotation `observability.giantswarm.io/organization: Main Org.`.
 
-It is an ordinary resource of the release: `helm upgrade` applies changes to `defaultOrganization.*`.
-Its CRD comes from the observability-operator release, so install the operator first and uninstall it
-last. Set `defaultOrganization.enabled: false` to declare all organizations yourself.
-
 After `helm uninstall`, the resource currently stays in deletion: the uninstall also removes
 Grafana's admin Secret, which the operator needs before it can process the deletion. Remove its
 finalizer:
