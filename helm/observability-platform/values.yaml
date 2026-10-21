@@ -266,6 +266,12 @@ loki:
     networkPolicy:
       enabled: false
       flavor: kubernetes
+      # The loki chart renders this egress-only NetworkPolicy for the backend even with
+      # network policies off. Once a CNI enforces it (kind's kindnet does), the backend
+      # reaches nothing but the API server: no memberlist, no queriers, no object storage,
+      # and every read times out.
+      egressKubeApiserver:
+        enabled: false
     loki:
       # Repeated from loki-app's own values. Overriding a list replaces it.
       schemaConfig:
