@@ -2,8 +2,11 @@
 Guards for the Observability Platform API. No resource or config is created from
 this template.
 
-Without JWT providers the API chart renders no routes and reports nothing. Without
-`global.domain` its hostnames are invalid. Both fail the render instead.
+The API chart requires:
+- JWT providers
+- `global.domain` to be set.
+- the route namespaces and backend toggles to match the release namespace.
+Any of these condition missing will fail the render.
 */}}
 {{- if .Values.observabilityPlatformApi.enabled }}
 {{- $api := index .Values "observability-platform-api" }}
@@ -14,5 +17,25 @@ Without JWT providers the API chart renders no routes and reports nothing. Witho
 
 {{- if not $api.auth.jwt.providers }}
 {{- fail "observabilityPlatformApi.enabled is true but observability-platform-api.auth.jwt.providers is empty, so the API chart renders no routes. Add at least one OIDC issuer - see doc/EXTERNAL_API.md." }}
+{{- end }}
+
+{{- if and $api.tempo.enabled (not .Values.tempo.enabled) }}
+{{- fail "observability-platform-api.tempo.enabled is true but tempo.enabled is false. The API routes Tempo traffic to the tempo-distributor and tempo-query-frontend Services. Enable Tempo or disable its API route." }}
+{{- end }}
+
+{{- range $backend := list "loki" "mimir" }}
+{{- $route := index $api $backend }}
+{{- if and $route.enabled (not (index $.Values $backend).enabled) }}
+{{- fail (printf "observability-platform-api.%s.enabled is true but %s.enabled is false, so its routes point at a %s that is not deployed. Set:\n\nobservability-platform-api:\n  %s:\n    enabled: false\n" $backend $backend $backend $backend) }}
+{{- end }}
+{{- if and $route.enabled (ne $route.namespace $.Release.Namespace) }}
+{{- fail (printf "observability-platform-api.%s.namespace is %q but this release installs into namespace %q, so its routes point at services in another namespace. Set:\n\nobservability-platform-api:\n  %s:\n    namespace: %s\n" $backend $route.namespace $.Release.Namespace $backend $.Release.Namespace) }}
+{{- end }}
+{{- end }}
+
+{{- range $apiVersion := list "gateway.networking.k8s.io/v1/HTTPRoute" "gateway.envoyproxy.io/v1alpha1/SecurityPolicy" }}
+{{- if not ($.Capabilities.APIVersions.Has $apiVersion) }}
+{{- fail (printf "observabilityPlatformApi.enabled is true but the cluster serves no %s. Install Envoy Gateway first - see doc/EXTERNAL_API.md." $apiVersion) }}
+{{- end }}
 {{- end }}
 {{- end }}

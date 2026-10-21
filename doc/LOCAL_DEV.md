@@ -22,7 +22,8 @@ make local-up
 
 `make local-up` creates a kind cluster and installs these components:
 
-- the chart in namespace `monitoring`, with `values-local.yaml`, including the observability-operator
+- the observability-operator, as its own release, with `values/observability-operator.yaml`
+- the chart in namespace `monitoring`, with `values-local.yaml`
 - the external API, with Envoy Gateway and a JWKS server. See [EXTERNAL_API.md](./EXTERNAL_API.md).
 
 ## Verify

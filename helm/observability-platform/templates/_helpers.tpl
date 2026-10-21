@@ -70,7 +70,7 @@ Connection string delivered to Mimir and Loki.
 {{- define "observability-platform.objectStorage.connectionString" -}}
 {{- if .Values.localBlobStorage.enabled -}}
 {{- $account := include "observability-platform.localBlobStorage.accountName" . -}}
-{{- printf "DefaultEndpointsProtocol=http;AccountName=%s;AccountKey=%s;BlobEndpoint=http://%s.%s.svc.cluster.local:%s/%s;" $account (include "observability-platform.localBlobStorage.accountKey" .) (include "observability-platform.localBlobStorage.serviceName" .) .Release.Namespace (include "observability-platform.localBlobStorage.port" .) $account -}}
+{{- printf "DefaultEndpointsProtocol=http;AccountName=%s;AccountKey=%s;BlobEndpoint=http://%s/%s;" $account (include "observability-platform.localBlobStorage.accountKey" .) (include "observability-platform.localBlobStorage.host" .) $account -}}
 {{- else -}}
 {{- .Values.global.objectStorage.azure.connectionString -}}
 {{- end -}}
@@ -82,7 +82,7 @@ when the suffix does not start with `blob.`.
 */}}
 {{- define "observability-platform.objectStorage.endpointSuffix" -}}
 {{- if .Values.localBlobStorage.enabled -}}
-{{- printf "%s.%s.svc.cluster.local:%s" (include "observability-platform.localBlobStorage.serviceName" .) .Release.Namespace (include "observability-platform.localBlobStorage.port" .) -}}
+{{- include "observability-platform.localBlobStorage.host" . -}}
 {{- else -}}
 blob.core.windows.net
 {{- end -}}

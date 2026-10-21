@@ -3,6 +3,9 @@
 LOCAL := hack/local
 KUBECTL := kubectl --context kind-kind
 HELM := helm --kube-context kind-kind
+# observability-operator release installed before the chart. Keep in step with the
+# version the platform is tested against.
+OPERATOR_VERSION := 0.84.1
 
 .PHONY: local-up local-token local-down
 
@@ -20,6 +23,10 @@ local-up: ## Create a kind cluster running the chart and the external API.
 	$(KUBECTL) create configmap jwks -n jwt-issuer --from-file=$(LOCAL)/.keys/jwks.json \
 	  --dry-run=client -o yaml | $(KUBECTL) apply -f -
 	$(KUBECTL) apply -f $(LOCAL)/jwks.yaml
+	$(HELM) upgrade --install observability-operator observability-operator \
+	  --repo https://giantswarm.github.io/control-plane-catalog/ --version $(OPERATOR_VERSION) \
+	  --namespace monitoring --create-namespace \
+	  --values values/observability-operator.yaml --wait --timeout 5m
 	$(HELM) dependency update helm/observability-platform
 	$(HELM) upgrade --install observability-platform helm/observability-platform \
 	  --namespace monitoring --create-namespace \

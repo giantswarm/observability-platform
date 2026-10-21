@@ -8,14 +8,11 @@ dependencies:
 - name: mimir
   repository: https://giantswarm.github.io/control-plane-catalog/
   version: 0.30.1
-- name: observability-operator
-  repository: https://giantswarm.github.io/control-plane-catalog/
-  version: 0.84.1
 - name: observability-platform-api
   repository: https://giantswarm.github.io/control-plane-catalog/
   version: 0.6.0
 - name: tempo
   repository: https://giantswarm.github.io/control-plane-catalog/
   version: 0.18.0
-digest: sha256:0f48aba0356b8580465bbfccbffadc91fc81c6bc17259f5894bc0c0ca4846658
-generated: "2026-10-15T13:55:36.398172727Z"
+digest: sha256:67001020035a55f3c5465ab3f89c8d03e1cc1ab92e8218847a71326b23385fc3
+generated: "2026-10-20T12:09:56.089880239+02:00"
