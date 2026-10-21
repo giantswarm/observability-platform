@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Enable Mimir Alertmanager.
+- Give Grafana's default organization (org 1) the platform's datasources, with alerting access while Mimir's Alertmanager is enabled.
 - Enable Tempo by default. It runs multi-tenant and stores traces in Azure Blob.
 - Add the `tempo` Azure Blob container configuration.
 - Run the observability-operator with only its GrafanaOrganization and Dashboard controllers.
@@ -38,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Stop shipping Giant Swarm's Alertmanager routing with the observability-operator release (`values/observability-operator.yaml`).
 - The external API routes attach only to the Gateway listener named `https`, so the API is no longer served over plain HTTP.
 - Update `observability-operator` from 0.72.2 to 0.84.0.
 - Update `observability-platform-api` from 0.4.0 to 0.5.0.

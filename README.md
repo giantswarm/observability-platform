@@ -19,10 +19,10 @@ Here, we define the observability-platform chart with its templates and default 
 
 **What is this app?**
 
-A self-hosted observability stack packaged as an umbrella chart: Mimir for metrics, Loki for
-logs, and Grafana to look at them. The `observability-operator`, installed as its own release next to
-it, manages organizations, datasources and dashboards. Tempo, the observability platform API
-and Alertmanager ship with the chart but are disabled by default.
+A self-hosted observability stack packaged as an umbrella chart: Mimir for metrics and its
+Alertmanager for alerts, Loki for logs, Tempo for traces, and Grafana to look at them. The
+`observability-operator`, installed as its own release next to it, manages organizations, datasources
+and dashboards. The observability platform API ships with the chart but is disabled by default.
 
 **Why did we add it?**
 
@@ -33,6 +33,23 @@ To offer the Giant Swarm Observability Platform as a self-hosted observability s
 
 Anyone with a Kubernetes cluster and object storage. It does not require a Giant Swarm management
 cluster.
+
+**The Default organization**
+
+The chart creates a `GrafanaOrganization` named `main-org` whose display name is `Main Org.`, the
+name of Grafana's default organization. The operator therefore takes over Grafana's org 1 and gives
+it Mimir, Loki and Tempo datasources reading the platform's data, that is, the tenant set in
+`global.tenant` (`default` unless set). While Mimir's Alertmanager is enabled, the organization also
+gets alerting access to that tenant, with a Mimir Alertmanager datasource. Dashboard ConfigMaps reach
+it with the annotation `observability.giantswarm.io/organization: Main Org.`.
+
+After `helm uninstall`, the resource currently stays in deletion: the uninstall also removes
+Grafana's admin Secret, which the operator needs before it can process the deletion. Remove its
+finalizer:
+
+```bash
+kubectl patch grafanaorganization main-org --type=merge -p '{"metadata":{"finalizers":null}}'
+```
 
 **Known limitations of the observability-operator with this chart**
 

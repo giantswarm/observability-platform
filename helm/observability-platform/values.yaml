@@ -108,6 +108,17 @@ localBlobStorage:
     image: mcr.microsoft.com/azure-cli:2.91.0
 
 # ---------------------------------------------------------------------------
+# Default organization: a GrafanaOrganization that takes over Grafana's default
+# organization ("Main Org.", org 1) and gives it datasources that read the platform's
+# data, that is, the tenant set in `global.tenant`.
+# ---------------------------------------------------------------------------
+defaultOrganization:
+  # -- Create the Default organization. Needs the observability-operator to be enabled.
+  enabled: true
+  admins:
+  - admins
+
+# ---------------------------------------------------------------------------
 # Observability Platform API: authenticated external ingest and read.
 #
 # Renders Gateway API routes plus Envoy Gateway filters and SecurityPolicies.
@@ -201,6 +212,8 @@ mimir:
   mimir:
     # Pin the service name - see "Deterministic names" under grafana above.
     fullnameOverride: mimir
+    alertmanager:
+      enabled: true
     ingester:
       verticalAutoscaling:
         enabled: false
