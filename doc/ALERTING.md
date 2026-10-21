@@ -20,7 +20,7 @@ Each file in `helm/observability-platform/files/alertmanager` becomes one key of
 default `alertmanager.yaml` routes every alert to the `default` receiver. That receiver has no
 integrations.
 
-To change the default config, edit `files/alertmanager/alertmanager.yaml` and upgrade the release.
+To use your own config, follow [Provide a config](#provide-a-config).
 
 ## Provide a config
 
