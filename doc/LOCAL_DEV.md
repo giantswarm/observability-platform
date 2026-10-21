@@ -69,6 +69,11 @@ back with the stored data, and the sidecar creates any missing container again. 
 `helm upgrade` is needed. `helm uninstall` and `make local-down` delete the data.
 Set `localBlobStorage.azurite.persistence` to change the volume size or StorageClass.
 
+A cluster installed before the PVC existed loses its Azurite data once on upgrade. Helm 4
+also refuses to switch the existing Deployment to the `Recreate` strategy with server-side
+apply, so run that one upgrade with `--server-side=false`. You can then delete the
+leftover `azurite-init` Job.
+
 ## Send data through the external API
 
 The local setup replaces the OIDC issuer with a static JWKS served in the cluster.

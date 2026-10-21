@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- The local Azurite keeps its data and storage containers when its pod restarts, so Loki, Mimir and Tempo keep working without a `helm upgrade`.
+- The local Azurite keeps its data and storage containers when its pod restarts, so Loki, Mimir and Tempo keep working without a `helm upgrade`. Upgrading an existing local install drops its Azurite data once and, with Helm 4, needs `--server-side=false` that one time.
 - The local kind cluster inherits no DNS search domain from the host. A host search domain no longer slows in-cluster lookups.
 - The `helm.sh/chart` label is valid for long chart versions: the 63-character cut trims the whole trailing run of `-`, `.` and `_`.
 

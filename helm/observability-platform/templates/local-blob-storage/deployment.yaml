@@ -134,11 +134,15 @@ spec:
               touch /tmp/ready
               echo "done"
 
-              # A container that exits is restarted, so this one idles. The trap lets it
-              # stop at once: as PID 1, the shell ignores SIGTERM otherwise.
+              # A container that exits is restarted, and a restarting one turns the pod
+              # unready, so this one idles. The trap lets it stop at once: as PID 1, the
+              # shell ignores SIGTERM otherwise. A loop rather than `sleep infinity`, which
+              # not every `sleep` accepts.
               trap 'exit 0' TERM
-              sleep infinity &
-              wait
+              while :; do
+                sleep 3600 &
+                wait $!
+              done
           readinessProbe:
             exec:
               command: ["test", "-f", "/tmp/ready"]
