@@ -60,9 +60,20 @@
         "enabled": { "type": "boolean" },
         "azurite": {
           "type": "object",
-          "required": ["image"],
+          "required": ["image", "persistence"],
           "properties": {
-            "image": { "type": "string", "minLength": 1 }
+            "image": { "type": "string", "minLength": 1 },
+            "persistence": {
+              "type": "object",
+              "required": ["size", "storageClass"],
+              "properties": {
+                "size": { "type": "string", "minLength": 1 },
+                "storageClass": {
+                  "type": "string",
+                  "description": "Empty uses the cluster's default StorageClass."
+                }
+              }
+            }
           }
         },
         "init": {

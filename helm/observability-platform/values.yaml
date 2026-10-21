@@ -103,7 +103,14 @@ localBlobStorage:
   enabled: false
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite:3.37.0
-  # Job that creates the containers, which Azurite does not create itself.
+    # Volume holding the emulated account, so the data and the containers survive a
+    # restarted pod. Deleted with the release.
+    persistence:
+      size: 5Gi
+      # Empty uses the cluster's default StorageClass (`standard` on kind).
+      storageClass: ""
+  # Sidecar that creates the containers, which Azurite does not create itself, at
+  # every Azurite start.
   init:
     image: mcr.microsoft.com/azure-cli:2.91.0
 
