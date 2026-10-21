@@ -232,7 +232,7 @@ use `$API/v1/traces`.
 
 ## Log push limits
 
-These apply to `/loki/api/v1/push` and `/otlp/v1/logs`, per tenant:
+These apply to `/loki/api/v1/push` and `/otlp/v1/logs`. The rate limits are per tenant:
 
 | Limit | Value | Over it |
 | --- | --- | --- |

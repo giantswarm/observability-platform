@@ -18,12 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Install the observability-operator as its own release, before this chart, with `values/observability-operator.yaml`.
-- Loki deletes logs older than 30 days by default (72 hours in the local profile), and serves its delete API inside the cluster.
+- Loki deletes logs older than 30 days by default (72 hours in the local profile), including logs stored before the upgrade; set `loki.loki.loki.limits_config.retention_period: 0s` to keep them forever.
 
 ### Added
 
 - Enable Mimir Alertmanager.
 - Give Grafana's default organization (org 1) the platform's datasources, with alerting access while Mimir's Alertmanager is enabled.
+- Serve the Loki delete API inside the cluster, through `loki-gateway`.
 - Enable Tempo by default. It runs multi-tenant and stores traces in Azure Blob.
 - Add the `tempo` Azure Blob container configuration.
 - Run the observability-operator with only its GrafanaOrganization and Dashboard controllers.
