@@ -266,7 +266,34 @@ loki:
     networkPolicy:
       enabled: false
       flavor: kubernetes
+    # Publish pods before they are Ready, so they can join the ring at startup.
+    # Without it, the DNS name does not resolve until one Loki pod is Ready.
+    memberlist:
+      service:
+        publishNotReadyAddresses: true
+    gateway:
+      nginxConfig:
+        # Largest push body on the wire, compressed or not. A larger push gets a 413.
+        # Keep it in line with `ingestion_burst_size_mb` below. See doc/EXTERNAL_API.md.
+        clientMaxBodySize: 16M
     loki:
+      # Serves /loki/api/v1/patterns, which the Logs Drilldown Patterns tab reads.
+      # Runs inside the write pods.
+      pattern_ingester:
+        enabled: true
+      # Applies retention, and serves the delete API (/loki/api/v1/delete) on the
+      # backend pods. Delete requests are kept in the same object store as the logs.
+      compactor:
+        retention_enabled: true
+        delete_request_store: azure
+      # Helm merges maps, so the upstream `limits_config` keys are kept.
+      limits_config:
+        # Per tenant. A push carrying more log-line bytes than the burst gets a 429.
+        ingestion_rate_mb: 16
+        ingestion_burst_size_mb: 32
+        # How long logs are kept: 30 days. 0 keeps them forever. Loki only: Mimir and
+        # Tempo keep their own defaults. See doc/OBJECT_STORAGE.md.
+        retention_period: 720h
       # Repeated from loki-app's own values. Overriding a list replaces it.
       schemaConfig:
         configs:

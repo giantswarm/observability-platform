@@ -11,15 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The local kind cluster inherits no DNS search domain from the host. A host search domain no longer slows in-cluster lookups.
 - The `helm.sh/chart` label is valid for long chart versions: the 63-character cut trims the whole trailing run of `-`, `.` and `_`.
+- Loki joins its memberlist ring right after startup, so it serves queries without a two-minute wait after an install.
+- Loki accepts log pushes up to 16 MiB on the wire, instead of rejecting uncompressed pushes over 4 MiB.
+- `/loki/api/v1/patterns` and the Patterns tab of Grafana Logs Drilldown work, instead of returning 404.
 
 ### Changed
 
 - Install the observability-operator as its own release, before this chart, with `values/observability-operator.yaml`.
+- Loki deletes logs older than 30 days by default (72 hours in the local profile), including logs stored before the upgrade; set `loki.loki.loki.limits_config.retention_period: 0s` to keep them forever.
 
 ### Added
 
 - Enable Mimir Alertmanager.
 - Give Grafana's default organization (org 1) the platform's datasources, with alerting access while Mimir's Alertmanager is enabled.
+- Serve the Loki delete API inside the cluster, through `loki-gateway`.
 - Enable Tempo by default. It runs multi-tenant and stores traces in Azure Blob.
 - Add the `tempo` Azure Blob container configuration.
 - Run the observability-operator with only its GrafanaOrganization and Dashboard controllers.
