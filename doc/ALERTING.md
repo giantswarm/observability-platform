@@ -1,24 +1,31 @@
 # Alerting
 
 The Mimir ruler sends alerts to Mimir Alertmanager. Alertmanager routes them to your receivers.
+Grafana shows the alerts of `global.tenant` in the default organization.
 
-Each tenant has one Alertmanager config. A tenant without a config uses the fallback config:
-one receiver with no integrations. Alerts then show in Grafana but notify no one.
+Each tenant has one Alertmanager config, stored in one Secret. A tenant without a Secret uses
+the fallback config: one receiver with no integrations.
 
 ## Default config
 
-The chart creates the Secret `alertmanager-config` for `global.tenant`. Each file in
-`helm/observability-platform/files/alertmanager` becomes one key of the Secret. The default
-`alertmanager.yaml` routes every alert to the `default` receiver. That receiver has no
+The chart creates the Secret `alertmanager-config` for `global.tenant`. It needs these values:
+
+- `defaultAlertmanagerConfig.enabled`
+- `defaultOrganization.enabled`
+- `observabilityOperator.enabled`
+- `mimir.enabled`
+- `mimir.mimir.alertmanager.enabled`
+
+Each file in `helm/observability-platform/files/alertmanager` becomes one key of the Secret. The
+default `alertmanager.yaml` routes every alert to the `default` receiver. That receiver has no
 integrations.
 
-Edit `files/alertmanager/alertmanager.yaml` to change the default config. Helm reverts direct
-edits to the Secret on the next upgrade.
+To change the default config, edit `files/alertmanager/alertmanager.yaml` and upgrade the release.
 
 ## Provide a config
 
-Create a Secret in any namespace. For `global.tenant`, first set
-`defaultAlertmanagerConfig.enabled: false`: two Secrets for one tenant overwrite each other.
+Create a Secret in any namespace. For `global.tenant`, set `defaultAlertmanagerConfig.enabled: false`
+first.
 
 ```yaml
 apiVersion: v1
@@ -40,37 +47,29 @@ stringData:
           - url: https://example.com/alerts
 ```
 
-- `observability.giantswarm.io/tenant` names the tenant. A `GrafanaOrganization` must list it.
+- `observability.giantswarm.io/tenant` names the tenant. A `GrafanaOrganization` lists it.
   The default organization lists `global.tenant`.
 - `alertmanager.yaml` holds the full [Alertmanager config](https://prometheus.io/docs/alerting/latest/configuration/).
   It replaces the fallback config.
 - Every other key ending in `.tmpl` is a [notification template](https://prometheus.io/docs/alerting/latest/notifications/).
   Reference it by its key name.
 
-The observability-operator loads the Secret into Mimir Alertmanager. Changes to the Secret load
-the same way. Deleting the Secret deletes the tenant's config.
+Create the `GrafanaOrganization` before the Secret. The observability-operator loads the Secret
+into Mimir Alertmanager. It reloads the Secret on every change. Deleting the Secret deletes the
+tenant's config.
 
 ## Check the config
 
-The operator logs every load:
+The operator logs every load and every rejected config:
 
 ```bash
 kubectl logs -n monitoring -l app.kubernetes.io/name=observability-operator | grep alertmanager
 ```
 
 Read back the loaded config. In Mimir, `GET /api/v1/alerts` returns the tenant's Alertmanager
-config, not its alerts:
+config:
 
 ```bash
 kubectl port-forward -n monitoring svc/mimir-alertmanager 8080 &
 curl -H "X-Scope-OrgID: default" http://localhost:8080/api/v1/alerts
 ```
-
-## Known limitations
-
-- The operator's admission webhooks are disabled. The operator rejects an invalid config in its
-  logs only.
-- One Secret per tenant. Two Secrets for one tenant overwrite each other.
-- The operator loads a Secret only if its tenant is listed at that moment. A Secret created
-  before its `GrafanaOrganization` stays unloaded until the Secret changes or the operator
-  restarts.
