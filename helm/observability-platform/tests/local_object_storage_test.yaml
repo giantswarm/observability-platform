@@ -8,6 +8,7 @@ templates:
   - templates/local-object-storage/garage-deployment.yaml
   - templates/local-object-storage/garage-service.yaml
   - templates/local-object-storage/garage-secret.yaml
+  - templates/local-object-storage/garage-init-job.yaml
 release:
   name: obs
   namespace: monitoring
@@ -252,3 +253,106 @@ tests:
       - hasDocuments:
           count: 0
         template: templates/local-object-storage/garage-secret.yaml
+
+  - it: creates the Garage bucket Job as a post-install and post-upgrade hook
+    set:
+      global.objectStorage.backend: s3
+      global.objectStorage.s3.store: compatible
+      localObjectStorage.enabled: true
+    template: templates/local-object-storage/garage-init-job.yaml
+    asserts:
+      - isKind:
+          of: Job
+      - equal:
+          path: metadata.name
+          value: garage-init
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: post-install,post-upgrade
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: before-hook-creation
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: amazon/aws-cli:2.31.0
+
+  - it: reads the bucket names from the storage ConfigMap
+    set:
+      global.objectStorage.backend: s3
+      global.objectStorage.s3.store: compatible
+      localObjectStorage.enabled: true
+    template: templates/local-object-storage/garage-init-job.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            configMapRef:
+              name: observability-platform-object-storage
+
+  - it: reads the dev key from garage-credentials
+    set:
+      global.objectStorage.backend: s3
+      global.objectStorage.s3.store: compatible
+      localObjectStorage.enabled: true
+    template: templates/local-object-storage/garage-init-job.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            secretRef:
+              name: garage-credentials
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: AWS_REGION
+            value: $(OBS_S3_REGION)
+
+  - it: names all five bucket variables
+    set:
+      global.objectStorage.backend: s3
+      global.objectStorage.s3.store: compatible
+      localObjectStorage.enabled: true
+    template: templates/local-object-storage/garage-init-job.yaml
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: \$OBS_BUCKET_MIMIR_BLOCKS
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: \$OBS_BUCKET_MIMIR_ALERTMANAGER
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: \$OBS_BUCKET_MIMIR_RULER
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: \$OBS_BUCKET_LOKI
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: \$OBS_BUCKET_TEMPO
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: BucketAlreadyOwnedByYou
+
+  - it: reads the Garage init image from localObjectStorage.garage
+    set:
+      global.objectStorage.backend: s3
+      global.objectStorage.s3.store: compatible
+      localObjectStorage.enabled: true
+      localObjectStorage.garage.initImage: example.com/aws-cli:1
+    template: templates/local-object-storage/garage-init-job.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: example.com/aws-cli:1
+
+  - it: creates no Garage Job with backend azure
+    set:
+      global.objectStorage.backend: azure
+      localObjectStorage.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/garage-init-job.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/local-object-storage/azurite-init-job.yaml
