@@ -62,6 +62,9 @@ Object storage validation.
 {{- end -}}
 {{- end -}}
 {{- end -}}
+{{- if and .Values.localObjectStorage.enabled (eq $backend "s3") (eq $store "aws") -}}
+{{- fail "localObjectStorage.enabled runs Garage, an S3-compatible store, but global.objectStorage.s3.store is \"aws\". Set it to \"compatible\", or unset localObjectStorage.enabled - see doc/LOCAL_DEV.md." -}}
+{{- end -}}
 {{- $garage := include "observability-platform.localObjectStorage.garage.enabled" . -}}
 {{- if $garage -}}
 {{- range $key := list "endpoint" "region" -}}
