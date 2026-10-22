@@ -50,6 +50,9 @@ Object storage validation.
 {{- if and (eq $backend "s3") (not $s3.endpoint) -}}
 {{- fail "global.objectStorage.backend is \"s3\" and global.objectStorage.s3.endpoint is empty. Set it to the store endpoint, host[:port] without a scheme - see doc/OBJECT_STORAGE.md." -}}
 {{- end -}}
+{{- if and (eq $backend "s3") (eq $store "aws") (not $s3.region) -}}
+{{- fail "global.objectStorage.s3.store is \"aws\" and global.objectStorage.s3.region is empty. Set it to the AWS region of the buckets - see doc/OBJECT_STORAGE.md." -}}
+{{- end -}}
 {{- if eq $backend "azure" -}}
 {{- $azure := $os.azure -}}
 {{- if .Values.localBlobStorage.enabled -}}

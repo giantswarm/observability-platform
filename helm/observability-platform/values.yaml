@@ -37,7 +37,7 @@ global:
       # store:
       # -- Store endpoint, host[:port], no scheme. Required with backend `s3`.
       endpoint: ""
-      # -- Signing region. Required with store `aws`.
+      # -- Signing region. Required with store `aws`. Optional with store `compatible`.
       region: ""
       # -- Plain HTTP.
       insecure: false
