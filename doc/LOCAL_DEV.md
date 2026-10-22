@@ -4,7 +4,7 @@ Azure Blob is the only object storage backend this chart supports. By default
 `helm install` needs a real storage account - see
 [doc/OBJECT_STORAGE.md](./OBJECT_STORAGE.md).
 
-`localBlobStorage.enabled` replaces it with [Azurite](https://github.com/Azure/Azurite),
+`localObjectStorage.enabled` replaces it with [Azurite](https://github.com/Azure/Azurite),
 Microsoft's Azure Storage emulator, running in the cluster.
 
 ## Prerequisites

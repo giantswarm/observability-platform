@@ -1,0 +1,107 @@
+suite: local object storage
+templates:
+  - templates/local-object-storage/azurite-deployment.yaml
+  - templates/local-object-storage/azurite-service.yaml
+  - templates/local-object-storage/azurite-init-job.yaml
+  - templates/local-object-storage/azurite-secret.yaml
+release:
+  name: obs
+  namespace: monitoring
+tests:
+  - it: deploys Azurite with backend azure
+    set:
+      global.objectStorage.backend: azure
+      localObjectStorage.enabled: true
+    asserts:
+      - isKind:
+          of: Deployment
+        template: templates/local-object-storage/azurite-deployment.yaml
+      - equal:
+          path: metadata.name
+          value: azurite
+        template: templates/local-object-storage/azurite-deployment.yaml
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: mcr.microsoft.com/azure-storage/azurite:3.37.0
+        template: templates/local-object-storage/azurite-deployment.yaml
+      - isKind:
+          of: Service
+        template: templates/local-object-storage/azurite-service.yaml
+      - equal:
+          path: metadata.name
+          value: azurite
+        template: templates/local-object-storage/azurite-service.yaml
+      - isKind:
+          of: Job
+        template: templates/local-object-storage/azurite-init-job.yaml
+      - equal:
+          path: metadata.name
+          value: azurite-init
+        template: templates/local-object-storage/azurite-init-job.yaml
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: mcr.microsoft.com/azure-cli:2.91.0
+        template: templates/local-object-storage/azurite-init-job.yaml
+      - isKind:
+          of: Secret
+        template: templates/local-object-storage/azurite-secret.yaml
+      - equal:
+          path: metadata.name
+          value: azurite-credentials
+        template: templates/local-object-storage/azurite-secret.yaml
+
+  - it: reads the Azurite images from localObjectStorage.azurite
+    set:
+      global.objectStorage.backend: azure
+      localObjectStorage.enabled: true
+      localObjectStorage.azurite.image: example.com/azurite:1
+      localObjectStorage.azurite.initImage: example.com/azure-cli:1
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: example.com/azurite:1
+        template: templates/local-object-storage/azurite-deployment.yaml
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: example.com/azure-cli:1
+        template: templates/local-object-storage/azurite-init-job.yaml
+
+  - it: deploys no Azurite with backend s3
+    values:
+      - values/s3-compatible.yaml
+    set:
+      localObjectStorage.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: deploys nothing when localObjectStorage is disabled
+    set:
+      global.objectStorage.backend: azure
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: deploys no Azurite when Mimir, Loki and Tempo are disabled
+    set:
+      global.objectStorage.backend: azure
+      localObjectStorage.enabled: true
+      mimir.enabled: false
+      loki.enabled: false
+      tempo.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: deploys no Azurite Secret when Tempo is disabled
+    set:
+      global.objectStorage.backend: azure
+      localObjectStorage.enabled: true
+      tempo.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/azurite-secret.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/local-object-storage/azurite-deployment.yaml
