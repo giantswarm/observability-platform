@@ -8,7 +8,9 @@ jobs:
   e2e-kind:
     machine:
       image: ubuntu-2404:current
-    resource_class: large
+    # The stack runs 23 pods plus Envoy Gateway. On 4 vCPUs they starve: liveness
+    # probes fail, components restart mid-test, and reads return 500.
+    resource_class: xlarge
     steps:
       - checkout
       - run:
