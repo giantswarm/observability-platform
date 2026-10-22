@@ -22,7 +22,7 @@ Here, we define the observability-platform chart with its templates and default 
 A self-hosted observability stack packaged as an umbrella chart: Mimir for metrics and its
 Alertmanager for alerts, Loki for logs, Tempo for traces, and Grafana to look at them. The
 `observability-operator`, installed as its own release next to it, manages organizations, datasources
-and dashboards. The observability platform API ships with the chart but is disabled by default.
+and dashboards. The observability platform API ships with the chart but is disabled by default. See [doc/ALERTING.md](doc/ALERTING.md) for alerting.
 
 **Why did we add it?**
 
@@ -53,6 +53,7 @@ this chart before the operator, which processes the deletion.
   [`values/observability-operator.yaml`](values/observability-operator.yaml). See [Installing](#installing).
 - The release installs into the `monitoring` namespace while `observabilityOperator.enabled` is on.
 - The operator values must agree with this chart's: `tracing.enabled` with `tempo.enabled`,
+  `operator.controllers.alertmanager.enabled` with `mimir.enabled` and `mimir.mimir.alertmanager.enabled`,
   `defaultTenant` with `global.tenant`, and the Grafana and datasource URLs with the `monitoring`
   namespace. Nothing checks this across the two releases.
 - The operator's admission webhooks are disabled, so mistakes in `GrafanaOrganization` resources or

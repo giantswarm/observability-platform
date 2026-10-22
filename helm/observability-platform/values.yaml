@@ -119,6 +119,17 @@ defaultOrganization:
   - admins
 
 # ---------------------------------------------------------------------------
+# Default Alertmanager config: a Secret holding the files in files/alertmanager.
+# The observability-operator loads it into Mimir Alertmanager for `global.tenant`.
+# See doc/ALERTING.md.
+# ---------------------------------------------------------------------------
+defaultAlertmanagerConfig:
+  # -- Create the default Alertmanager config Secret. Needs the observability-operator,
+  # Mimir Alertmanager and the Default organization to be enabled. Disable it to provide
+  # your own Secret.
+  enabled: true
+
+# ---------------------------------------------------------------------------
 # Observability Platform API: authenticated external ingest and read.
 #
 # Renders Gateway API routes plus Envoy Gateway filters and SecurityPolicies.
