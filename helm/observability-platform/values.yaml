@@ -94,13 +94,20 @@ tempo:
     multitenancyEnabled: true
     storage:
       trace:
-        backend: azure
-        azure:
-          storage_account_name: ${OBS_AZURE_ACCOUNT_NAME}
-          storage_account_key: ${AZURE_STORAGE_KEY}
-          container_name: ${OBS_BUCKET_TEMPO}
-          # A suffix not starting with `blob.` switches Tempo to Azurite path style.
-          endpoint_suffix: ${OBS_AZURE_ENDPOINT_SUFFIX}
+        # The upstream chart renders a backend block only for a literal backend.
+        # The blocks live in `tempo.structuredConfig` below.
+        backend: ${OBS_BACKEND}
+    tempo:
+      structuredConfig:
+        storage:
+          trace:
+            backend: ${OBS_BACKEND}
+            azure:
+              storage_account_name: ${OBS_AZURE_ACCOUNT_NAME}
+              storage_account_key: ${AZURE_STORAGE_KEY}
+              container_name: ${OBS_BUCKET_TEMPO}
+              # A suffix not starting with `blob.` switches Tempo to Azurite path style.
+              endpoint_suffix: ${OBS_AZURE_ENDPOINT_SUFFIX}
     metricsGenerator:
       enabled: false
     # The API reaches the query-frontend and the distributor directly.
@@ -216,7 +223,8 @@ observability-platform-api:
 #      Tempo gets it from `tempo.tempo.defaults.extraArgs`. The references expand
 #      at startup.
 #
-# The backend is a literal `azure` everywhere.
+# Every backend field reads `${OBS_BACKEND}`, except Loki's `storage.type`, a
+# template-time literal.
 # ---------------------------------------------------------------------------
 mimir:
   enabled: true
@@ -251,7 +259,7 @@ mimir:
       structuredConfig:
         common:
           storage:
-            backend: azure
+            backend: ${OBS_BACKEND}
             azure:
               account_name: ${OBS_AZURE_ACCOUNT_NAME}
               account_key: ${AZURE_STORAGE_KEY}
@@ -259,15 +267,15 @@ mimir:
               # See `global.objectStorage.azure.connectionString`.
               connection_string: ${OBS_AZURE_CONNECTION_STRING}
         blocks_storage:
-          backend: azure
+          backend: ${OBS_BACKEND}
           azure:
             container_name: ${OBS_BUCKET_MIMIR_BLOCKS}
         alertmanager_storage:
-          backend: azure
+          backend: ${OBS_BACKEND}
           azure:
             container_name: ${OBS_BUCKET_MIMIR_ALERTMANAGER}
         ruler_storage:
-          backend: azure
+          backend: ${OBS_BACKEND}
           azure:
             container_name: ${OBS_BUCKET_MIMIR_RULER}
 
@@ -295,7 +303,7 @@ loki:
       schemaConfig:
         configs:
           - from: 2024-04-01
-            object_store: azure
+            object_store: ${OBS_BACKEND}
             store: tsdb
             schema: v13
             index:

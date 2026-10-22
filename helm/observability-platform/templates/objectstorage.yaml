@@ -11,6 +11,7 @@ metadata:
     {{- include "labels.common" . | nindent 4 }}
 data:
   OBS_TENANT: {{ .Values.global.tenant | quote }}
+  OBS_BACKEND: {{ .Values.global.objectStorage.backend | quote }}
   OBS_AZURE_ACCOUNT_NAME: {{ include "observability-platform.objectStorage.accountName" . | quote }}
   OBS_AZURE_CONNECTION_STRING: {{ include "observability-platform.objectStorage.connectionString" . | quote }}
   OBS_BUCKET_MIMIR_BLOCKS: {{ .Values.global.objectStorage.buckets.mimirBlocks | quote }}
