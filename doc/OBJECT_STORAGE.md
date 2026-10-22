@@ -196,7 +196,63 @@ before install.
 S3-compatible stores and Azure Blob Storage scope names to the account. The defaults
 work there.
 
-<!-- Story 23 adds "### Create the buckets" here. -->
+### Create the buckets
+
+Create the five buckets before install. Use the names from your `buckets` values. The
+examples use the `acme-prod-*` names from above on AWS and the defaults elsewhere.
+
+The examples run with an admin identity. The credentials Secret needs no right to create
+buckets.
+
+#### AWS S3
+
+```bash
+REGION=eu-west-1   # s3.region
+
+for b in acme-prod-mimir-blocks acme-prod-mimir-alertmanager acme-prod-mimir-ruler \
+         acme-prod-loki acme-prod-tempo; do
+  aws s3api create-bucket --bucket "$b" --region "$REGION" \
+    --create-bucket-configuration LocationConstraint="$REGION"
+  aws s3api put-public-access-block --bucket "$b" --region "$REGION" \
+    --public-access-block-configuration \
+    BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+done
+```
+
+In `us-east-1`, drop `--create-bucket-configuration`. AWS rejects
+`LocationConstraint=us-east-1`. Every other region requires it.
+
+Each `create-bucket` call prints the bucket `Location`. A re-run prints
+`BucketAlreadyOwnedByYou` for a bucket that exists in your account. `BucketAlreadyExists`
+means another AWS account owns the name. Pick another prefix.
+
+#### S3-compatible store
+
+```bash
+ENDPOINT=minio.storage.internal:9000   # s3.endpoint
+
+for b in mimir-blocks mimir-alertmanager mimir-ruler loki tempo; do
+  aws s3api create-bucket --bucket "$b" --endpoint-url "https://$ENDPOINT"
+done
+```
+
+Use `http://` with `s3.insecure: true`. Add `--region "$REGION"` with your `s3.region`
+when the store checks the signing region.
+
+#### Azure Blob Storage
+
+Create the containers with `az storage container create`. See
+[Step 3](#step-3--create-the-containers).
+
+#### List the buckets
+
+```bash
+aws s3api list-buckets --query "Buckets[].Name" \
+  --endpoint-url "https://$ENDPOINT" --region "$REGION"
+```
+
+The output lists the five names. On AWS, set `ENDPOINT` to `s3.<region>.amazonaws.com`.
+Drop `--region` on a store that does not check the signing region.
 
 ## Credentials
 
