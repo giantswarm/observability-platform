@@ -129,3 +129,12 @@ S3 endpoint delivered to Mimir and Tempo. Empty with backend `azure`.
 {{- .Values.global.objectStorage.s3.endpoint -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+S3 region delivered to Mimir and Tempo. Empty with backend `azure`.
+*/}}
+{{- define "observability-platform.objectStorage.s3.region" -}}
+{{- if eq .Values.global.objectStorage.backend "s3" -}}
+{{- .Values.global.objectStorage.s3.region -}}
+{{- end -}}
+{{- end -}}
