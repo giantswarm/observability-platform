@@ -42,7 +42,11 @@
                   "enum": ["aws", "compatible"],
                   "description": "AWS S3 or an S3-compatible store. Required with backend s3. No default. The objectStorage.validate helper fails the render while it is unset."
                 },
-                "endpoint": { "type": "string" },
+                "endpoint": {
+                  "type": "string",
+                  "pattern": "^([^/:]+(:[0-9]+)?)?$",
+                  "description": "Store endpoint, host[:port], no scheme. Required with backend s3. The objectStorage.validate helper fails the render while it is empty."
+                },
                 "region": { "type": "string" },
                 "insecure": { "type": "boolean" }
               }

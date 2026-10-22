@@ -36,6 +36,7 @@ global:
       # -- (string) `aws` or `compatible`. Required with backend `s3`. No default.
       # store:
       # -- Store endpoint, host[:port], no scheme. Required with backend `s3`.
+      # Examples: `s3.eu-west-1.amazonaws.com`, `minio.storage.internal:9000`.
       endpoint: ""
       # -- Signing region. Required with store `aws`. Optional with store `compatible`.
       region: ""
