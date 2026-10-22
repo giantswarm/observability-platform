@@ -138,6 +138,30 @@ tests:
           path: data.OBS_S3_INSECURE
           value: "false"
 
+  - it: sets OBS_LOKI_THANOS to true for store compatible
+    values:
+      - values/s3-compatible.yaml
+    asserts:
+      - equal:
+          path: data.OBS_LOKI_THANOS
+          value: "true"
+
+  - it: sets OBS_LOKI_THANOS to false for store aws
+    values:
+      - values/s3-aws.yaml
+    asserts:
+      - equal:
+          path: data.OBS_LOKI_THANOS
+          value: "false"
+
+  - it: sets OBS_LOKI_THANOS to false with backend azure
+    values:
+      - values/azure.yaml
+    asserts:
+      - equal:
+          path: data.OBS_LOKI_THANOS
+          value: "false"
+
   - it: sets the five bucket names with backend s3
     values:
       - values/s3-aws.yaml
