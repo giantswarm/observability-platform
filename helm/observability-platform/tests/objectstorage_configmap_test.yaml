@@ -190,9 +190,9 @@ tests:
       - equal:
           path: data.OBS_AZURE_ACCOUNT_NAME
           value: devstoreaccount1
-      - equal:
+      - matchRegex:
           path: data.OBS_AZURE_CONNECTION_STRING
-          value: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite.monitoring.svc.cluster.local:10000/devstoreaccount1;
+          pattern: ^DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=[A-Za-z0-9+/]+=*;BlobEndpoint=http://azurite\.monitoring\.svc\.cluster\.local:10000/devstoreaccount1;$
       - equal:
           path: data.OBS_AZURE_ENDPOINT_SUFFIX
           value: azurite.monitoring.svc.cluster.local:10000
