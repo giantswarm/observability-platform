@@ -123,7 +123,7 @@ Some apps have restrictions on how they can be deployed.
 Not following these limitations will most likely result in a broken deployment.
 
 - Azure Blob is the only supported object storage backend for now. For development,
-  `localBlobStorage.enabled` runs the Azurite emulator in-cluster instead of a real
+  `localObjectStorage.enabled` runs the Azurite emulator in-cluster instead of a real
   storage account — see [doc/LOCAL_DEV.md](doc/LOCAL_DEV.md).
 - One sizing profile, tuned for a small cluster. There is no answer yet for real ingest volume.
 - The chart creates no Gateway and no TLS certificate. The external API and Grafana are
