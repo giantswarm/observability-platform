@@ -43,13 +43,9 @@ it Mimir, Loki and Tempo datasources reading the platform's data, that is, the t
 gets alerting access to that tenant, with a Mimir Alertmanager datasource. Dashboard ConfigMaps reach
 it with the annotation `observability.giantswarm.io/organization: Main Org.`.
 
-After `helm uninstall`, the resource currently stays in deletion: the uninstall also removes
-Grafana's admin Secret, which the operator needs before it can process the deletion. Remove its
-finalizer:
-
-```bash
-kubectl patch grafanaorganization main-org --type=merge -p '{"metadata":{"finalizers":null}}'
-```
+`helm uninstall` deletes it. Grafana is removed in the same uninstall, so the operator releases the
+resource without contacting Grafana; this needs observability-operator 0.86.0 or later. Uninstall
+this chart before the operator, which processes the deletion.
 
 **Known limitations of the observability-operator with this chart**
 
