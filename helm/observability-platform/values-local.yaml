@@ -7,14 +7,27 @@
 #
 # Optimised for a small memory footprint, roughly 5 Gi for the whole release.
 #
-# One of the values below is not sizing: `localObjectStorage.enabled` points the blob
-# backend at Azurite. The observability-operator is a separate release, installed
-# first with values/observability-operator.yaml.
+# The storage values below are not sizing: they select the `s3` backend with
+# `store: compatible`, and `localObjectStorage.enabled` runs Garage as that store.
+# The observability-operator is a separate release, installed first with
+# values/observability-operator.yaml.
 #
 # Do not use this anywhere real. It has no headroom for ingest.
 # ---------------------------------------------------------------------------
 
 loki:
+  # Repeated from values.yaml. Overriding a list replaces it. The Garage key comes
+  # last and wins.
+  global:
+    extraEnvFrom:
+      - configMapRef:
+          name: observability-platform-object-storage
+      - secretRef:
+          name: observability-platform-object-storage
+          optional: true
+      - secretRef:
+          name: garage-credentials
+          optional: true
   loki:
     # One write replica, with replication_factor to match.
     loki:
@@ -54,6 +67,18 @@ loki:
       replicas: 1
 
 mimir:
+  # Repeated from values.yaml. Overriding a list replaces it. The Garage key comes
+  # last and wins.
+  global:
+    extraEnvFrom:
+      - configMapRef:
+          name: observability-platform-object-storage
+      - secretRef:
+          name: observability-platform-object-storage
+          optional: true
+      - secretRef:
+          name: garage-credentials
+          optional: true
   hpa:
     querier:
       enabled: false
@@ -102,8 +127,8 @@ mimir:
 
 tempo:
   tempo:
-    # Repeated from values.yaml. Overriding a list replaces it. The Azurite account
-    # key comes last and wins.
+    # Repeated from values.yaml. Overriding a list replaces it. The local store's
+    # key comes last and wins: the Garage key, or the Azurite account key.
     defaults:
       extraEnvFrom:
         - configMapRef:
@@ -112,7 +137,11 @@ tempo:
             name: observability-platform-object-storage
             optional: true
         - secretRef:
+            name: garage-credentials
+            optional: true
+        - secretRef:
             name: azurite-credentials
+            optional: true
     # One replica each, with replication_factor to match. `affinity: ""` drops the
     # control-plane exclusion: the kind node is a control-plane node.
     distributor:
@@ -152,12 +181,14 @@ tempo:
     cache:
       caches: []
 
-# Azure Blob Storage as the object storage backend, served by Azurite below.
+# An S3-compatible store as the object storage backend, served by Garage below.
 global:
   objectStorage:
-    backend: azure
+    backend: s3
+    s3:
+      store: compatible
 
-# Azurite as the blob backend. Computes `accountName` and `connectionString`. Setting
-# either by hand on top of this profile fails the render.
+# Garage as the S3-compatible store. Computes the endpoint, the region and `insecure`.
+# Setting `s3.endpoint` or `s3.region` by hand on top of this profile fails the render.
 localObjectStorage:
   enabled: true
