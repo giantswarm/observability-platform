@@ -181,3 +181,18 @@ tests:
       - equal:
           path: data.OBS_BUCKET_TEMPO
           value: tempo
+
+  - it: computes the Azurite connection string with backend azure
+    set:
+      global.objectStorage.backend: azure
+      localObjectStorage.enabled: true
+    asserts:
+      - equal:
+          path: data.OBS_AZURE_ACCOUNT_NAME
+          value: devstoreaccount1
+      - equal:
+          path: data.OBS_AZURE_CONNECTION_STRING
+          value: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite.monitoring.svc.cluster.local:10000/devstoreaccount1;
+      - equal:
+          path: data.OBS_AZURE_ENDPOINT_SUFFIX
+          value: azurite.monitoring.svc.cluster.local:10000

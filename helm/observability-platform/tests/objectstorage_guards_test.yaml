@@ -162,3 +162,29 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: 'global\.objectStorage\.azure\.accountName is empty'
+
+  - it: renders with localObjectStorage enabled and backend azure
+    set:
+      global.objectStorage.backend: azure
+      localObjectStorage.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: fails when localObjectStorage is enabled and azure.accountName is set
+    values:
+      - values/azure.yaml
+    set:
+      localObjectStorage.enabled: true
+    asserts:
+      - failedTemplate:
+          errorPattern: 'localObjectStorage\.enabled is true, so storage is the in-cluster Azurite emulator'
+
+  - it: fails when localObjectStorage is enabled and azure.connectionString is set
+    set:
+      global.objectStorage.backend: azure
+      global.objectStorage.azure.connectionString: DefaultEndpointsProtocol=http;AccountName=x
+      localObjectStorage.enabled: true
+    asserts:
+      - failedTemplate:
+          errorPattern: 'localObjectStorage\.enabled is true, which computes the connection string'
