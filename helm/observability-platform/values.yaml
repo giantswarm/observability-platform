@@ -1,8 +1,8 @@
 # ---------------------------------------------------------------------------
 # Curated cross-cutting interface.
 #
-# Storage is Azure Blob only. The chart consumes an existing storage account, its
-# containers and its key. See doc/OBJECT_STORAGE.md.
+# Storage is Azure Blob or S3, picked by `global.objectStorage.backend`. The chart
+# consumes an existing storage account, its containers and its key. See doc/OBJECT_STORAGE.md.
 # ---------------------------------------------------------------------------
 global:
   # -- Base domain for the platform's HTTP endpoints. The API is served at
@@ -108,6 +108,9 @@ tempo:
               container_name: ${OBS_BUCKET_TEMPO}
               # A suffix not starting with `blob.` switches Tempo to Azurite path style.
               endpoint_suffix: ${OBS_AZURE_ENDPOINT_SUFFIX}
+            s3:
+              bucket: ${OBS_BUCKET_TEMPO}
+              endpoint: ${OBS_S3_ENDPOINT}
     metricsGenerator:
       enabled: false
     # The API reaches the query-frontend and the distributor directly.
@@ -266,18 +269,26 @@ mimir:
               # Mutually exclusive with `AZURE_STORAGE_KEY`.
               # See `global.objectStorage.azure.connectionString`.
               connection_string: ${OBS_AZURE_CONNECTION_STRING}
+            s3:
+              endpoint: ${OBS_S3_ENDPOINT}
         blocks_storage:
           backend: ${OBS_BACKEND}
           azure:
             container_name: ${OBS_BUCKET_MIMIR_BLOCKS}
+          s3:
+            bucket_name: ${OBS_BUCKET_MIMIR_BLOCKS}
         alertmanager_storage:
           backend: ${OBS_BACKEND}
           azure:
             container_name: ${OBS_BUCKET_MIMIR_ALERTMANAGER}
+          s3:
+            bucket_name: ${OBS_BUCKET_MIMIR_ALERTMANAGER}
         ruler_storage:
           backend: ${OBS_BACKEND}
           azure:
             container_name: ${OBS_BUCKET_MIMIR_RULER}
+          s3:
+            bucket_name: ${OBS_BUCKET_MIMIR_RULER}
 
 loki:
   enabled: true

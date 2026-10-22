@@ -120,3 +120,12 @@ when the suffix does not start with `blob.`.
 blob.core.windows.net
 {{- end -}}
 {{- end -}}
+
+{{/*
+S3 endpoint delivered to Mimir and Tempo. Empty with backend `azure`.
+*/}}
+{{- define "observability-platform.objectStorage.s3.endpoint" -}}
+{{- if eq .Values.global.objectStorage.backend "s3" -}}
+{{- .Values.global.objectStorage.s3.endpoint -}}
+{{- end -}}
+{{- end -}}
