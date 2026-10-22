@@ -138,3 +138,15 @@ S3 region delivered to Mimir and Tempo. Empty with backend `azure`.
 {{- .Values.global.objectStorage.s3.region -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+S3 plain-HTTP switch delivered to Mimir and Tempo. Always `true` or `false`.
+`false` with backend `azure`.
+*/}}
+{{- define "observability-platform.objectStorage.s3.insecure" -}}
+{{- if and (eq .Values.global.objectStorage.backend "s3") .Values.global.objectStorage.s3.insecure -}}
+true
+{{- else -}}
+false
+{{- end -}}
+{{- end -}}
