@@ -1,0 +1,206 @@
+# Stories covered: 37.
+# Full-map assertions: the whole OBS_* ConfigMap per backend and store, and the
+# document count of every Local object store template per backend.
+suite: object storage matrix
+templates:
+  - templates/objectstorage.yaml
+  - templates/local-object-storage/azurite-deployment.yaml
+  - templates/local-object-storage/azurite-service.yaml
+  - templates/local-object-storage/azurite-init-job.yaml
+  - templates/local-object-storage/azurite-secret.yaml
+  - templates/local-object-storage/garage-configmap.yaml
+  - templates/local-object-storage/garage-deployment.yaml
+  - templates/local-object-storage/garage-service.yaml
+  - templates/local-object-storage/garage-secret.yaml
+  - templates/local-object-storage/garage-init-job.yaml
+release:
+  name: obs
+  namespace: monitoring
+tests:
+  - it: sets all 14 OBS_* keys with backend azure
+    values:
+      - values/azure.yaml
+    template: templates/objectstorage.yaml
+    asserts:
+      - equal:
+          path: data
+          value:
+            OBS_TENANT: default
+            OBS_BACKEND: azure
+            OBS_AZURE_ACCOUNT_NAME: obsplatform
+            OBS_AZURE_CONNECTION_STRING: ""
+            OBS_BUCKET_MIMIR_BLOCKS: mimir-blocks
+            OBS_BUCKET_MIMIR_ALERTMANAGER: mimir-alertmanager
+            OBS_BUCKET_MIMIR_RULER: mimir-ruler
+            OBS_BUCKET_LOKI: loki
+            OBS_BUCKET_TEMPO: tempo
+            OBS_AZURE_ENDPOINT_SUFFIX: blob.core.windows.net
+            OBS_S3_ENDPOINT: ""
+            OBS_S3_REGION: ""
+            OBS_S3_INSECURE: "false"
+            OBS_LOKI_THANOS: "false"
+
+  - it: sets all 14 OBS_* keys with backend azure and Azurite
+    set:
+      global.objectStorage.backend: azure
+      localObjectStorage.enabled: true
+    template: templates/objectstorage.yaml
+    asserts:
+      # The connection string carries the Azurite dev key. Match its shape, not its literal.
+      - isSubset:
+          path: data
+          content:
+            OBS_TENANT: default
+            OBS_BACKEND: azure
+            OBS_AZURE_ACCOUNT_NAME: devstoreaccount1
+            OBS_BUCKET_MIMIR_BLOCKS: mimir-blocks
+            OBS_BUCKET_MIMIR_ALERTMANAGER: mimir-alertmanager
+            OBS_BUCKET_MIMIR_RULER: mimir-ruler
+            OBS_BUCKET_LOKI: loki
+            OBS_BUCKET_TEMPO: tempo
+            OBS_AZURE_ENDPOINT_SUFFIX: azurite.monitoring.svc.cluster.local:10000
+            OBS_S3_ENDPOINT: ""
+            OBS_S3_REGION: ""
+            OBS_S3_INSECURE: "false"
+            OBS_LOKI_THANOS: "false"
+      - matchRegex:
+          path: data.OBS_AZURE_CONNECTION_STRING
+          pattern: ^DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=[A-Za-z0-9+/]+=*;BlobEndpoint=http://azurite\.monitoring\.svc\.cluster\.local:10000/devstoreaccount1;$
+
+  - it: sets all 14 OBS_* keys with backend s3 and store aws
+    values:
+      - values/s3-aws.yaml
+    template: templates/objectstorage.yaml
+    asserts:
+      - equal:
+          path: data
+          value:
+            OBS_TENANT: default
+            OBS_BACKEND: s3
+            OBS_AZURE_ACCOUNT_NAME: ""
+            OBS_AZURE_CONNECTION_STRING: ""
+            OBS_BUCKET_MIMIR_BLOCKS: mimir-blocks
+            OBS_BUCKET_MIMIR_ALERTMANAGER: mimir-alertmanager
+            OBS_BUCKET_MIMIR_RULER: mimir-ruler
+            OBS_BUCKET_LOKI: loki
+            OBS_BUCKET_TEMPO: tempo
+            OBS_AZURE_ENDPOINT_SUFFIX: blob.core.windows.net
+            OBS_S3_ENDPOINT: s3.eu-west-1.amazonaws.com
+            OBS_S3_REGION: eu-west-1
+            OBS_S3_INSECURE: "false"
+            OBS_LOKI_THANOS: "false"
+
+  - it: sets all 14 OBS_* keys with backend s3 and store compatible
+    values:
+      - values/s3-compatible.yaml
+    template: templates/objectstorage.yaml
+    asserts:
+      - equal:
+          path: data
+          value:
+            OBS_TENANT: default
+            OBS_BACKEND: s3
+            OBS_AZURE_ACCOUNT_NAME: ""
+            OBS_AZURE_CONNECTION_STRING: ""
+            OBS_BUCKET_MIMIR_BLOCKS: mimir-blocks
+            OBS_BUCKET_MIMIR_ALERTMANAGER: mimir-alertmanager
+            OBS_BUCKET_MIMIR_RULER: mimir-ruler
+            OBS_BUCKET_LOKI: loki
+            OBS_BUCKET_TEMPO: tempo
+            OBS_AZURE_ENDPOINT_SUFFIX: blob.core.windows.net
+            OBS_S3_ENDPOINT: s3.example.internal:9000
+            OBS_S3_REGION: ""
+            OBS_S3_INSECURE: "false"
+            OBS_LOKI_THANOS: "true"
+
+  - it: sets all 14 OBS_* keys with backend s3 and Garage
+    set:
+      global.objectStorage.backend: s3
+      global.objectStorage.s3.store: compatible
+      localObjectStorage.enabled: true
+    template: templates/objectstorage.yaml
+    asserts:
+      - equal:
+          path: data
+          value:
+            OBS_TENANT: default
+            OBS_BACKEND: s3
+            OBS_AZURE_ACCOUNT_NAME: ""
+            OBS_AZURE_CONNECTION_STRING: ""
+            OBS_BUCKET_MIMIR_BLOCKS: mimir-blocks
+            OBS_BUCKET_MIMIR_ALERTMANAGER: mimir-alertmanager
+            OBS_BUCKET_MIMIR_RULER: mimir-ruler
+            OBS_BUCKET_LOKI: loki
+            OBS_BUCKET_TEMPO: tempo
+            OBS_AZURE_ENDPOINT_SUFFIX: blob.core.windows.net
+            OBS_S3_ENDPOINT: garage.monitoring.svc.cluster.local:3900
+            OBS_S3_REGION: garage
+            OBS_S3_INSECURE: "true"
+            OBS_LOKI_THANOS: "true"
+
+  - it: renders the Azurite resources and no Garage resource with backend azure
+    set:
+      global.objectStorage.backend: azure
+      localObjectStorage.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: templates/local-object-storage/azurite-deployment.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/local-object-storage/azurite-service.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/local-object-storage/azurite-init-job.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/local-object-storage/azurite-secret.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/garage-configmap.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/garage-deployment.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/garage-service.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/garage-secret.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/garage-init-job.yaml
+
+  - it: renders the Garage resources and no Azurite resource with backend s3
+    set:
+      global.objectStorage.backend: s3
+      global.objectStorage.s3.store: compatible
+      localObjectStorage.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/azurite-deployment.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/azurite-service.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/azurite-init-job.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/azurite-secret.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/local-object-storage/garage-configmap.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/local-object-storage/garage-deployment.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/local-object-storage/garage-service.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/local-object-storage/garage-secret.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/local-object-storage/garage-init-job.yaml
