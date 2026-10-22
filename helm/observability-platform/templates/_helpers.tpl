@@ -70,19 +70,30 @@ Object storage validation.
 {{- end -}}
 {{- if eq $backend "azure" -}}
 {{- $azure := $os.azure -}}
-{{- if .Values.localBlobStorage.enabled -}}
+{{- $azurite := include "observability-platform.localObjectStorage.azurite.enabled" . -}}
+{{- if $azurite -}}
 {{- if $azure.accountName -}}
-{{- fail (printf "localBlobStorage.enabled is true, so storage is the in-cluster Azurite emulator under account %q, but global.objectStorage.azure.accountName is set to %q - which nothing would read. Unset one of the two - see doc/LOCAL_DEV.md." (include "observability-platform.localBlobStorage.accountName" .) $azure.accountName) -}}
+{{- fail (printf "localObjectStorage.enabled is true, so storage is the in-cluster Azurite emulator under account %q, but global.objectStorage.azure.accountName is set to %q - which nothing would read. Unset one of the two - see doc/LOCAL_DEV.md." (include "observability-platform.azurite.accountName" .) $azure.accountName) -}}
 {{- end -}}
 {{- if $azure.connectionString -}}
-{{- fail "localBlobStorage.enabled is true, which computes the connection string for the in-cluster emulator, but global.objectStorage.azure.connectionString is set as well and would be ignored. Unset one of the two - see doc/LOCAL_DEV.md." -}}
+{{- fail "localObjectStorage.enabled is true, which computes the connection string for the in-cluster emulator, but global.objectStorage.azure.connectionString is set as well and would be ignored. Unset one of the two - see doc/LOCAL_DEV.md." -}}
 {{- end -}}
 {{- else if not (or $azure.accountName $azure.connectionString) -}}
-{{- fail "global.objectStorage.azure.accountName is empty. Set it to the Azure storage account holding the containers, or set global.objectStorage.azure.connectionString to reach an endpoint of your own, or set localBlobStorage.enabled to run against a local Azurite emulator - see doc/OBJECT_STORAGE.md." -}}
+{{- fail "global.objectStorage.azure.accountName is empty. Set it to the Azure storage account holding the containers, or set global.objectStorage.azure.connectionString to reach an endpoint of your own, or set localObjectStorage.enabled to run against a local Azurite emulator - see doc/OBJECT_STORAGE.md." -}}
 {{- end -}}
-{{- if and .Values.tempo.enabled $azure.connectionString (not .Values.localBlobStorage.enabled) -}}
+{{- if and .Values.tempo.enabled $azure.connectionString (not $azurite) -}}
 {{- fail "tempo.enabled is true and global.objectStorage.azure.connectionString is set. Tempo reads no connection string: it needs global.objectStorage.azure.accountName and the account key in the credentials Secret. Set accountName instead of connectionString, or set tempo.enabled to false - see doc/OBJECT_STORAGE.md." -}}
 {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Azurite switch. `true` when localObjectStorage.enabled is set, the backend is `azure`
+and Mimir, Loki or Tempo is enabled. Empty otherwise, so templates test it with `if`.
+*/}}
+{{- define "observability-platform.localObjectStorage.azurite.enabled" -}}
+{{- if and .Values.localObjectStorage.enabled (eq (.Values.global.objectStorage.backend | default "") "azure") (or .Values.mimir.enabled .Values.loki.enabled .Values.tempo.enabled) -}}
+true
 {{- end -}}
 {{- end -}}
 
@@ -90,8 +101,8 @@ Object storage validation.
 Storage account name delivered to Mimir, Loki and Tempo.
 */}}
 {{- define "observability-platform.objectStorage.accountName" -}}
-{{- if .Values.localBlobStorage.enabled -}}
-{{- include "observability-platform.localBlobStorage.accountName" . -}}
+{{- if include "observability-platform.localObjectStorage.azurite.enabled" . -}}
+{{- include "observability-platform.azurite.accountName" . -}}
 {{- else -}}
 {{- .Values.global.objectStorage.azure.accountName -}}
 {{- end -}}
@@ -101,9 +112,9 @@ Storage account name delivered to Mimir, Loki and Tempo.
 Connection string delivered to Mimir and Loki.
 */}}
 {{- define "observability-platform.objectStorage.connectionString" -}}
-{{- if .Values.localBlobStorage.enabled -}}
-{{- $account := include "observability-platform.localBlobStorage.accountName" . -}}
-{{- printf "DefaultEndpointsProtocol=http;AccountName=%s;AccountKey=%s;BlobEndpoint=http://%s/%s;" $account (include "observability-platform.localBlobStorage.accountKey" .) (include "observability-platform.localBlobStorage.host" .) $account -}}
+{{- if include "observability-platform.localObjectStorage.azurite.enabled" . -}}
+{{- $account := include "observability-platform.azurite.accountName" . -}}
+{{- printf "DefaultEndpointsProtocol=http;AccountName=%s;AccountKey=%s;BlobEndpoint=http://%s/%s;" $account (include "observability-platform.azurite.accountKey" .) (include "observability-platform.azurite.host" .) $account -}}
 {{- else -}}
 {{- .Values.global.objectStorage.azure.connectionString -}}
 {{- end -}}
@@ -114,8 +125,8 @@ Azure Blob endpoint suffix delivered to Tempo. Tempo switches to Azurite path st
 when the suffix does not start with `blob.`.
 */}}
 {{- define "observability-platform.objectStorage.endpointSuffix" -}}
-{{- if .Values.localBlobStorage.enabled -}}
-{{- include "observability-platform.localBlobStorage.host" . -}}
+{{- if include "observability-platform.localObjectStorage.azurite.enabled" . -}}
+{{- include "observability-platform.azurite.host" . -}}
 {{- else -}}
 blob.core.windows.net
 {{- end -}}

@@ -24,11 +24,11 @@ global:
     existingSecret: observability-platform-object-storage
     azure:
       # -- Storage account holding the containers below. Required, unless
-      # `connectionString` or `localBlobStorage.enabled` is set.
+      # `connectionString` or `localObjectStorage.enabled` is set.
       accountName: ""
       # -- Full Azure Blob connection string.
       # Mutually exclusive with `AZURE_STORAGE_KEY`.
-      # Set it if you use `localBlobStorage`
+      # Set it if you use `localObjectStorage`
       # Leave it empty otherwise.
       connectionString: ""
     # -- S3 settings. Used only with backend `s3`.
@@ -125,15 +125,14 @@ tempo:
     enabled: false
 observabilityPlatformApi:
   enabled: false
-# Use a local Azurite for data storage.
+# Local object store for data storage: Azurite with backend `azure`.
 # Development only. See doc/LOCAL_DEV.md.
-localBlobStorage:
+localObjectStorage:
   enabled: false
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite:3.37.0
-  # Job that creates the containers, which Azurite does not create itself.
-  init:
-    image: mcr.microsoft.com/azure-cli:2.91.0
+    # Job that creates the containers, which Azurite does not create itself.
+    initImage: mcr.microsoft.com/azure-cli:2.91.0
 
 # ---------------------------------------------------------------------------
 # Default organization: a GrafanaOrganization that takes over Grafana's default
