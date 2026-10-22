@@ -232,3 +232,30 @@ tests:
       - equal:
           path: data.OBS_LOKI_THANOS
           value: "true"
+
+  - it: selects azure, Azurite and Loki's default client with values-local.yaml and the azure override
+    values:
+      - ../values-local.yaml
+      - ../../../hack/local/values-azure.yaml
+    asserts:
+      - equal:
+          path: data.OBS_BACKEND
+          value: azure
+      - matchRegex:
+          path: data.OBS_AZURE_CONNECTION_STRING
+          pattern: ;BlobEndpoint=http://azurite\.monitoring\.svc\.cluster\.local:10000/
+      - equal:
+          path: data.OBS_AZURE_ENDPOINT_SUFFIX
+          value: azurite.monitoring.svc.cluster.local:10000
+      - equal:
+          path: data.OBS_S3_ENDPOINT
+          value: ""
+      - equal:
+          path: data.OBS_S3_REGION
+          value: ""
+      - equal:
+          path: data.OBS_S3_INSECURE
+          value: "false"
+      - equal:
+          path: data.OBS_LOKI_THANOS
+          value: "false"
