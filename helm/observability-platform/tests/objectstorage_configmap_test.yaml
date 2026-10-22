@@ -33,3 +33,47 @@ tests:
       - equal:
           path: data.OBS_BACKEND
           value: s3
+
+  - it: sets OBS_S3_ENDPOINT from s3.endpoint with store compatible
+    values:
+      - values/s3-compatible.yaml
+    asserts:
+      - equal:
+          path: data.OBS_S3_ENDPOINT
+          value: s3.example.internal:9000
+
+  - it: sets OBS_S3_ENDPOINT from s3.endpoint with store aws
+    values:
+      - values/s3-aws.yaml
+    asserts:
+      - equal:
+          path: data.OBS_S3_ENDPOINT
+          value: s3.eu-west-1.amazonaws.com
+
+  - it: leaves OBS_S3_ENDPOINT empty with backend azure
+    values:
+      - values/azure.yaml
+    asserts:
+      - equal:
+          path: data.OBS_S3_ENDPOINT
+          value: ""
+
+  - it: sets the five bucket names with backend s3
+    values:
+      - values/s3-aws.yaml
+    asserts:
+      - equal:
+          path: data.OBS_BUCKET_MIMIR_BLOCKS
+          value: mimir-blocks
+      - equal:
+          path: data.OBS_BUCKET_MIMIR_ALERTMANAGER
+          value: mimir-alertmanager
+      - equal:
+          path: data.OBS_BUCKET_MIMIR_RULER
+          value: mimir-ruler
+      - equal:
+          path: data.OBS_BUCKET_LOKI
+          value: loki
+      - equal:
+          path: data.OBS_BUCKET_TEMPO
+          value: tempo
