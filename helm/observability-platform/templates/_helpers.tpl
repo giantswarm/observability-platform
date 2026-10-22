@@ -47,6 +47,14 @@ Object storage validation.
 {{- if and (eq $backend "s3") (not (has $store (list "aws" "compatible"))) -}}
 {{- fail (printf "global.objectStorage.s3.store must be \"aws\" or \"compatible\" with backend \"s3\", but it is %q - see doc/OBJECT_STORAGE.md." $store) -}}
 {{- end -}}
+{{- if eq $backend "s3" -}}
+{{- $azure := $os.azure | default dict -}}
+{{- range $key := list "accountName" "connectionString" -}}
+{{- if index $azure $key -}}
+{{- fail (printf "global.objectStorage.backend is \"s3\", but global.objectStorage.azure.%s is set. Unset it: the s3 backend reads no Azure values - see doc/OBJECT_STORAGE.md." $key) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
 {{- if and (eq $backend "s3") (not $s3.endpoint) -}}
 {{- fail "global.objectStorage.backend is \"s3\" and global.objectStorage.s3.endpoint is empty. Set it to the store endpoint, host[:port] without a scheme - see doc/OBJECT_STORAGE.md." -}}
 {{- end -}}
