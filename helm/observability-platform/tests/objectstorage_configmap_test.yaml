@@ -1,4 +1,4 @@
-# Stories covered: 3, 1, 2, 11, 12, 5, 33, 35, 31, 32.
+# Stories covered: 3, 1, 2, 11, 12, 5, 33, 35, 31, 32, 13.
 suite: object storage configmap
 templates:
   - templates/objectstorage.yaml
@@ -182,6 +182,19 @@ tests:
       - equal:
           path: data.OBS_BUCKET_TEMPO
           value: tempo
+
+  - it: puts no credentials in the ConfigMap
+    values:
+      - values/s3-aws.yaml
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - notExists:
+          path: data.AWS_ACCESS_KEY_ID
+      - notExists:
+          path: data.AWS_SECRET_ACCESS_KEY
+      - notExists:
+          path: data.AZURE_STORAGE_KEY
 
   - it: computes the Azurite connection string with backend azure
     set:

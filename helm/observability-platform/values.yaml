@@ -18,10 +18,12 @@ global:
     # -- (string) Object storage backend for Mimir, Loki and Tempo: `azure` or `s3`.
     # Required. No default.
     # backend:
-    # -- Name of the Secret holding the storage account key. The name is fixed:
-    # the subcharts reference it from static values. Create the Secret yourself,
-    # with this name and one key, `AZURE_STORAGE_KEY`. The key reaches the pods as
-    # an environment variable, so its name must be a valid variable name.
+    # -- Name of the Secret holding the object storage credentials. The name is
+    # fixed: the subcharts reference it from static values. Create the Secret
+    # yourself, with this name. It holds `AZURE_STORAGE_KEY` for backend `azure`,
+    # or `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` for backend `s3`. The keys
+    # reach the pods as environment variables, so each name must be a valid
+    # variable name.
     existingSecret: observability-platform-object-storage
     azure:
       # -- Storage account holding the containers below. Required, unless
