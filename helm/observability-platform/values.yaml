@@ -34,6 +34,8 @@ global:
     # -- S3 settings. Used only with backend `s3`.
     s3:
       # -- (string) `aws` or `compatible`. Required with backend `s3`. No default.
+      # Picks Loki's storage client only: Loki thanos mode for `compatible`,
+      # Loki's default client for `aws`.
       # store:
       # -- Store endpoint, host[:port], no scheme. Required with backend `s3`.
       # Examples: `s3.eu-west-1.amazonaws.com`, `minio.storage.internal:9000`.

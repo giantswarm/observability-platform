@@ -150,3 +150,15 @@ true
 false
 {{- end -}}
 {{- end -}}
+
+{{/*
+Loki thanos mode switch. Always `true` or `false`.
+`true` only with backend `s3` and store `compatible`.
+*/}}
+{{- define "observability-platform.objectStorage.lokiThanos" -}}
+{{- if and (eq .Values.global.objectStorage.backend "s3") (eq (.Values.global.objectStorage.s3.store | default "") "compatible") -}}
+true
+{{- else -}}
+false
+{{- end -}}
+{{- end -}}
