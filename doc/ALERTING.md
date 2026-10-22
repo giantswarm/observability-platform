@@ -20,12 +20,16 @@ Each file in `helm/observability-platform/files/alertmanager` becomes one key of
 default `alertmanager.yaml` routes every alert to the `default` receiver. That receiver has no
 integrations.
 
-To use your own config, follow [Provide a config](#provide-a-config).
+To use your own config, follow the steps below.
 
 ## Provide a config
 
-Create a Secret in any namespace. For `global.tenant`, set `defaultAlertmanagerConfig.enabled: false`
-first.
+Before you create the Secret:
+
+- Create the `GrafanaOrganization` that lists the tenant.
+- For `global.tenant`, set `defaultAlertmanagerConfig.enabled: false`.
+
+Then create a Secret in any namespace.
 
 ```yaml
 apiVersion: v1
@@ -56,9 +60,8 @@ stringData:
 - Every other key ending in `.tmpl` is a [notification template](https://prometheus.io/docs/alerting/latest/notifications/).
   Reference it by its key name.
 
-Create the `GrafanaOrganization` before the Secret. The observability-operator loads the Secret
-into Mimir Alertmanager. It reloads the Secret on every change. Deleting the Secret deletes the
-tenant's config.
+The observability-operator loads the Secret into Mimir Alertmanager. It reloads the Secret on
+every change. Deleting the Secret deletes the tenant's config.
 
 ## Check the config
 
