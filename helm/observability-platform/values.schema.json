@@ -40,7 +40,7 @@
                 "store": {
                   "type": "string",
                   "enum": ["aws", "compatible"],
-                  "description": "AWS S3 or an S3-compatible store. Required with backend s3. No default. The objectStorage.validate helper fails the render while it is unset."
+                  "description": "aws or compatible. Picks Loki's storage client only: Loki thanos mode for compatible, Loki's default client for aws. Required with backend s3. No default. The objectStorage.validate helper fails the render while it is unset."
                 },
                 "endpoint": {
                   "type": "string",
