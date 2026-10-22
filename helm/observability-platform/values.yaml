@@ -376,6 +376,40 @@ loki:
               # See the note on Mimir's `connection_string` above.
               connection_string: ${OBS_AZURE_CONNECTION_STRING}
               container_name: ${OBS_BUCKET_LOKI}
+        # Loki's default client reads `ruler.storage`. Loki thanos mode reads
+        # `ruler_storage`. Both follow `use_thanos_objstore` and use the Loki
+        # bucket. The ruler keeps its objects under the `rules/` prefix.
+        ruler:
+          storage:
+            type: ${OBS_BACKEND}
+            s3:
+              bucketnames: ${OBS_BUCKET_LOKI}
+              endpoint: ${OBS_S3_ENDPOINT}
+              region: ${OBS_S3_REGION}
+              insecure: ${OBS_S3_INSECURE}
+            azure:
+              account_name: ${OBS_AZURE_ACCOUNT_NAME}
+              account_key: ${AZURE_STORAGE_KEY}
+              # See the note on Mimir's `connection_string` above.
+              connection_string: ${OBS_AZURE_CONNECTION_STRING}
+              container_name: ${OBS_BUCKET_LOKI}
+        ruler_storage:
+          backend: ${OBS_BACKEND}
+          s3:
+            bucket_name: ${OBS_BUCKET_LOKI}
+            endpoint: ${OBS_S3_ENDPOINT}
+            region: ${OBS_S3_REGION}
+            insecure: ${OBS_S3_INSECURE}
+          azure:
+            account_name: ${OBS_AZURE_ACCOUNT_NAME}
+            account_key: ${AZURE_STORAGE_KEY}
+            # See the note on Mimir's `connection_string` above.
+            connection_string: ${OBS_AZURE_CONNECTION_STRING}
+            container_name: ${OBS_BUCKET_LOKI}
+        # The compactor needs no storage block. It follows `schemaConfig` and
+        # `use_thanos_objstore`. No retention is enabled, so no delete request
+        # store is set. Enabling retention requires
+        # `compactor.delete_request_store: ${OBS_BACKEND}`.
 
 # ---------------------------------------------------------------------------
 # What global.* cannot reach
