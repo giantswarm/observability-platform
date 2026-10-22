@@ -24,7 +24,8 @@ The chart configures the API itself. See [EXTERNAL_API.md](EXTERNAL_API.md).
 | Load balancer | AWS Classic Load Balancer, created for the Envoy Service |
 
 The Gateway name, namespace and listener name match the chart's default `parentRefs`. The
-chart's routes attach to it without overrides.
+chart's routes attach to it without overrides. See
+[Point the routes at your Gateway](EXTERNAL_API.md#point-the-routes-at-your-gateway).
 
 The `http` listener serves the ACME HTTP-01 challenge. It accepts routes from the
 `envoy-gateway-system` namespace only. The chart's routes attach to `https` only.
@@ -59,6 +60,8 @@ helm upgrade --install eg oci://docker.io/envoyproxy/gateway-helm --version 1.9.
 
 The chart installs the Gateway API CRDs and the Envoy Gateway CRDs.
 
+Reference: [Install with Helm](https://gateway.envoyproxy.io/docs/install/install-helm/).
+
 ```bash
 kubectl get crd gateways.gateway.networking.k8s.io securitypolicies.gateway.envoyproxy.io
 kubectl -n envoy-gateway-system rollout status deploy/envoy-gateway
@@ -67,7 +70,11 @@ kubectl -n envoy-gateway-system rollout status deploy/envoy-gateway
 ## Step 3 — Install cert-manager
 
 Install cert-manager after Envoy Gateway. cert-manager detects the Gateway API CRDs at
-start-up only.
+start-up only. `--enable-gateway-api` turns on its Gateway API support. See
+[Certificate from cert-manager](EXTERNAL_API.md#certificate-from-cert-manager).
+
+Reference: [Helm installation](https://cert-manager.io/docs/installation/helm/),
+[Gateway API usage](https://cert-manager.io/docs/usage/gateway/).
 
 ```bash
 helm upgrade --install cert-manager oci://quay.io/jetstack/charts/cert-manager --version v1.21.2 \
@@ -126,6 +133,9 @@ kubectl wait --for=condition=Ready clusterissuer/letsencrypt --timeout=120s
 For a dry run, use the staging server `https://acme-staging-v02.api.letsencrypt.org/directory`.
 Staging certificates are not trusted by clients.
 
+Reference: [HTTP01 solver](https://cert-manager.io/docs/configuration/acme/http01/),
+[Let's Encrypt staging](https://letsencrypt.org/docs/staging-environment/).
+
 ## Step 5 — Create the Gateway
 
 ```bash
@@ -172,9 +182,10 @@ spec:
 EOF
 ```
 
-The `cert-manager.io/cluster-issuer` annotation makes cert-manager create the Certificate
-`observability-https-tls` in `envoy-gateway-system`. It reads `hostname` and `certificateRefs`
-from the `https` listener.
+cert-manager creates the Certificate `observability-https-tls` in `envoy-gateway-system`. See
+[Certificate from cert-manager](EXTERNAL_API.md#certificate-from-cert-manager).
+
+Reference: [Secure Gateways using cert-manager](https://gateway.envoyproxy.io/docs/tasks/security/tls-cert-manager/).
 
 Wait for the load balancer:
 
@@ -196,6 +207,8 @@ Point `observability.<domain>` at the load balancer with a CNAME record:
 aws route53 change-resource-record-sets --hosted-zone-id "$HOSTED_ZONE_ID" \
   --change-batch "{\"Changes\":[{\"Action\":\"UPSERT\",\"ResourceRecordSet\":{\"Name\":\"$OBS_HOST\",\"Type\":\"CNAME\",\"TTL\":60,\"ResourceRecords\":[{\"Value\":\"$LB\"}]}}]}"
 ```
+
+Reference: [Creating records](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-creating.html).
 
 Check the record resolves:
 
