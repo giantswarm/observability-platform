@@ -344,10 +344,13 @@ loki:
           # See the note on Mimir's `connection_string` above. Empty is ignored:
           # the client reads it only when non-empty.
           connectionString: ${OBS_AZURE_CONNECTION_STRING}
-      # Loki's default client. `schemaConfig` picks the block through
-      # `object_store`.
+      # `schemaConfig` picks the block through `object_store`.
       structuredConfig:
         storage_config:
+          # `true` for `s3.store: compatible`: Loki thanos mode reads
+          # `object_store` below. `false`: Loki's default client reads `aws`
+          # and `azure`. Unquoted, so the client is chosen at runtime.
+          use_thanos_objstore: ${OBS_LOKI_THANOS}
           aws:
             bucketnames: ${OBS_BUCKET_LOKI}
             endpoint: ${OBS_S3_ENDPOINT}
@@ -359,6 +362,20 @@ loki:
             # See the note on Mimir's `connection_string` above.
             connection_string: ${OBS_AZURE_CONNECTION_STRING}
             container_name: ${OBS_BUCKET_LOKI}
+          # Loki thanos mode. No prefix in either shape, so both address the
+          # same keys. `common.storage.object_store` stays unset.
+          object_store:
+            s3:
+              bucket_name: ${OBS_BUCKET_LOKI}
+              endpoint: ${OBS_S3_ENDPOINT}
+              region: ${OBS_S3_REGION}
+              insecure: ${OBS_S3_INSECURE}
+            azure:
+              account_name: ${OBS_AZURE_ACCOUNT_NAME}
+              account_key: ${AZURE_STORAGE_KEY}
+              # See the note on Mimir's `connection_string` above.
+              connection_string: ${OBS_AZURE_CONNECTION_STRING}
+              container_name: ${OBS_BUCKET_LOKI}
 
 # ---------------------------------------------------------------------------
 # What global.* cannot reach
