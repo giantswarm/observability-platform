@@ -47,6 +47,9 @@ Object storage validation.
 {{- if and (eq $backend "s3") (not (has $store (list "aws" "compatible"))) -}}
 {{- fail (printf "global.objectStorage.s3.store must be \"aws\" or \"compatible\" with backend \"s3\", but it is %q - see doc/OBJECT_STORAGE.md." $store) -}}
 {{- end -}}
+{{- if and (eq $backend "s3") (not $s3.endpoint) -}}
+{{- fail "global.objectStorage.backend is \"s3\" and global.objectStorage.s3.endpoint is empty. Set it to the store endpoint, host[:port] without a scheme - see doc/OBJECT_STORAGE.md." -}}
+{{- end -}}
 {{- if eq $backend "azure" -}}
 {{- $azure := $os.azure -}}
 {{- if .Values.localBlobStorage.enabled -}}
