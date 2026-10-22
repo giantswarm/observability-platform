@@ -178,7 +178,39 @@ This chart does not deploy Pyroscope yet. Pyroscope will get its own container o
 
 <!-- Story 23 adds "### Create the buckets" here. -->
 
-<!-- Story 13 and story 14 add "## Credentials" here. -->
+## Credentials
+
+Static keys come from one Secret. The operator creates it in the release namespace. The
+chart never renders it, and chart values never hold a key.
+
+- Name: `observability-platform-object-storage`, fixed. `global.objectStorage.existingSecret`
+  holds this name.
+- The same Secret serves both backends. Only the keys differ.
+- Mimir, Loki and Tempo load it through `envFrom`, with `optional: true`.
+- The S3 key fields stay empty in every component config. The components read the keys
+  from the environment.
+
+Backend `azure`:
+
+```bash
+kubectl create secret generic observability-platform-object-storage \
+  --namespace monitoring \
+  --from-literal=AZURE_STORAGE_KEY="<storage-account-key>"
+```
+
+Backend `s3`:
+
+```bash
+kubectl create secret generic observability-platform-object-storage \
+  --namespace monitoring \
+  --from-literal=AWS_ACCESS_KEY_ID="<access-key-id>" \
+  --from-literal=AWS_SECRET_ACCESS_KEY="<secret-access-key>"
+```
+
+Under `localObjectStorage.enabled` the chart renders the dev Secret `garage-credentials`
+with the same two key names. The local setup exercises the same path.
+
+<!-- Story 14 adds the Secret key table here. -->
 
 <!-- Stories 15, 16 and 17 add "### Ambient credentials and IRSA" here. -->
 
