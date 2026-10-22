@@ -5,7 +5,7 @@ KUBECTL := kubectl --context kind-kind
 HELM := helm --kube-context kind-kind
 # observability-operator release installed before the chart. Keep in step with the
 # version the platform is tested against.
-OPERATOR_VERSION := 0.84.1
+OPERATOR_VERSION := 0.85.0
 
 .PHONY: local-up local-token local-down
 
