@@ -222,7 +222,38 @@ The S3 key names follow the AWS SDK convention. The observability-operator `LogE
 reads the same two keys from its `credentialsRef` Secret. See
 [`logexport_types.go`](https://github.com/giantswarm/observability-operator/blob/main/api/v1alpha1/logexport_types.go).
 
-<!-- Stories 15, 16 and 17 add "### Ambient credentials and IRSA" here. -->
+### Ambient credentials and IRSA
+
+The S3 keys are optional. Without them, Mimir, Loki and Tempo fall back to **ambient
+credentials**: IRSA or the node's instance role.
+
+"Empty keys" means the pods see no `AWS_ACCESS_KEY_ID` and no `AWS_SECRET_ACCESS_KEY`.
+Two setups give empty keys:
+
+- Skip the Secret `observability-platform-object-storage`.
+- Create the Secret without the two keys.
+
+The pods start in both setups. The `secretRef` is `optional: true`. The chart sets no
+AWS key variable and no key field in any component config.
+
+Each component tries the credential sources in this order:
+
+1. Secret keys: `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` from the environment.
+2. Web identity (IRSA): the token file and role ARN that the EKS pod identity webhook
+   injects into pods of an annotated ServiceAccount.
+3. IMDS: the EC2 instance role of the node.
+
+Static keys win over IRSA. Remove both keys from the Secret to use IRSA.
+
+When no source resolves:
+
+- Tempo fails at startup.
+- Mimir and Loki thanos mode fall back to anonymous requests. The store rejects them, and
+  the components log access-denied errors.
+
+<!-- Story 16 adds the ServiceAccount annotations for IRSA here. -->
+
+<!-- Story 17 adds the EKS Pod Identity note here. -->
 
 ## Azure Blob Storage
 
