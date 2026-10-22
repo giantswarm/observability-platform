@@ -50,6 +50,26 @@ tests:
           path: data.OBS_S3_ENDPOINT
           value: s3.eu-west-1.amazonaws.com
 
+  - it: passes an on-prem host:port endpoint through
+    values:
+      - values/s3-compatible.yaml
+    set:
+      global.objectStorage.s3.endpoint: minio.storage.internal:9000
+    asserts:
+      - equal:
+          path: data.OBS_S3_ENDPOINT
+          value: minio.storage.internal:9000
+
+  - it: passes an IP endpoint through
+    values:
+      - values/s3-compatible.yaml
+    set:
+      global.objectStorage.s3.endpoint: 10.0.0.5:9000
+    asserts:
+      - equal:
+          path: data.OBS_S3_ENDPOINT
+          value: 10.0.0.5:9000
+
   - it: leaves OBS_S3_ENDPOINT empty with backend azure
     values:
       - values/azure.yaml

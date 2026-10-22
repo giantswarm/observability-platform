@@ -54,6 +54,15 @@ tests:
       - failedTemplate:
           errorPattern: endpoint
 
+  - it: rejects an endpoint with a scheme
+    values:
+      - values/s3-compatible.yaml
+    set:
+      global.objectStorage.s3.endpoint: https://s3.example.com
+    asserts:
+      - failedTemplate:
+          errorPattern: endpoint
+
   - it: fails when store is aws and region is empty
     set:
       global.objectStorage.backend: s3
