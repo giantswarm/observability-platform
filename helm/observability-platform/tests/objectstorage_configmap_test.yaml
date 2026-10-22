@@ -112,6 +112,32 @@ tests:
           path: data.OBS_S3_REGION
           value: ""
 
+  - it: sets OBS_S3_INSECURE to false by default with backend s3
+    values:
+      - values/s3-compatible.yaml
+    asserts:
+      - equal:
+          path: data.OBS_S3_INSECURE
+          value: "false"
+
+  - it: sets OBS_S3_INSECURE to true when s3.insecure is true
+    values:
+      - values/s3-compatible.yaml
+    set:
+      global.objectStorage.s3.insecure: true
+    asserts:
+      - equal:
+          path: data.OBS_S3_INSECURE
+          value: "true"
+
+  - it: sets OBS_S3_INSECURE to false with backend azure
+    values:
+      - values/azure.yaml
+    asserts:
+      - equal:
+          path: data.OBS_S3_INSECURE
+          value: "false"
+
   - it: sets the five bucket names with backend s3
     values:
       - values/s3-aws.yaml
