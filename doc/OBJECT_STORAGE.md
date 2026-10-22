@@ -306,7 +306,16 @@ Drop the `alertmanager` and `ruler` blocks to keep both on the shared `mimir`
 ServiceAccount. The role's trust policy must allow each ServiceAccount in the release
 namespace, for example `system:serviceaccount:monitoring:mimir`.
 
-<!-- Story 17 adds the EKS Pod Identity note here. -->
+#### EKS Pod Identity
+
+EKS Pod Identity is untested with this chart
+([thanos-io/objstore#131](https://github.com/thanos-io/objstore/issues/131)). IRSA is
+the supported and tested path.
+
+The Pod Identity agent injects `AWS_CONTAINER_CREDENTIALS_FULL_URI` and
+`AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE` into the pods. The minio-go IAM provider and the
+aws-sdk-go-v2 default chain both read these two variables. Remove both keys from the
+Secret before you try it.
 
 ## Azure Blob Storage
 
