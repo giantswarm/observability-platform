@@ -34,6 +34,19 @@
                 }
               }
             },
+            "s3": {
+              "type": "object",
+              "properties": {
+                "store": {
+                  "type": "string",
+                  "enum": ["aws", "compatible"],
+                  "description": "AWS S3 or an S3-compatible store. Required with backend s3. No default. The objectStorage.validate helper fails the render while it is unset."
+                },
+                "endpoint": { "type": "string" },
+                "region": { "type": "string" },
+                "insecure": { "type": "boolean" }
+              }
+            },
             "buckets": {
               "type": "object",
               "required": ["mimirBlocks", "mimirAlertmanager", "mimirRuler", "loki", "tempo"],

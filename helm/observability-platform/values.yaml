@@ -31,6 +31,16 @@ global:
       # Set it if you use `localBlobStorage`
       # Leave it empty otherwise.
       connectionString: ""
+    # -- S3 settings. Used only with backend `s3`.
+    s3:
+      # -- (string) `aws` or `compatible`. Required with backend `s3`. No default.
+      # store:
+      # -- Store endpoint, host[:port], no scheme. Required with backend `s3`.
+      endpoint: ""
+      # -- Signing region. Required with store `aws`.
+      region: ""
+      # -- Plain HTTP.
+      insecure: false
     # -- Existing containers, one per consumer.
     buckets:
       mimirBlocks: mimir-blocks
