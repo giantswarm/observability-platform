@@ -130,3 +130,21 @@ The token expires after one hour. Run the `AUTH=` line again for a new one.
 ```bash
 make local-down
 ```
+
+## Chart unit tests
+
+The chart unit tests render the Platform chart and assert on the output. They need no
+cluster. CI runs them in the `chart-tests` workflow.
+
+```bash
+make helm-test
+```
+
+The target installs the helm-unittest plugin on first run. It runs without subcharts, so
+the suites cover only the Platform chart's own templates.
+
+- Suites live in `helm/observability-platform/tests/` and end in `_test.yaml`.
+- Shared values files live in `helm/observability-platform/tests/values/`: `azure.yaml`,
+  `s3-aws.yaml` and `s3-compatible.yaml`. A case lists them under `values:`.
+- Every suite renders with release `obs` in namespace `monitoring`.
+- Tests never contain the Azurite or Garage dev key literals. They match the key shape.
