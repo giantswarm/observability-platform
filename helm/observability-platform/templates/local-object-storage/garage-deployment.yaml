@@ -30,6 +30,8 @@ spec:
         runAsUser: 1000
         # The data directory is an emptyDir, which the kubelet group-owns to fsGroup.
         fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: {{ $name }}
           image: {{ .Values.localObjectStorage.garage.image | quote }}
@@ -65,6 +67,10 @@ spec:
           securityContext:
             # Garage writes to /var/lib/garage only, which is the emptyDir below.
             readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           resources:
             requests:
               cpu: 50m

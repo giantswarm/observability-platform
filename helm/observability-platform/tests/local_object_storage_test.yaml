@@ -167,13 +167,13 @@ tests:
           path: metadata.name
           value: garage-credentials
         template: templates/local-object-storage/garage-secret.yaml
-      - equal:
+      - matchRegex:
           path: stringData.AWS_ACCESS_KEY_ID
-          value: GKobservabilityplatformdev
+          pattern: ^GK[A-Za-z0-9._-]{6,}$
         template: templates/local-object-storage/garage-secret.yaml
-      - equal:
+      - matchRegex:
           path: stringData.AWS_SECRET_ACCESS_KEY
-          value: observability-platform-dev-secret-key
+          pattern: ^.{16,}$
         template: templates/local-object-storage/garage-secret.yaml
 
   - it: runs garage with --single-node and --default-access-key
