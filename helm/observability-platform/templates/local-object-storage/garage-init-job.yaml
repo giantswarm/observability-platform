@@ -1,0 +1,102 @@
+{{/*
+Creates the five buckets, which Garage does not create itself.
+*/}}
+{{- if include "observability-platform.localObjectStorage.garage.enabled" . }}
+{{- $name := include "observability-platform.garage.serviceName" . }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $name }}-init
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "labels.common" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}-init
+  annotations:
+    # post-install rather than pre-install: the Deployment this waits for is part of the
+    # release, so it does not exist yet at pre-install. `before-hook-creation` is what
+    # makes `helm upgrade` work - a Job of a fixed name cannot be patched in place.
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 6
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        {{- include "labels.selector" . | nindent 8 }}
+        app.kubernetes.io/component: {{ $name }}-init
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: init
+          image: {{ .Values.localObjectStorage.garage.initImage | quote }}
+          # The Garage endpoint, region and bucket names come from the same ConfigMap the
+          # components read, so this cannot create buckets under names they will not look
+          # for. The key is the one Garage creates on every start.
+          envFrom:
+            - configMapRef:
+                name: observability-platform-object-storage
+            - secretRef:
+                name: garage-credentials
+          env:
+            - name: AWS_REGION
+              value: $(OBS_S3_REGION)
+            # The CLI writes its configuration under $HOME, which is not writable here:
+            # the image's default is root's, and the root filesystem is read-only.
+            - name: HOME
+              value: /tmp
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+
+              endpoint="http://$OBS_S3_ENDPOINT"
+
+              # The Deployment is created alongside this hook, so Garage is usually not
+              # answering yet.
+              echo "waiting for garage"
+              until aws --endpoint-url "$endpoint" s3api list-buckets >/dev/null 2>&1; do
+                sleep 2
+              done
+
+              # Garage creates no buckets of its own, and Mimir, Loki and Tempo do not
+              # create a missing one. A bucket the key already owns is a success, so
+              # re-running this on upgrade is a no-op.
+              for bucket in \
+                  "$OBS_BUCKET_MIMIR_BLOCKS" \
+                  "$OBS_BUCKET_MIMIR_ALERTMANAGER" \
+                  "$OBS_BUCKET_MIMIR_RULER" \
+                  "$OBS_BUCKET_LOKI" \
+                  "$OBS_BUCKET_TEMPO"; do
+                echo "creating bucket $bucket"
+                if ! out=$(aws --endpoint-url "$endpoint" s3api create-bucket \
+                    --bucket "$bucket" \
+                    --create-bucket-configuration LocationConstraint="$OBS_S3_REGION" 2>&1); then
+                  case "$out" in
+                    *BucketAlreadyOwnedByYou*) echo "bucket $bucket exists" ;;
+                    *) echo "$out" >&2; exit 1 ;;
+                  esac
+                fi
+              done
+
+              echo "done"
+          securityContext:
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: home
+              mountPath: /tmp
+      volumes:
+        - name: home
+          emptyDir: {}
+{{- end }}
