@@ -1,6 +1,6 @@
 # External API
 
-`observabilityPlatformApi.enabled` exposes Loki and Mimir outside the cluster through the
+`observabilityPlatformApi.enabled` exposes Loki, Mimir and Tempo outside the cluster through the
 Observability Platform API. External agents write and read through it. The API chart lives
 at https://github.com/giantswarm/observability-platform-api
 
@@ -16,6 +16,7 @@ All paths are served at `observability.<global.domain>`.
 | --- | --- | --- |
 | Mimir | `/prometheus/api/v1/push`, `/otlp/v1/metrics` | `/prometheus/api/v1/{query,query_range,series,labels,...}` |
 | Loki | `/loki/api/v1/push`, `/otlp/v1/logs` | `/loki/api/v1/{query,query_range,series,labels,...}` |
+| Tempo | `/v1/traces`, OTLP gRPC | `/tempo/api/{search,traces,v2/search,v2/traces,...}`, gRPC |
 
 Every request needs:
 
@@ -277,13 +278,23 @@ curl -sS -o /dev/null -w '%{http_code}\n' "${AUTH[@]}" \
   -d '{"streams":[{"stream":{"job":"external-api-test"},"values":[["'"$(date +%s)"'000000000","hello from the external API"]]}]}'
 ```
 
-Both return `200` or `204`.
+Push a span:
+
+```bash
+curl -sS -o /dev/null -w '%{http_code}\n' "${AUTH[@]}" \
+  -H "Content-Type: application/json" \
+  "$API/v1/traces" \
+  -d '{"resourceSpans":[{"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"external-api-test"}}]},"scopeSpans":[{"spans":[{"traceId":"5b8efff798038103d269b633813fc60c","spanId":"eee19b7ec3c1b174","name":"external-api-test","kind":1,"startTimeUnixNano":"'"$(date +%s)"'000000000","endTimeUnixNano":"'"$(date +%s)"'100000000"}]}]}]}'
+```
+
+All three return `200` or `204`.
 
 Read them back:
 
 ```bash
 curl -sS -G "${AUTH[@]}" "$API/prometheus/api/v1/query" --data-urlencode 'query=external_api_test'
 curl -sS -G "${AUTH[@]}" "$API/loki/api/v1/query_range" --data-urlencode 'query={job="external-api-test"}'
+curl -sS "${AUTH[@]}" "$API/tempo/api/v2/traces/5b8efff798038103d269b633813fc60c"
 ```
 
 Without a token, the API rejects the request:
@@ -298,7 +309,8 @@ curl -sS -o /dev/null -w '%{http_code}\n' -H "X-Scope-OrgID: <tenant>" \
 ```
 
 For a Prometheus `remote_write` or an OpenTelemetry Collector, use
-`$API/prometheus/api/v1/push` or `$API/otlp/v1/metrics` with the same two headers.
+`$API/prometheus/api/v1/push` or `$API/otlp/v1/metrics` with the same two headers. For traces,
+use `$API/v1/traces`.
 
 ## Read-only basic auth
 
@@ -338,5 +350,4 @@ scheme.
 ## Limitations
 
 - A client can send any `X-Scope-OrgID`. Nothing binds the tenant to the token.
-- Tempo is not exposed.
 - Ingest authentication is JWT only.

@@ -9,14 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The local kind cluster inherits no DNS search domain from the host. A host search domain no longer slows in-cluster lookups.
 - The `helm.sh/chart` label is valid for long chart versions: the 63-character cut trims the whole trailing run of `-`, `.` and `_`.
+
+### Changed
+
+- Install the observability-operator as its own release, before this chart, with `values/observability-operator.yaml`.
 
 ### Added
 
+- Enable Mimir Alertmanager.
+- Give Grafana's default organization (org 1) the platform's datasources, with alerting access while Mimir's Alertmanager is enabled.
+- Enable Tempo by default. It runs multi-tenant and stores traces in Azure Blob.
+- Add the `tempo` Azure Blob container configuration.
 - Add `doc/GATEWAY.md`. It installs Envoy Gateway and cert-manager, and creates the Gateway, its certificate and its DNS record.
 - List the network access the platform needs in the README.
 - Run the observability-operator with only its GrafanaOrganization and Dashboard controllers.
 - Add the Observability Platform API wiring for Loki and Mimir
+- Route Tempo traffic through the Observability Platform API.
+- Add Tempo to `doc/EXTERNAL_API.md` and `doc/LOCAL_DEV.md`.
 - Serve Grafana over HTTPS at `https://grafana.localhost:8443` in the local kind setup.
 - Add `doc/EXTERNAL_API.md`, walking through values and requests.
 - `doc/EXTERNAL_API.md` links `doc/GATEWAY.md` and covers the egress of the Envoy proxy pods: DNS, JWKS, xDS and backends.
@@ -32,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Stop shipping Giant Swarm's Alertmanager routing with the observability-operator release (`values/observability-operator.yaml`).
 - The external API routes attach only to the Gateway listener named `https`, so the API is no longer served over plain HTTP.
 - Update `observability-operator` from 0.72.2 to 0.84.0.
 - Update `observability-platform-api` from 0.4.0 to 0.5.0.

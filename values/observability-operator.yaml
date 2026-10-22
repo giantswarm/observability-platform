@@ -1,0 +1,76 @@
+# ---------------------------------------------------------------------------
+# Standalone profile for the observability-operator release.
+#
+# The operator is installed as its own release, before the Platform chart:
+#
+#   helm install observability-operator observability-operator \
+#     --repo https://giantswarm.github.io/control-plane-catalog/ \
+#     --namespace monitoring --create-namespace \
+#     --values values/observability-operator.yaml
+#
+# It installs the operator's CRDs, which the Platform chart's resources need.
+# The values below must agree with the Platform chart's: `tracing.enabled` with
+# `tempo.enabled`, `defaultTenant` with `global.tenant`, and the URLs with the
+# `monitoring` namespace. Nothing checks this across the two releases.
+#
+# Beware that some features won't work outside of a Giant Swarm management cluster.
+# ---------------------------------------------------------------------------
+verticalPodAutoscaler:
+  enabled: false
+# Disabling the webhook loses CR validation.
+# TODO: re-enable once this chart has a real issuer to offer.
+webhook:
+  enabled: false
+operator:
+  # TODO: re-enable once this chart has a real issuer to offer.
+  metricsServerCertificate:
+    enabled: false
+  controllers:
+    # The cluster controller generates the observability-agents config for each Giantswarm-created cluster
+    # This feature is only available for GiantSwarm management clusters.
+    cluster:
+      enabled: false
+    # Alertmanager wiring is a separate component, off by default here too.
+    alertmanager:
+      enabled: false
+    # Agent credentials feed Giant Swarm gateway Secrets; the external API authenticates
+    # writes with JWTs instead, so nothing here would read them.
+    agentCredential:
+      enabled: false
+    logExport:
+      enabled: false
+# -- Provision Tempo datasources and trace links. Must match the Platform chart's
+# `tempo.enabled`.
+tracing:
+  enabled: true
+# -- Tenant the operator assigns when a resource carries no tenant label.
+# Must match the Platform chart's `global.tenant`.
+defaultTenant: default
+alerting:
+  alertmanagerSecret:
+    # -- Don't ship Giant Swarm's Alertmanager routing (Slack, PagerDuty) to standalone installs.
+    enabled: false
+# The "managementCluster" section is specific to Giant Swarm management clusters.
+# Please don't change anything here except "name".
+managementCluster:
+  name: observability-platform
+  baseDomain: ""
+  customer: ""
+  pipeline: ""
+  region: ""
+  # We don't support custom clusterIssuer yet, please keep `clusterIssuer` empty.
+  clusterIssuer: ""
+grafana:
+  # Deterministic names: this URL and the datasource URLs below name services of the
+  # Platform chart in the `monitoring` namespace, the only namespace it installs into
+  # while the operator manages its Grafana.
+  url: "http://grafana.monitoring.svc.cluster.local"
+  # -- Secret holding the client TLS certificate for Grafana.
+  # This is currently not supported, so there is nothing to name here yet.
+  gatewayTLSSecretName: ""
+  datasources:
+    lokiURL: "http://loki-gateway.monitoring.svc"
+    mimirURL: "http://mimir-gateway.monitoring.svc/prometheus"
+    mimirAlertmanagerURL: "http://mimir-alertmanager.monitoring.svc:8080"
+    mimirCardinalityURL: "http://mimir-gateway.monitoring.svc:8080/prometheus/api/v1/cardinality/"
+    tempoURL: "http://tempo-query-frontend.monitoring.svc:3200"

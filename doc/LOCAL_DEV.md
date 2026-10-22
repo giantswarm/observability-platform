@@ -22,7 +22,8 @@ make local-up
 
 `make local-up` creates a kind cluster and installs these components:
 
-- the chart in namespace `monitoring`, with `values-local.yaml`, including the observability-operator
+- the observability-operator, as its own release, with `values/observability-operator.yaml`
+- the chart in namespace `monitoring`, with `values-local.yaml`
 - the external API, with Envoy Gateway and a JWKS server. See [EXTERNAL_API.md](./EXTERNAL_API.md).
 
 ## Verify
@@ -45,7 +46,9 @@ Then check the pods:
 kubectl get pods -n monitoring
 ```
 
-Expect 21 Running. Mimir and Loki may restart once or twice while the emulator starts.
+Expect 23 Running. Mimir and Loki may restart once or twice while the emulator starts.
+Tempo's ingester, querier, query-frontend and compactor restart until the hook creates the
+`tempo` container, two to four times each.
 
 Log in at <https://grafana.localhost:8443> as `admin`. The chart generates a random password and
 stores it in the `grafana` secret:

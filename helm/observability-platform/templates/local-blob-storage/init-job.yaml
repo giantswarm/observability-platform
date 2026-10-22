@@ -1,7 +1,7 @@
 {{/*
 Creates the storage containers, which Azurite does not create itself.
 */}}
-{{- if and .Values.localBlobStorage.enabled (or .Values.mimir.enabled .Values.loki.enabled) }}
+{{- if and .Values.localBlobStorage.enabled (or .Values.mimir.enabled .Values.loki.enabled .Values.tempo.enabled) }}
 {{- $name := include "observability-platform.localBlobStorage.serviceName" . }}
 apiVersion: batch/v1
 kind: Job
@@ -67,7 +67,8 @@ spec:
                   "$OBS_BUCKET_MIMIR_BLOCKS" \
                   "$OBS_BUCKET_MIMIR_ALERTMANAGER" \
                   "$OBS_BUCKET_MIMIR_RULER" \
-                  "$OBS_BUCKET_LOKI"; do
+                  "$OBS_BUCKET_LOKI" \
+                  "$OBS_BUCKET_TEMPO"; do
                 echo "creating container $container"
                 az storage container create --name "$container" \
                   --connection-string "$OBS_AZURE_CONNECTION_STRING" -o none

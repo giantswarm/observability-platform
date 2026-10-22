@@ -34,6 +34,7 @@ global:
       mimirAlertmanager: mimir-alertmanager
       mimirRuler: mimir-ruler
       loki: loki
+      tempo: tempo
 
 # ---------------------------------------------------------------------------
 # Component toggles. Each one drives the matching `condition:` in Chart.yaml.
@@ -45,18 +46,53 @@ grafana:
     enabled: false
   grafana:
     # Deterministic name: pinned, do not change. The operator's `grafana.url` and
-    # the datasource URLs below name this service literally.
+    # datasource URLs (values/observability-operator.yaml) name this service literally.
     fullnameOverride: grafana
+# -- An observability-operator release, installed separately before this chart, manages
+# this platform's Grafana. Pins the release to the `monitoring` namespace.
 observabilityOperator:
   enabled: true
 tempo:
-  enabled: false
+  enabled: true
   tempo:
     # Pin the service name - see "Deterministic names" under grafana above.
     fullnameOverride: tempo
+    minio:
+      enabled: false
     metaMonitoring:
       serviceMonitor:
         enabled: false
+      # Mimir already installs the grafana-agent-operator under the same names.
+      grafanaAgent:
+        installOperator: false
+    # Its webhooks fail closed on StatefulSet updates and pod evictions in the namespace.
+    rollout_operator:
+      enabled: false
+    defaults:
+      extraArgs:
+        - -config.expand-env=true
+      extraEnvFrom:
+        - configMapRef:
+            name: observability-platform-object-storage
+        - secretRef:
+            name: observability-platform-object-storage
+            optional: true
+    # Tempo reads `X-Scope-OrgID` only with multitenancy on.
+    multitenancyEnabled: true
+    storage:
+      trace:
+        backend: azure
+        azure:
+          storage_account_name: ${OBS_AZURE_ACCOUNT_NAME}
+          storage_account_key: ${AZURE_STORAGE_KEY}
+          container_name: ${OBS_BUCKET_TEMPO}
+          # A suffix not starting with `blob.` switches Tempo to Azurite path style.
+          endpoint_suffix: ${OBS_AZURE_ENDPOINT_SUFFIX}
+    metricsGenerator:
+      enabled: false
+    # The API reaches the query-frontend and the distributor directly.
+    gateway:
+      enabled: false
   vulture:
     enabled: false
 observabilityPlatformApi:
@@ -72,66 +108,15 @@ localBlobStorage:
     image: mcr.microsoft.com/azure-cli:2.91.0
 
 # ---------------------------------------------------------------------------
-# Standalone profile for observability-operator.
-#
-# Beware that some features won't work outside of a Giant Swarm management cluster.
+# Default organization: a GrafanaOrganization that takes over Grafana's default
+# organization ("Main Org.", org 1) and gives it datasources that read the platform's
+# data, that is, the tenant set in `global.tenant`.
 # ---------------------------------------------------------------------------
-observability-operator:
-  verticalPodAutoscaler:
-    enabled: false
-  # Disabling the webhook loses CR validation.
-  # TODO: re-enable once this chart has a real issuer to offer.
-  webhook:
-    enabled: false
-  operator:
-    # TODO: re-enable once this chart has a real issuer to offer.
-    metricsServerCertificate:
-      enabled: false
-    controllers:
-      # The cluster controller generates the observability-agents config for each Giantswarm-created cluster
-      # This feature is only available for GiantSwarm management clusters.
-      cluster:
-        enabled: false
-      # Alertmanager wiring is a separate component, off by default here too.
-      alertmanager:
-        enabled: false
-      # Agent credentials feed Giant Swarm gateway Secrets; the external API authenticates
-      # writes with JWTs instead, so nothing here would read them.
-      agentCredential:
-        enabled: false
-      logExport:
-        enabled: false
-  # -- Provision Tempo datasources and trace links. Must match `tempo.enabled`:
-  # the operator cannot read it, so the two are kept in step by hand.
-  tracing:
-    enabled: false
-  # -- Tenant the operator assigns when a resource carries no tenant label.
-  # Must match `global.tenant`.
-  defaultTenant: default
-  # The "managementCluster" section is specific to Giant Swarm management clusters.
-  # Please don't change anything here except "name".
-  managementCluster:
-    name: observability-platform
-    baseDomain: ""
-    customer: ""
-    pipeline: ""
-    region: ""
-    # We don't support custom clusterIssuer yet, please keep `clusterIssuer` empty.
-    clusterIssuer: ""
-  grafana:
-    # Deterministic names: this URL and the datasource URLs below name services in the
-    # `monitoring` namespace, the only namespace this release installs into while the
-    # operator is enabled. The render fails otherwise.
-    url: "http://grafana.monitoring.svc.cluster.local"
-    # -- Secret holding the client TLS certificate for Grafana.
-    # This is currently not supported, so there is nothing to name here yet.
-    gatewayTLSSecretName: ""
-    datasources:
-      lokiURL: "http://loki-gateway.monitoring.svc"
-      mimirURL: "http://mimir-gateway.monitoring.svc/prometheus"
-      mimirAlertmanagerURL: "http://mimir-alertmanager.monitoring.svc:8080"
-      mimirCardinalityURL: "http://mimir-gateway.monitoring.svc:8080/prometheus/api/v1/cardinality/"
-      tempoURL: "http://tempo-query-frontend.monitoring.svc:3200"
+defaultOrganization:
+  # -- Create the Default organization. Needs the observability-operator to be enabled.
+  enabled: true
+  admins:
+  - admins
 
 # ---------------------------------------------------------------------------
 # Observability Platform API: authenticated external ingest and read.
@@ -166,7 +151,7 @@ observability-platform-api:
         namespace: envoy-gateway-system
         sectionName: https
   # Routes live next to the backends. Service names match the pinned
-  # `fullnameOverride`s below.
+  # `fullnameOverride`s of each backend.
   loki:
     enabled: true
     namespace: monitoring
@@ -184,7 +169,9 @@ observability-platform-api:
         namespace: envoy-gateway-system
         sectionName: https
   tempo:
-    enabled: false
+    enabled: true
+    namespace: monitoring
+    hostname: "observability.{{ .Values.global.domain }}"
     parentRefs:
       - name: giantswarm-default
         namespace: envoy-gateway-system
@@ -198,11 +185,12 @@ observability-platform-api:
 #   1. This chart renders a ConfigMap (fixed name, see templates/objectstorage.yaml)
 #      holding the storage parameters resolved from `global.objectStorage`.
 #   2. That ConfigMap and the credentials Secret are injected as environment
-#      variables into the Mimir and Loki pods. Injection is scoped per component
-#      family, so the credentials reach Mimir and Loki only.
+#      variables into the Mimir, Loki and Tempo pods. Injection is scoped per
+#      component family, so the credentials reach Mimir, Loki and Tempo only.
 #   3. The values below reference those variables as `${...}`. mimir-distributed and
-#      the upstream Loki chart pass `-config.expand-env=true` to every component,
-#      so the references expand at startup.
+#      the upstream Loki chart pass `-config.expand-env=true` to every component.
+#      Tempo gets it from `tempo.tempo.defaults.extraArgs`. The references expand
+#      at startup.
 #
 # The backend is a literal `azure` everywhere.
 # ---------------------------------------------------------------------------
@@ -224,6 +212,8 @@ mimir:
   mimir:
     # Pin the service name - see "Deterministic names" under grafana above.
     fullnameOverride: mimir
+    alertmanager:
+      enabled: true
     ingester:
       verticalAutoscaling:
         enabled: false
@@ -313,6 +303,6 @@ loki:
 #
 # `global.domain` reaches the Observability Platform API hostnames only.
 #
-# `global.tenant` rides in the same ConfigMap as `OBS_TENANT`. It reaches Mimir and
-# Loki while one of them is enabled. Nothing consumes it yet.
+# `global.tenant` rides in the same ConfigMap as `OBS_TENANT`. It reaches Mimir, Loki
+# and Tempo while one of them is enabled. Nothing consumes it yet.
 # ---------------------------------------------------------------------------
