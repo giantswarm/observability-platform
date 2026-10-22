@@ -121,23 +121,7 @@ This app has been tested to work with the following workload cluster release ver
 
 Standalone, it has been installed and verified on a vanilla EKS cluster.
 
-## Network access
-
-The cluster needs outbound HTTPS (port 443) to these endpoints:
-
-| Endpoint | Used for | Hosts |
-| --- | --- | --- |
-| Object storage | Mimir, Loki and Tempo data | `<account>.blob.core.windows.net` |
-| `gsoci.azurecr.io` | Container images | `gsoci.azurecr.io`, `*.blob.core.windows.net` |
-| `docker.io` | Container images | `registry-1.docker.io`, `auth.docker.io`, `production.cloudflare.docker.com` |
-| OIDC issuer | JWKS fetch by the Envoy proxy pods, with the external API | The host of the JWKS URI |
-
-The machine that runs `helm install` needs outbound HTTPS to the Giant Swarm Helm catalogs:
-
-- `https://giantswarm.github.io/giantswarm-catalog/`
-- `https://giantswarm.github.io/control-plane-catalog/`
-
-`gsoci.azurecr.io` serves image layers from Azure Blob Storage hosts. The host names vary.
+The network access the platform needs is in [doc/GATEWAY.md](doc/GATEWAY.md#network-access).
 
 ## Limitations
 
@@ -151,5 +135,6 @@ Not following these limitations will most likely result in a broken deployment.
 - The chart creates no Gateway and no TLS certificate. The external API and Grafana are
   exposed over HTTPS on a Gateway you provide, and you must set the name and namespace of that
   Gateway in each component's `parentRefs`. The external API also needs Envoy Gateway and an
-  OIDC issuer installed beforehand — see [doc/EXTERNAL_API.md](doc/EXTERNAL_API.md).
+  OIDC issuer installed beforehand — see [doc/GATEWAY.md](doc/GATEWAY.md) and
+  [doc/EXTERNAL_API.md](doc/EXTERNAL_API.md).
 - Turning Mimir or Loki off leaves Grafana with a datasource pointing at nothing.

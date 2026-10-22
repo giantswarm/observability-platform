@@ -1,6 +1,6 @@
 # Gateway
 
-The external API and Grafana are served through a Gateway you provide. This guide prepares
+The external API is served through a Gateway you provide. This guide prepares
 one on the cluster from [EKS_CLUSTER.md](EKS_CLUSTER.md):
 
 - Envoy Gateway
@@ -38,6 +38,30 @@ The `http` listener serves the ACME HTTP-01 challenge. It accepts routes from th
 - A domain with a Route53 hosted zone. Another DNS provider works: create the record by hand
   in [Step 6](#step-6--create-the-dns-record).
 - An email address for the Let's Encrypt account
+
+## Network access
+
+The cluster needs outbound HTTPS (port 443) to these endpoints:
+
+| Endpoint | Used for | Hosts |
+| --- | --- | --- |
+| Object storage | Mimir, Loki and Tempo data | `<account>.blob.core.windows.net` |
+| `gsoci.azurecr.io` | Container images | `gsoci.azurecr.io`, `*.blob.core.windows.net` |
+| `docker.io` | Container images | `registry-1.docker.io`, `auth.docker.io`, `production.cloudflare.docker.com` |
+| `quay.io` | cert-manager images | `quay.io`, `*.quay.io` |
+| Let's Encrypt | ACME orders by cert-manager | `acme-v02.api.letsencrypt.org` |
+| OIDC issuer | JWKS fetch by the Envoy proxy pods, with the external API | The host of the JWKS URI |
+
+The machine that runs `helm install` needs outbound HTTPS to:
+
+- the Giant Swarm Helm catalogs:
+  - `https://giantswarm.github.io/giantswarm-catalog/`
+  - `https://giantswarm.github.io/control-plane-catalog/`
+- the `docker.io` hosts, for the Envoy Gateway chart
+- the `quay.io` hosts, for the cert-manager chart
+
+`gsoci.azurecr.io` serves image layers from Azure Blob Storage hosts. `quay.io` serves image
+layers from `*.quay.io` hosts. The host names vary.
 
 ## Step 1 — Set variables
 
@@ -293,6 +317,7 @@ Delete the Gateway before the cluster. The Gateway owns the load balancer. A loa
 left behind blocks the VPC deletion in `eksctl delete cluster`.
 
 ```bash
+LB=$(kubectl -n envoy-gateway-system get gateway giantswarm-default -o jsonpath='{.status.addresses[0].value}')
 aws route53 change-resource-record-sets --hosted-zone-id "$HOSTED_ZONE_ID" \
   --change-batch "{\"Changes\":[{\"Action\":\"DELETE\",\"ResourceRecordSet\":{\"Name\":\"$OBS_HOST\",\"Type\":\"CNAME\",\"TTL\":60,\"ResourceRecords\":[{\"Value\":\"$LB\"}]}}]}"
 
