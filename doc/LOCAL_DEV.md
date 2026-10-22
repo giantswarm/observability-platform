@@ -81,6 +81,33 @@ curl --cacert hack/local/.keys/tls.crt https://grafana.localhost:8443/api/health
 Garage keeps its data and its buckets in an `emptyDir`: restarting the `garage` pod
 discards both. The dev key survives: Garage creates it again on every start.
 
+## Run on Azurite
+
+```bash
+make local-up LOCAL_BACKEND=azure
+```
+
+`LOCAL_BACKEND` defaults to `s3`. `LOCAL_BACKEND=azure` adds `hack/local/values-azure.yaml`
+after the other values files. It sets `backend: azure` and drops the `s3` block of
+`values-local.yaml`. The rest of the setup is the same.
+
+These parts differ:
+
+- Azurite runs in place of Garage.
+- The chart computes the dev account name and the connection string. Mimir and Loki read the
+  connection string. Tempo reads the dev account key from the `azurite-credentials` Secret.
+- Loki runs its default Azure client, not Loki thanos mode.
+- The `azurite-init` hook creates the five containers:
+
+```bash
+kubectl get job azurite-init -n monitoring
+```
+
+Azurite keeps its data in an `emptyDir`: restarting the `azurite` pod discards the data.
+
+`make local-down` deletes the cluster for both backends. Pass `LOCAL_BACKEND=azure` again on
+the next `make local-up` to stay on Azurite.
+
 ## Send data through the external API
 
 The local setup replaces the OIDC issuer with a static JWKS served in the cluster.
