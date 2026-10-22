@@ -81,6 +81,13 @@ AUTH=(--cacert hack/local/.keys/tls.crt -H "Authorization: Bearer $(make -s loca
 
 The requests in [EXTERNAL_API.md](./EXTERNAL_API.md#send-data) then run as written.
 
+The token carries no tenant. Change `X-Scope-OrgID` to write to or read from another tenant:
+the API accepts any tenant for any valid token. See
+[EXTERNAL_API.md](./EXTERNAL_API.md#tenants). `default` is the chart's `global.tenant`.
+
+To skip the API and query Loki from inside the cluster, see
+[EXTERNAL_API.md](./EXTERNAL_API.md#from-inside-the-cluster).
+
 The token expires after one hour. Run the `AUTH=` line again for a new one.
 
 ## Teardown

@@ -25,6 +25,19 @@ Every request needs:
 
 A request missing either one gets a `401`.
 
+## Tenants
+
+The JWT only authenticates the request. The tenant is whatever the client sends in
+`X-Scope-OrgID`, and it reaches Loki, Mimir and Tempo unchanged. Any valid token can
+therefore read and write any tenant.
+
+Loki also answers reads for several tenants at once, joined with `|`
+(`X-Scope-OrgID: team-a|team-b`). Each stream comes back with a `__tenant_id__` label.
+Pushes take a single tenant.
+
+Do not name a tenant `index` or `rules`. Loki stores those paths in the same container as
+the tenants' chunks. See [OBJECT_STORAGE.md](./OBJECT_STORAGE.md#the-loki-container).
+
 ## Prerequisites
 
 The chart does not install these, but the Makefile does for local kind setups (`make local-up`).
@@ -230,6 +243,35 @@ For a Prometheus `remote_write` or an OpenTelemetry Collector, use
 `$API/prometheus/api/v1/push` or `$API/otlp/v1/metrics` with the same two headers. For traces,
 use `$API/v1/traces`.
 
+## From inside the cluster
+
+Pods in the cluster can call the gateways directly, without the API and without a token.
+They still need `X-Scope-OrgID`, or the backends answer `401` with `no org id`. These URLs
+assume the release runs in `monitoring`:
+
+| Backend | URL |
+| --- | --- |
+| Loki | `http://loki-gateway.monitoring.svc` |
+| Mimir | `http://mimir-gateway.monitoring.svc/prometheus` |
+| Tempo | `http://tempo-query-frontend.monitoring.svc:3200` (read), `http://tempo-distributor.monitoring.svc:4318` (OTLP write) |
+
+Push a log line and read it back from a throwaway pod:
+
+```bash
+kubectl run loki-check -n monitoring --rm -i --restart=Never --image=curlimages/curl:8.11.1 -- \
+  -sS -o /dev/null -w '%{http_code}\n' -H "X-Scope-OrgID: default" -H "Content-Type: application/json" \
+  http://loki-gateway.monitoring.svc/loki/api/v1/push \
+  -d '{"streams":[{"stream":{"job":"in-cluster-test"},"values":[["'"$(date +%s)"'000000000","hello from inside the cluster"]]}]}'
+kubectl run loki-check -n monitoring --rm -i --restart=Never --image=curlimages/curl:8.11.1 -- \
+  -sS -G -H "X-Scope-OrgID: default" \
+  http://loki-gateway.monitoring.svc/loki/api/v1/query_range --data-urlencode 'query={job="in-cluster-test"}'
+```
+
+The push prints `204`, the query `"status":"success"` with the line.
+
+A Grafana datasource uses the same URL, with `X-Scope-OrgID` as a custom HTTP header. The
+datasources that the observability-operator provisions already set it.
+
 ## Read-only basic auth
 
 For clients that can't send a JWT, such as an external Grafana, the API can also expose the
@@ -267,5 +309,11 @@ scheme.
 
 ## Limitations
 
-- A client can send any `X-Scope-OrgID`. Nothing binds the tenant to the token.
+- A client can send any `X-Scope-OrgID`. Nothing binds the tenant to the token. See
+  [Tenants](#tenants).
+- Loki's Prometheus-compatible rules API is not reachable. Loki and Mimir share the
+  hostname, and `/prometheus/api/v1/rules` goes to Mimir. `/prometheus/api/v1/alerts` has no
+  route. A Grafana Loki datasource pointed at the API reads its alert rules from that path,
+  so it lists the tenant's Mimir rules instead of its Loki rules. Loki's own
+  `/loki/api/v1/rules` works.
 - Ingest authentication is JWT only.
