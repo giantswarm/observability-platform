@@ -4,6 +4,10 @@ templates:
   - templates/local-object-storage/azurite-service.yaml
   - templates/local-object-storage/azurite-init-job.yaml
   - templates/local-object-storage/azurite-secret.yaml
+  - templates/local-object-storage/garage-configmap.yaml
+  - templates/local-object-storage/garage-deployment.yaml
+  - templates/local-object-storage/garage-service.yaml
+  - templates/local-object-storage/garage-secret.yaml
 release:
   name: obs
   namespace: monitoring
@@ -74,6 +78,16 @@ tests:
     asserts:
       - hasDocuments:
           count: 0
+        template: templates/local-object-storage/azurite-deployment.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/azurite-service.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/azurite-init-job.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/azurite-secret.yaml
 
   - it: deploys nothing when localObjectStorage is disabled
     set:
@@ -105,3 +119,136 @@ tests:
       - hasDocuments:
           count: 1
         template: templates/local-object-storage/azurite-deployment.yaml
+
+  - it: deploys Garage with backend s3
+    set:
+      global.objectStorage.backend: s3
+      global.objectStorage.s3.store: compatible
+      localObjectStorage.enabled: true
+    asserts:
+      - isKind:
+          of: Deployment
+        template: templates/local-object-storage/garage-deployment.yaml
+      - equal:
+          path: metadata.name
+          value: garage
+        template: templates/local-object-storage/garage-deployment.yaml
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: dxflrs/garage:v2.4.1
+        template: templates/local-object-storage/garage-deployment.yaml
+      - isKind:
+          of: Service
+        template: templates/local-object-storage/garage-service.yaml
+      - equal:
+          path: metadata.name
+          value: garage
+        template: templates/local-object-storage/garage-service.yaml
+      - equal:
+          path: spec.ports[0].port
+          value: 3900
+        template: templates/local-object-storage/garage-service.yaml
+      - isKind:
+          of: ConfigMap
+        template: templates/local-object-storage/garage-configmap.yaml
+      - equal:
+          path: metadata.name
+          value: garage-config
+        template: templates/local-object-storage/garage-configmap.yaml
+      - matchRegex:
+          path: data["garage.toml"]
+          pattern: 's3_region = "garage"'
+        template: templates/local-object-storage/garage-configmap.yaml
+      - isKind:
+          of: Secret
+        template: templates/local-object-storage/garage-secret.yaml
+      - equal:
+          path: metadata.name
+          value: garage-credentials
+        template: templates/local-object-storage/garage-secret.yaml
+      - equal:
+          path: stringData.AWS_ACCESS_KEY_ID
+          value: GKobservabilityplatformdev
+        template: templates/local-object-storage/garage-secret.yaml
+      - equal:
+          path: stringData.AWS_SECRET_ACCESS_KEY
+          value: observability-platform-dev-secret-key
+        template: templates/local-object-storage/garage-secret.yaml
+
+  - it: runs garage with --single-node and --default-access-key
+    set:
+      global.objectStorage.backend: s3
+      global.objectStorage.s3.store: compatible
+      localObjectStorage.enabled: true
+    template: templates/local-object-storage/garage-deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --single-node
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --default-access-key
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GARAGE_DEFAULT_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: garage-credentials
+                key: AWS_ACCESS_KEY_ID
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GARAGE_DEFAULT_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: garage-credentials
+                key: AWS_SECRET_ACCESS_KEY
+
+  - it: mounts an emptyDir for Garage data
+    set:
+      global.objectStorage.backend: s3
+      global.objectStorage.s3.store: compatible
+      localObjectStorage.enabled: true
+    template: templates/local-object-storage/garage-deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: data
+            emptyDir: {}
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: data
+            mountPath: /var/lib/garage
+
+  - it: reads the Garage image from localObjectStorage.garage
+    set:
+      global.objectStorage.backend: s3
+      global.objectStorage.s3.store: compatible
+      localObjectStorage.enabled: true
+      localObjectStorage.garage.image: example.com/garage:1
+    template: templates/local-object-storage/garage-deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: example.com/garage:1
+
+  - it: deploys no Garage with backend azure
+    set:
+      global.objectStorage.backend: azure
+      localObjectStorage.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/garage-configmap.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/garage-deployment.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/garage-service.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/garage-secret.yaml

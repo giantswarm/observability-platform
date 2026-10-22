@@ -196,3 +196,19 @@ tests:
       - equal:
           path: data.OBS_AZURE_ENDPOINT_SUFFIX
           value: azurite.monitoring.svc.cluster.local:10000
+
+  - it: points OBS_S3_* at Garage
+    set:
+      global.objectStorage.backend: s3
+      global.objectStorage.s3.store: compatible
+      localObjectStorage.enabled: true
+    asserts:
+      - equal:
+          path: data.OBS_S3_ENDPOINT
+          value: garage.monitoring.svc.cluster.local:3900
+      - equal:
+          path: data.OBS_S3_REGION
+          value: garage
+      - equal:
+          path: data.OBS_S3_INSECURE
+          value: "true"
