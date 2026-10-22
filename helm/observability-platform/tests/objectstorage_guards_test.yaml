@@ -63,6 +63,24 @@ tests:
       - failedTemplate:
           errorPattern: 'global\.objectStorage\.s3\.store is "aws" and global\.objectStorage\.s3\.region is empty'
 
+  - it: fails when backend is s3 and azure.accountName is set
+    values:
+      - values/s3-compatible.yaml
+    set:
+      global.objectStorage.azure.accountName: obsplatform
+    asserts:
+      - failedTemplate:
+          errorPattern: 'global\.objectStorage\.backend is "s3", but global\.objectStorage\.azure\.accountName is set'
+
+  - it: fails when backend is s3 and azure.connectionString is set
+    values:
+      - values/s3-compatible.yaml
+    set:
+      global.objectStorage.azure.connectionString: DefaultEndpointsProtocol=https;AccountName=obsplatform
+    asserts:
+      - failedTemplate:
+          errorPattern: 'global\.objectStorage\.backend is "s3", but global\.objectStorage\.azure\.connectionString is set'
+
   - it: renders with backend azure
     values:
       - values/azure.yaml
