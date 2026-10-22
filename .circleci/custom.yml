@@ -69,6 +69,8 @@ workflows:
   build:
     jobs:
       - e2e-kind:
+          requires:
+            - build-chart
           filters:
             branches:
               ignore:
