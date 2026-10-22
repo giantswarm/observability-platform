@@ -33,9 +33,27 @@ jobs:
       - run:
           name: Collect cluster state on failure
           command: |
-            kubectl --context kind-kind get pods -A
-            kubectl --context kind-kind get events -n monitoring --sort-by=.lastTimestamp | tail -n 50
-            kubectl --context kind-kind logs -n monitoring -l app.kubernetes.io/name=loki --all-containers --prefix --tail=30
+            KUBECTL="kubectl --context kind-kind"
+            $KUBECTL get pods -n monitoring -o wide
+            $KUBECTL get events -n monitoring --sort-by=.lastTimestamp | tail -n 80
+            echo "=== loki-backend"
+            $KUBECTL logs -n monitoring loki-backend-0 -c backend --tail=300
+            echo "=== loki-read"
+            $KUBECTL logs -n monitoring deploy/loki-read --tail=100
+            echo "=== kindnet"
+            $KUBECTL logs -n kube-system -l app=kindnet --tail=50
+            echo "=== connectivity matrix: loki pods, gossip port 7946"
+            IPS=$($KUBECTL get pods -n monitoring -l app.kubernetes.io/name=loki -o jsonpath='{range .items[*]}{.metadata.name}={.status.podIP}{" "}{end}')
+            echo "$IPS"
+            for src in loki-backend-0 loki-write-0; do
+              for dst in $IPS; do
+                $KUBECTL exec -n monitoring "$src" -- sh -c "nc -z -w 3 ${dst#*=} 7946 && echo \"OK   $src -> $dst:7946\" || echo \"FAIL $src -> $dst:7946\"" 2>&1
+              done
+              $KUBECTL exec -n monitoring "$src" -- sh -c "nc -z -w 3 azurite.monitoring.svc 10000 && echo \"OK   $src -> azurite:10000\" || echo \"FAIL $src -> azurite:10000\"" 2>&1
+            done
+            echo "=== node conntrack and inotify"
+            docker exec kind-control-plane sh -c 'cat /proc/sys/net/netfilter/nf_conntrack_count /proc/sys/net/netfilter/nf_conntrack_max; sysctl fs.inotify.max_user_instances fs.inotify.max_user_watches'
+            docker exec kind-control-plane sh -c 'dmesg | tail -n 30' || true
           when: on_fail
 
 workflows:
