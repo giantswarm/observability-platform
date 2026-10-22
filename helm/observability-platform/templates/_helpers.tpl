@@ -62,7 +62,15 @@ Object storage validation.
 {{- end -}}
 {{- end -}}
 {{- end -}}
-{{- if and (eq $backend "s3") (not $s3.endpoint) -}}
+{{- $garage := include "observability-platform.localObjectStorage.garage.enabled" . -}}
+{{- if $garage -}}
+{{- range $key := list "endpoint" "region" -}}
+{{- if index $s3 $key -}}
+{{- fail (printf "localObjectStorage.enabled runs Garage and computes global.objectStorage.s3.%s, but it is set as well and would be ignored. Unset one of the two - see doc/LOCAL_DEV.md." $key) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- if and (eq $backend "s3") (not $garage) (not $s3.endpoint) -}}
 {{- fail "global.objectStorage.backend is \"s3\" and global.objectStorage.s3.endpoint is empty. Set it to the store endpoint, host[:port] without a scheme - see doc/OBJECT_STORAGE.md." -}}
 {{- end -}}
 {{- if and (eq $backend "s3") (eq $store "aws") (not $s3.region) -}}
@@ -93,6 +101,16 @@ and Mimir, Loki or Tempo is enabled. Empty otherwise, so templates test it with 
 */}}
 {{- define "observability-platform.localObjectStorage.azurite.enabled" -}}
 {{- if and .Values.localObjectStorage.enabled (eq (.Values.global.objectStorage.backend | default "") "azure") (or .Values.mimir.enabled .Values.loki.enabled .Values.tempo.enabled) -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
+Garage switch. `true` when localObjectStorage.enabled is set, the backend is `s3`
+and Mimir, Loki or Tempo is enabled. Empty otherwise, so templates test it with `if`.
+*/}}
+{{- define "observability-platform.localObjectStorage.garage.enabled" -}}
+{{- if and .Values.localObjectStorage.enabled (eq (.Values.global.objectStorage.backend | default "") "s3") (or .Values.mimir.enabled .Values.loki.enabled .Values.tempo.enabled) -}}
 true
 {{- end -}}
 {{- end -}}
@@ -133,29 +151,37 @@ blob.core.windows.net
 {{- end -}}
 
 {{/*
-S3 endpoint delivered to Mimir and Tempo. Empty with backend `azure`.
+S3 endpoint delivered to Mimir and Tempo. The Garage host under Garage. Empty with
+backend `azure`.
 */}}
 {{- define "observability-platform.objectStorage.s3.endpoint" -}}
-{{- if eq .Values.global.objectStorage.backend "s3" -}}
+{{- if include "observability-platform.localObjectStorage.garage.enabled" . -}}
+{{- include "observability-platform.garage.host" . -}}
+{{- else if eq .Values.global.objectStorage.backend "s3" -}}
 {{- .Values.global.objectStorage.s3.endpoint -}}
 {{- end -}}
 {{- end -}}
 
 {{/*
-S3 region delivered to Mimir and Tempo. Empty with backend `azure`.
+S3 region delivered to Mimir and Tempo. The Garage region under Garage. Empty with
+backend `azure`.
 */}}
 {{- define "observability-platform.objectStorage.s3.region" -}}
-{{- if eq .Values.global.objectStorage.backend "s3" -}}
+{{- if include "observability-platform.localObjectStorage.garage.enabled" . -}}
+{{- include "observability-platform.garage.region" . -}}
+{{- else if eq .Values.global.objectStorage.backend "s3" -}}
 {{- .Values.global.objectStorage.s3.region -}}
 {{- end -}}
 {{- end -}}
 
 {{/*
 S3 plain-HTTP switch delivered to Mimir and Tempo. Always `true` or `false`.
-`false` with backend `azure`.
+`true` under Garage. `false` with backend `azure`.
 */}}
 {{- define "observability-platform.objectStorage.s3.insecure" -}}
-{{- if and (eq .Values.global.objectStorage.backend "s3") .Values.global.objectStorage.s3.insecure -}}
+{{- if include "observability-platform.localObjectStorage.garage.enabled" . -}}
+true
+{{- else if and (eq .Values.global.objectStorage.backend "s3") .Values.global.objectStorage.s3.insecure -}}
 true
 {{- else -}}
 false
