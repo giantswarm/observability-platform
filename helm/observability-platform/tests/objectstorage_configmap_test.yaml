@@ -1,0 +1,35 @@
+suite: object storage configmap
+templates:
+  - templates/objectstorage.yaml
+release:
+  name: obs
+  namespace: monitoring
+tests:
+  - it: sets OBS_BACKEND to azure
+    values:
+      - values/azure.yaml
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: observability-platform-object-storage
+      - equal:
+          path: data.OBS_BACKEND
+          value: azure
+
+  - it: sets OBS_BACKEND to s3
+    values:
+      - values/s3-compatible.yaml
+    asserts:
+      - equal:
+          path: data.OBS_BACKEND
+          value: s3
+
+  - it: sets OBS_BACKEND to s3 with store aws
+    values:
+      - values/s3-aws.yaml
+    asserts:
+      - equal:
+          path: data.OBS_BACKEND
+          value: s3
