@@ -2,7 +2,8 @@
 # Curated cross-cutting interface.
 #
 # Storage is Azure Blob or S3, picked by `global.objectStorage.backend`. The chart
-# consumes an existing storage account, its containers and its key. See doc/OBJECT_STORAGE.md.
+# consumes an existing store, its containers or buckets, and its credentials. See
+# doc/OBJECT_STORAGE.md.
 # ---------------------------------------------------------------------------
 global:
   # -- Base domain for the platform's HTTP endpoints. The API is served at
