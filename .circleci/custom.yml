@@ -68,9 +68,18 @@ jobs:
 workflows:
   build:
     jobs:
+      # Hold the e2e job until someone clicks "e2e-approval" in the CircleCI
+      # workflow. It runs a 10-minute xlarge machine job.
+      - e2e-approval:
+          type: approval
+          filters:
+            branches:
+              ignore:
+                - main
       - e2e-kind:
           requires:
             - build-chart
+            - e2e-approval
           filters:
             branches:
               ignore:
