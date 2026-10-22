@@ -251,7 +251,60 @@ When no source resolves:
 - Mimir and Loki thanos mode fall back to anonymous requests. The store rejects them, and
   the components log access-denied errors.
 
-<!-- Story 16 adds the ServiceAccount annotations for IRSA here. -->
+#### ServiceAccount annotations for IRSA
+
+The Platform chart has no value for IRSA roles. Set the annotation
+`eks.amazonaws.com/role-arn` on each subchart's ServiceAccount. The EKS pod identity
+webhook then injects the role into the pods.
+
+| Subchart | Values path | ServiceAccount | Notes |
+|---|---|---|---|
+| Mimir | `mimir.mimir.serviceAccount.annotations` | `mimir` | Shared by all Mimir components. Required. |
+| Mimir | `mimir.mimir.alertmanager.serviceAccount.create` and `.annotations` | `mimir-alertmanager` | Optional. Without `create: true`, the Alertmanager uses `mimir`. |
+| Mimir | `mimir.mimir.ruler.serviceAccount.create` and `.annotations` | `mimir-ruler` | Optional. Without `create: true`, the ruler uses `mimir`. |
+| Loki | `loki.loki.serviceAccount.annotations` | `loki` | Used by `loki-read`, `loki-write` and `loki-backend`. Required. |
+| Tempo | `tempo.tempo.serviceAccount.annotations` | `tempo` | Shared by all Tempo components. Required. |
+
+These ServiceAccounts need no annotation. Their pods do not touch the bucket:
+
+- `loki-gateway`: the Loki gateway.
+- `loki-memcached`: the Loki chunks and results caches.
+- `obs-grafana-agent-operator`: the Grafana Agent operator from the Mimir chart.
+- `grafana`: Grafana.
+
+Values example with one role for all components:
+
+```yaml
+mimir:
+  mimir:
+    serviceAccount:
+      annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/example
+    alertmanager:
+      serviceAccount:
+        create: true
+        annotations:
+          eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/example
+    ruler:
+      serviceAccount:
+        create: true
+        annotations:
+          eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/example
+loki:
+  loki:
+    serviceAccount:
+      annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/example
+tempo:
+  tempo:
+    serviceAccount:
+      annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/example
+```
+
+Drop the `alertmanager` and `ruler` blocks to keep both on the shared `mimir`
+ServiceAccount. The role's trust policy must allow each ServiceAccount in the release
+namespace, for example `system:serviceaccount:monitoring:mimir`.
 
 <!-- Story 17 adds the EKS Pod Identity note here. -->
 

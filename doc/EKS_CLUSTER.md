@@ -84,6 +84,7 @@ metadata:
 
 # Required for IRSA, which the EBS CSI driver depends on — and which you will
 # want later if you move object storage off static credentials.
+# OBJECT_STORAGE.md lists the ServiceAccount annotations for IRSA.
 iam:
   withOIDC: true
 
