@@ -1,7 +1,14 @@
 suite: buckets
 templates:
   - templates/objectstorage.yaml
+  - templates/local-object-storage/azurite-deployment.yaml
+  - templates/local-object-storage/azurite-service.yaml
   - templates/local-object-storage/azurite-init-job.yaml
+  - templates/local-object-storage/azurite-secret.yaml
+  - templates/local-object-storage/garage-configmap.yaml
+  - templates/local-object-storage/garage-deployment.yaml
+  - templates/local-object-storage/garage-service.yaml
+  - templates/local-object-storage/garage-secret.yaml
   - templates/local-object-storage/garage-init-job.yaml
 release:
   name: obs
@@ -145,3 +152,61 @@ tests:
       localObjectStorage.enabled: true
     template: templates/local-object-storage/garage-init-job.yaml
     asserts: *initJob
+
+  - it: renders no Local object store resource with backend azure and localObjectStorage disabled
+    values:
+      - values/azure.yaml
+    templates: &localObjectStorage
+      - templates/local-object-storage/azurite-deployment.yaml
+      - templates/local-object-storage/azurite-service.yaml
+      - templates/local-object-storage/azurite-init-job.yaml
+      - templates/local-object-storage/azurite-secret.yaml
+      - templates/local-object-storage/garage-configmap.yaml
+      - templates/local-object-storage/garage-deployment.yaml
+      - templates/local-object-storage/garage-service.yaml
+      - templates/local-object-storage/garage-secret.yaml
+      - templates/local-object-storage/garage-init-job.yaml
+    asserts: &noLocalObjectStorage
+      - hasDocuments:
+          count: 0
+
+  - it: renders no Local object store resource with backend s3 and store aws and localObjectStorage disabled
+    values:
+      - values/s3-aws.yaml
+    templates: *localObjectStorage
+    asserts: *noLocalObjectStorage
+
+  - it: renders no Local object store resource with backend s3 and store compatible and localObjectStorage disabled
+    values:
+      - values/s3-compatible.yaml
+    templates: *localObjectStorage
+    asserts: *noLocalObjectStorage
+
+  - it: renders no storage credentials with backend azure
+    values:
+      - values/azure.yaml
+    template: templates/objectstorage.yaml
+    asserts: &noCredentials
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: data.OBS_AZURE_CONNECTION_STRING
+          value: ""
+      - notExists:
+          path: data.AWS_ACCESS_KEY_ID
+      - notExists:
+          path: data.AWS_SECRET_ACCESS_KEY
+
+  - it: renders no storage credentials with backend s3 and store aws
+    values:
+      - values/s3-aws.yaml
+    template: templates/objectstorage.yaml
+    asserts: *noCredentials
+
+  - it: renders no storage credentials with backend s3 and store compatible
+    values:
+      - values/s3-compatible.yaml
+    template: templates/objectstorage.yaml
+    asserts: *noCredentials
