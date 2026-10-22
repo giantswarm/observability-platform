@@ -1,11 +1,25 @@
 # Local development
 
-Azure Blob is the only object storage backend this chart supports. By default
-`helm install` needs a real storage account - see
+By default `helm install` needs a real object store - see
 [doc/OBJECT_STORAGE.md](./OBJECT_STORAGE.md).
 
-`localObjectStorage.enabled` replaces it with [Azurite](https://github.com/Azure/Azurite),
-Microsoft's Azure Storage emulator, running in the cluster.
+`localObjectStorage.enabled` replaces it with a store running in the cluster. The store
+follows `global.objectStorage.backend`:
+
+- `s3`: [Garage](https://garagehq.deuxfleurs.fr/), a single-node S3-compatible store.
+  It needs `global.objectStorage.s3.store: compatible`.
+- `azure`: [Azurite](https://github.com/Azure/Azurite), Microsoft's Azure Storage emulator.
+
+The kind setup runs Garage by default. `values-local.yaml` sets `backend: s3`,
+`s3.store: compatible` and `localObjectStorage.enabled: true`. Loki runs Loki thanos mode
+against Garage.
+
+The chart computes the Garage endpoint, the region `garage` and plain HTTP. Setting
+`global.objectStorage.s3.endpoint` or `global.objectStorage.s3.region` on top fails the
+render.
+
+Garage creates a fixed, well-known dev key on every start. The `garage-credentials` Secret
+holds it. Mimir, Loki and Tempo read it from there. Do not use this key anywhere real.
 
 ## Prerequisites
 
@@ -23,21 +37,21 @@ make local-up
 `make local-up` creates a kind cluster and installs these components:
 
 - the observability-operator, as its own release, with `values/observability-operator.yaml`
-- the chart in namespace `monitoring`, with `values-local.yaml`
+- the chart in namespace `monitoring`, with `values-local.yaml`, on the `s3` backend with Garage
 - the external API, with Envoy Gateway and a JWKS server. See [EXTERNAL_API.md](./EXTERNAL_API.md).
 
 ## Verify
 
-A `post-install` hook creates the storage containers, so `make local-up` returns once it
-has finished:
+A `post-install` hook creates the five buckets, so `make local-up` returns once it has
+finished:
 
 ```bash
-kubectl get job azurite-init -n monitoring
+kubectl get job garage-init -n monitoring
 ```
 
 ```
-NAME           STATUS     COMPLETIONS   DURATION   AGE
-azurite-init   Complete   1/1           14s        30s
+NAME          STATUS     COMPLETIONS   DURATION   AGE
+garage-init   Complete   1/1           14s        30s
 ```
 
 Then check the pods:
@@ -46,9 +60,9 @@ Then check the pods:
 kubectl get pods -n monitoring
 ```
 
-Expect 23 Running. Mimir and Loki may restart once or twice while the emulator starts.
+Expect 23 Running. Mimir and Loki may restart once or twice while Garage starts.
 Tempo's ingester, querier, query-frontend and compactor restart until the hook creates the
-`tempo` container, two to four times each.
+`tempo` bucket, two to four times each.
 
 Log in at <https://grafana.localhost:8443> as `admin`. The chart generates a random password and
 stores it in the `grafana` secret:
@@ -64,7 +78,8 @@ The `https` listener serves a self-signed certificate that `make local-up` gener
 curl --cacert hack/local/.keys/tls.crt https://grafana.localhost:8443/api/health
 ```
 
-Storage lives in an `emptyDir`: restarting the emulator discards the data.
+Garage keeps its data and its buckets in an `emptyDir`: restarting the `garage` pod
+discards both. The dev key survives: Garage creates it again on every start.
 
 ## Send data through the external API
 
