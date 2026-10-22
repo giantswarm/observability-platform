@@ -7,7 +7,7 @@ HELM := helm --kube-context kind-kind
 # version the platform is tested against.
 OPERATOR_VERSION := 0.86.0
 
-.PHONY: local-up local-token local-down
+.PHONY: local-up local-test local-token local-down
 
 local-up: ## Create a kind cluster running the chart and the external API.
 	kind create cluster --config $(LOCAL)/kind.yaml
@@ -32,6 +32,9 @@ local-up: ## Create a kind cluster running the chart and the external API.
 	  --namespace monitoring --create-namespace \
 	  --values helm/observability-platform/values-local.yaml \
 	  --values $(LOCAL)/values.yaml
+
+local-test: ## Verify the local install: workloads ready, Grafana up, one round trip per signal.
+	$(LOCAL)/test.sh
 
 local-token: ## Print a JWT for the external API, valid for one hour.
 	@$(LOCAL)/jwt.sh token
