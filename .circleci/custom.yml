@@ -42,18 +42,27 @@ jobs:
             $KUBECTL logs -n monitoring deploy/loki-read --tail=100
             echo "=== kindnet"
             $KUBECTL logs -n kube-system -l app=kindnet --tail=50
-            echo "=== connectivity matrix: loki pods, gossip port 7946"
-            IPS=$($KUBECTL get pods -n monitoring -l app.kubernetes.io/name=loki -o jsonpath='{range .items[*]}{.metadata.name}={.status.podIP}{" "}{end}')
-            echo "$IPS"
-            for src in loki-backend-0 loki-write-0; do
-              for dst in $IPS; do
-                $KUBECTL exec -n monitoring "$src" -- sh -c "nc -z -w 3 ${dst#*=} 7946 && echo \"OK   $src -> $dst:7946\" || echo \"FAIL $src -> $dst:7946\"" 2>&1
-              done
-              $KUBECTL exec -n monitoring "$src" -- sh -c "nc -z -w 3 azurite.monitoring.svc 10000 && echo \"OK   $src -> azurite:10000\" || echo \"FAIL $src -> azurite:10000\"" 2>&1
+            set +e
+            echo "=== network diagnostics from inside loki-backend-0 (broken) and loki-write-0 (healthy)"
+            READ_IP=$($KUBECTL get pod -n monitoring -l app.kubernetes.io/component=read -o jsonpath='{.items[0].status.podIP}')
+            for pod in loki-backend-0 loki-write-0; do
+              $KUBECTL debug -n monitoring "$pod" --image=busybox:1.36 --container=netdbg -- sh -c "
+                echo '--- ip addr'; ip addr
+                echo '--- ip route'; ip route
+                echo '--- ip neigh'; ip neigh
+                nc -z -w 3 $READ_IP 7946 && echo 'OK   tcp -> loki-read:7946' || echo 'FAIL tcp -> loki-read:7946'
+                nslookup kubernetes.default.svc.cluster.local 10.96.0.10 && echo 'OK   dns' || echo 'FAIL dns'
+                ip neigh"
             done
-            echo "=== node conntrack and inotify"
-            docker exec kind-control-plane sh -c 'cat /proc/sys/net/netfilter/nf_conntrack_count /proc/sys/net/netfilter/nf_conntrack_max; sysctl fs.inotify.max_user_instances fs.inotify.max_user_watches'
-            docker exec kind-control-plane sh -c 'dmesg | tail -n 30' || true
+            sleep 20
+            for pod in loki-backend-0 loki-write-0; do
+              echo "=== netdbg $pod"
+              $KUBECTL logs -n monitoring "$pod" -c netdbg
+            done
+            echo "=== node routes, neighbors, conntrack, inotify"
+            docker exec kind-control-plane sh -c 'ip route; ip neigh; cat /proc/sys/net/netfilter/nf_conntrack_count /proc/sys/net/netfilter/nf_conntrack_max; sysctl fs.inotify.max_user_instances fs.inotify.max_user_watches'
+            docker exec kind-control-plane sh -c 'dmesg | tail -n 40'
+            true
           when: on_fail
 
 workflows:
