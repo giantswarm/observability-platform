@@ -132,9 +132,11 @@ Not following these limitations will most likely result in a broken deployment.
   `localBlobStorage.enabled` runs the Azurite emulator in-cluster instead of a real
   storage account — see [doc/LOCAL_DEV.md](doc/LOCAL_DEV.md).
 - One sizing profile, tuned for a small cluster. There is no answer yet for real ingest volume.
-- The chart creates no Gateway and no TLS certificate. The external API and Grafana are
-  exposed over HTTPS on a Gateway you provide, and you must set the name and namespace of that
-  Gateway in each component's `parentRefs`. The external API also needs Envoy Gateway and an
-  OIDC issuer installed beforehand — see [doc/GATEWAY.md](doc/GATEWAY.md) and
-  [doc/EXTERNAL_API.md](doc/EXTERNAL_API.md).
+- The chart creates no Gateway and no TLS certificate. The external API is exposed over HTTPS
+  on a Gateway you provide, and you must set the name and namespace of that Gateway in each
+  component's `parentRefs`. The external API also needs Envoy Gateway and an OIDC issuer
+  installed beforehand — see [doc/GATEWAY.md](doc/GATEWAY.md) and
+  [doc/EXTERNAL_API.md](doc/EXTERNAL_API.md). Grafana can be exposed on the same Gateway
+  through its chart's route — see
+  [doc/EXTERNAL_API.md](doc/EXTERNAL_API.md#expose-grafana-over-https).
 - Turning Mimir or Loki off leaves Grafana with a datasource pointing at nothing.
