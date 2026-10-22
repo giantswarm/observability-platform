@@ -174,7 +174,27 @@ Loki uses one bucket for chunks, ruler and admin. They become key prefixes insid
 
 This chart does not deploy Pyroscope yet. Pyroscope will get its own container or bucket.
 
-<!-- Story 21 adds the AWS S3 global bucket name warning here. -->
+**AWS S3 bucket names are global.** Every AWS account shares one bucket namespace. The
+defaults `mimir-blocks`, `mimir-alertmanager`, `mimir-ruler`, `loki` and `tempo` are
+almost certainly taken on AWS. Override all five names before install. Add a prefix, for
+example `<org>-<installation>-mimir-blocks`:
+
+```yaml
+global:
+  objectStorage:
+    buckets:
+      mimirBlocks: acme-prod-mimir-blocks
+      mimirAlertmanager: acme-prod-mimir-alertmanager
+      mimirRuler: acme-prod-mimir-ruler
+      loki: acme-prod-loki
+      tempo: acme-prod-tempo
+```
+
+The chart passes the names through unchanged. Create the buckets under these names
+before install.
+
+S3-compatible stores and Azure Blob Storage scope names to the account. The defaults
+work there.
 
 <!-- Story 23 adds "### Create the buckets" here. -->
 
@@ -575,6 +595,7 @@ global:
 ```
 
 Set `endpoint` to the regional endpoint, `s3.<region>.amazonaws.com`.
+Override the bucket names. See [Buckets](#buckets).
 
 ### S3-compatible store
 
