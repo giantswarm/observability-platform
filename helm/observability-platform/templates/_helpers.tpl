@@ -42,6 +42,11 @@ Object storage validation.
 {{- if not (has $backend (list "azure" "s3")) -}}
 {{- fail (printf "global.objectStorage.backend is %q. Set it to \"azure\" or \"s3\" - see doc/OBJECT_STORAGE.md." $backend) -}}
 {{- end -}}
+{{- $s3 := $os.s3 | default dict -}}
+{{- $store := $s3.store | default "" -}}
+{{- if and (eq $backend "s3") (not (has $store (list "aws" "compatible"))) -}}
+{{- fail (printf "global.objectStorage.s3.store must be \"aws\" or \"compatible\" with backend \"s3\", but it is %q - see doc/OBJECT_STORAGE.md." $store) -}}
+{{- end -}}
 {{- if eq $backend "azure" -}}
 {{- $azure := $os.azure -}}
 {{- if .Values.localBlobStorage.enabled -}}
