@@ -20,6 +20,23 @@ tests:
       - failedTemplate:
           errorPattern: backend
 
+  - it: fails when backend is s3 and store is unset
+    set:
+      global.objectStorage.backend: s3
+      global.objectStorage.s3.endpoint: s3.example.internal:9000
+    asserts:
+      - failedTemplate:
+          errorPattern: 'global\.objectStorage\.s3\.store must be "aws" or "compatible" with backend "s3", but it is ""'
+
+  - it: fails when store is minio
+    set:
+      global.objectStorage.backend: s3
+      global.objectStorage.s3.store: minio
+      global.objectStorage.s3.endpoint: s3.example.internal:9000
+    asserts:
+      - failedTemplate:
+          errorPattern: store
+
   - it: renders with backend azure
     values:
       - values/azure.yaml
