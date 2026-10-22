@@ -1,0 +1,45 @@
+# Repo-owned CircleCI config. The setup workflow in .circleci/config.yml
+# deep-merges this file into the generated workflows.yml at pipeline runtime.
+
+jobs:
+  # End-to-end install test on kind. Runs the same `make local-up` as local
+  # development, then `make local-test`: workloads ready, Grafana up, one
+  # write/read round trip per signal through the external API.
+  e2e-kind:
+    machine:
+      image: ubuntu-2404:current
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Install kind, kubectl, helm and xxd
+          command: |
+            curl -fsSLo kind https://github.com/kubernetes-sigs/kind/releases/download/v0.29.0/kind-linux-amd64
+            curl -fsSLo kubectl https://dl.k8s.io/release/v1.33.1/bin/linux/amd64/kubectl
+            chmod +x kind kubectl
+            sudo mv kind kubectl /usr/local/bin/
+            curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | DESIRED_VERSION=v3.18.4 bash
+            sudo apt-get update -qq && sudo apt-get install -y -qq xxd
+      - run:
+          name: Install the platform on a kind cluster
+          command: make local-up
+          no_output_timeout: 15m
+      - run:
+          name: Verify the install
+          command: make local-test
+          no_output_timeout: 15m
+      - run:
+          name: Collect cluster state on failure
+          command: |
+            kubectl --context kind-kind get pods -A
+            kubectl --context kind-kind get events -n monitoring --sort-by=.lastTimestamp | tail -n 50
+          when: on_fail
+
+workflows:
+  build:
+    jobs:
+      - e2e-kind:
+          filters:
+            branches:
+              ignore:
+                - main

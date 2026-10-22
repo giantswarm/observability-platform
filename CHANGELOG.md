@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add `make local-test`: verify the local install with workloads ready, Grafana up, and one write/read round trip per signal through the external API.
+- Run the kind install test in CI on every pull request.
 - Enable Mimir Alertmanager.
 - Load Alertmanager config Secrets into Mimir Alertmanager through the observability-operator. See `doc/ALERTING.md`.
 - Add a default Alertmanager config Secret for `global.tenant`. Its config lives in `files/alertmanager/alertmanager.yaml`.
