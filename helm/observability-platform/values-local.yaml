@@ -152,6 +152,11 @@ tempo:
     cache:
       caches: []
 
+# Azure Blob Storage as the object storage backend, served by Azurite below.
+global:
+  objectStorage:
+    backend: azure
+
 # Azurite as the blob backend. Computes `accountName` and `connectionString`. Setting
 # either by hand on top of this profile fails the render.
 localBlobStorage:

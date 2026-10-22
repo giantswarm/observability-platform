@@ -37,7 +37,13 @@ app.kubernetes.io/instance: {{ .Release.Name | quote }}
 Object storage validation.
 */}}
 {{- define "observability-platform.objectStorage.validate" -}}
-{{- $azure := .Values.global.objectStorage.azure -}}
+{{- $os := .Values.global.objectStorage -}}
+{{- $backend := $os.backend | default "" -}}
+{{- if not (has $backend (list "azure" "s3")) -}}
+{{- fail (printf "global.objectStorage.backend is %q. Set it to \"azure\" or \"s3\" - see doc/OBJECT_STORAGE.md." $backend) -}}
+{{- end -}}
+{{- if eq $backend "azure" -}}
+{{- $azure := $os.azure -}}
 {{- if .Values.localBlobStorage.enabled -}}
 {{- if $azure.accountName -}}
 {{- fail (printf "localBlobStorage.enabled is true, so storage is the in-cluster Azurite emulator under account %q, but global.objectStorage.azure.accountName is set to %q - which nothing would read. Unset one of the two - see doc/LOCAL_DEV.md." (include "observability-platform.localBlobStorage.accountName" .) $azure.accountName) -}}
@@ -50,6 +56,7 @@ Object storage validation.
 {{- end -}}
 {{- if and .Values.tempo.enabled $azure.connectionString (not .Values.localBlobStorage.enabled) -}}
 {{- fail "tempo.enabled is true and global.objectStorage.azure.connectionString is set. Tempo reads no connection string: it needs global.objectStorage.azure.accountName and the account key in the credentials Secret. Set accountName instead of connectionString, or set tempo.enabled to false - see doc/OBJECT_STORAGE.md." -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 

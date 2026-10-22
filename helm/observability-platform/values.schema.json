@@ -13,6 +13,11 @@
           "type": "object",
           "required": ["existingSecret", "azure", "buckets"],
           "properties": {
+            "backend": {
+              "type": "string",
+              "enum": ["azure", "s3"],
+              "description": "Object storage backend for Mimir, Loki and Tempo. Required when Mimir, Loki or Tempo is enabled. No default. The objectStorage.validate helper fails the render while it is unset."
+            },
             "existingSecret": {
               "type": "string",
               "const": "observability-platform-object-storage",
