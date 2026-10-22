@@ -1,3 +1,4 @@
+# Stories covered: 33, 35, 36, 31, 32.
 suite: local object storage
 templates:
   - templates/local-object-storage/azurite-deployment.yaml

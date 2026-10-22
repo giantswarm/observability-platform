@@ -1,3 +1,4 @@
+# Stories covered: 4, 6, 7, 8, 9, 10, 2, 33, 35, 34, 37.
 suite: object storage guards
 templates:
   - templates/objectstorage.yaml
