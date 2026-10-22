@@ -78,6 +78,40 @@ tests:
           path: data.OBS_S3_ENDPOINT
           value: ""
 
+  - it: sets OBS_S3_REGION from s3.region with store aws
+    values:
+      - values/s3-aws.yaml
+    asserts:
+      - equal:
+          path: data.OBS_S3_REGION
+          value: eu-west-1
+
+  - it: sets OBS_S3_REGION from s3.region with store compatible
+    values:
+      - values/s3-compatible.yaml
+    set:
+      global.objectStorage.s3.region: garage
+    asserts:
+      - equal:
+          path: data.OBS_S3_REGION
+          value: garage
+
+  - it: leaves OBS_S3_REGION empty with store compatible and no region
+    values:
+      - values/s3-compatible.yaml
+    asserts:
+      - equal:
+          path: data.OBS_S3_REGION
+          value: ""
+
+  - it: leaves OBS_S3_REGION empty with backend azure
+    values:
+      - values/azure.yaml
+    asserts:
+      - equal:
+          path: data.OBS_S3_REGION
+          value: ""
+
   - it: sets the five bucket names with backend s3
     values:
       - values/s3-aws.yaml

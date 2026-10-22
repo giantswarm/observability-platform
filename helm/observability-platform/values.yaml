@@ -112,6 +112,7 @@ tempo:
             s3:
               bucket: ${OBS_BUCKET_TEMPO}
               endpoint: ${OBS_S3_ENDPOINT}
+              region: ${OBS_S3_REGION}
     metricsGenerator:
       enabled: false
     # The API reaches the query-frontend and the distributor directly.
@@ -272,6 +273,7 @@ mimir:
               connection_string: ${OBS_AZURE_CONNECTION_STRING}
             s3:
               endpoint: ${OBS_S3_ENDPOINT}
+              region: ${OBS_S3_REGION}
         blocks_storage:
           backend: ${OBS_BACKEND}
           azure:

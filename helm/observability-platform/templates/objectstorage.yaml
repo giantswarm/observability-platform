@@ -21,4 +21,5 @@ data:
   OBS_BUCKET_TEMPO: {{ .Values.global.objectStorage.buckets.tempo | quote }}
   OBS_AZURE_ENDPOINT_SUFFIX: {{ include "observability-platform.objectStorage.endpointSuffix" . | quote }}
   OBS_S3_ENDPOINT: {{ include "observability-platform.objectStorage.s3.endpoint" . | quote }}
+  OBS_S3_REGION: {{ include "observability-platform.objectStorage.s3.region" . | quote }}
 {{- end }}
