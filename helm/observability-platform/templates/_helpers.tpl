@@ -55,6 +55,13 @@ Object storage validation.
 {{- end -}}
 {{- end -}}
 {{- end -}}
+{{- if eq $backend "azure" -}}
+{{- range $key := list "store" "endpoint" "region" "insecure" -}}
+{{- if index $s3 $key -}}
+{{- fail (printf "global.objectStorage.backend is \"azure\", but global.objectStorage.s3.%s is set. Unset it: the azure backend reads no S3 values - see doc/OBJECT_STORAGE.md." $key) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
 {{- if and (eq $backend "s3") (not $s3.endpoint) -}}
 {{- fail "global.objectStorage.backend is \"s3\" and global.objectStorage.s3.endpoint is empty. Set it to the store endpoint, host[:port] without a scheme - see doc/OBJECT_STORAGE.md." -}}
 {{- end -}}

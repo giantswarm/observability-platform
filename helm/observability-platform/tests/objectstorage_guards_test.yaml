@@ -81,6 +81,51 @@ tests:
       - failedTemplate:
           errorPattern: 'global\.objectStorage\.backend is "s3", but global\.objectStorage\.azure\.connectionString is set'
 
+  - it: fails when backend is azure and s3.store is set
+    values:
+      - values/azure.yaml
+    set:
+      global.objectStorage.s3.store: aws
+    asserts:
+      - failedTemplate:
+          errorPattern: 'global\.objectStorage\.backend is "azure", but global\.objectStorage\.s3\.store is set'
+
+  - it: fails when backend is azure and s3.endpoint is set
+    values:
+      - values/azure.yaml
+    set:
+      global.objectStorage.s3.endpoint: s3.example.internal:9000
+    asserts:
+      - failedTemplate:
+          errorPattern: 'global\.objectStorage\.backend is "azure", but global\.objectStorage\.s3\.endpoint is set'
+
+  - it: fails when backend is azure and s3.region is set
+    values:
+      - values/azure.yaml
+    set:
+      global.objectStorage.s3.region: eu-west-1
+    asserts:
+      - failedTemplate:
+          errorPattern: 'global\.objectStorage\.backend is "azure", but global\.objectStorage\.s3\.region is set'
+
+  - it: fails when backend is azure and s3.insecure is true
+    values:
+      - values/azure.yaml
+    set:
+      global.objectStorage.s3.insecure: true
+    asserts:
+      - failedTemplate:
+          errorPattern: 'global\.objectStorage\.backend is "azure", but global\.objectStorage\.s3\.insecure is set'
+
+  - it: renders when backend is azure and s3.insecure is false
+    values:
+      - values/azure.yaml
+    set:
+      global.objectStorage.s3.insecure: false
+    asserts:
+      - hasDocuments:
+          count: 1
+
   - it: renders with backend azure
     values:
       - values/azure.yaml
