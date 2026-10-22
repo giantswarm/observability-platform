@@ -11,6 +11,9 @@ one on the cluster from [EKS_CLUSTER.md](EKS_CLUSTER.md):
 
 The chart configures the API itself. See [EXTERNAL_API.md](EXTERNAL_API.md).
 
+This guide uses Envoy Gateway, the recommended implementation. Any other Gateway API
+implementation works too, such as Traefik, HAProxy or Kong.
+
 ## What you get
 
 | Component | Value |
