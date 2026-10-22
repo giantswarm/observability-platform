@@ -33,6 +33,7 @@ jobs:
           command: |
             kubectl --context kind-kind get pods -A
             kubectl --context kind-kind get events -n monitoring --sort-by=.lastTimestamp | tail -n 50
+            kubectl --context kind-kind logs -n monitoring -l app.kubernetes.io/name=loki --all-containers --prefix --tail=30
           when: on_fail
 
 workflows:

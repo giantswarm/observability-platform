@@ -22,12 +22,16 @@ ok() { PASS=$((PASS + 1)); echo "OK   $1"; }
 fail() { echo "FAIL $1" >&2; exit 1; }
 
 # retry <name> <seconds> <command...>: run the command every 5s until it
-# succeeds, then print OK. Fail once the deadline passes.
+# succeeds, then print OK. Once the deadline passes, run it a last time with
+# its output shown, then fail.
 retry() {
   local name=$1 deadline=$(($(date +%s) + $2))
   shift 2
   until "$@" >/dev/null 2>&1; do
-    [ "$(date +%s)" -lt "$deadline" ] || fail "$name"
+    if [ "$(date +%s)" -ge "$deadline" ]; then
+      "$@" >&2 || true
+      fail "$name"
+    fi
     sleep 5
   done
   ok "$name"
