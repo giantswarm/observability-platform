@@ -226,3 +226,20 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: 'localObjectStorage\.enabled runs Garage, an S3-compatible store, but global\.objectStorage\.s3\.store is "aws"'
+
+  - it: fails when tempo is enabled and azure.connectionString is set
+    set:
+      global.objectStorage.backend: azure
+      global.objectStorage.azure.connectionString: DefaultEndpointsProtocol=https;AccountName=obsplatform
+    asserts:
+      - failedTemplate:
+          errorPattern: 'tempo\.enabled is true and global\.objectStorage\.azure\.connectionString is set'
+
+  - it: renders with azure.connectionString when tempo is disabled
+    set:
+      global.objectStorage.backend: azure
+      global.objectStorage.azure.connectionString: DefaultEndpointsProtocol=https;AccountName=obsplatform
+      tempo.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 1
