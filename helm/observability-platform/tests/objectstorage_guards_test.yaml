@@ -216,3 +216,13 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: 'localObjectStorage\.enabled runs Garage and computes global\.objectStorage\.s3\.region'
+
+  - it: fails when localObjectStorage is enabled and store is aws
+    set:
+      global.objectStorage.backend: s3
+      global.objectStorage.s3.store: aws
+      global.objectStorage.s3.region: eu-west-1
+      localObjectStorage.enabled: true
+    asserts:
+      - failedTemplate:
+          errorPattern: 'localObjectStorage\.enabled runs Garage, an S3-compatible store, but global\.objectStorage\.s3\.store is "aws"'
