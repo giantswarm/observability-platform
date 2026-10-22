@@ -330,7 +330,7 @@ namespace, for example `system:serviceaccount:monitoring:mimir`.
 
 EKS Pod Identity is untested with this chart
 ([thanos-io/objstore#131](https://github.com/thanos-io/objstore/issues/131)). IRSA is
-the supported and tested path.
+the supported path.
 
 The Pod Identity agent injects `AWS_CONTAINER_CREDENTIALS_FULL_URI` and
 `AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE` into the pods. The minio-go IAM provider and the
