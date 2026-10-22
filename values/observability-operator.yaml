@@ -10,8 +10,9 @@
 #
 # It installs the operator's CRDs, which the Platform chart's resources need.
 # The values below must agree with the Platform chart's: `tracing.enabled` with
-# `tempo.enabled`, `defaultTenant` with `global.tenant`, and the URLs with the
-# `monitoring` namespace. Nothing checks this across the two releases.
+# `tempo.enabled`, `operator.controllers.alertmanager.enabled` with `mimir.enabled`
+# and `mimir.mimir.alertmanager.enabled`, `defaultTenant` with `global.tenant`, and
+# the URLs with the `monitoring` namespace. Nothing checks this across the two releases.
 #
 # Beware that some features won't work outside of a Giant Swarm management cluster.
 # ---------------------------------------------------------------------------
@@ -30,9 +31,10 @@ operator:
     # This feature is only available for GiantSwarm management clusters.
     cluster:
       enabled: false
-    # Alertmanager wiring is a separate component, off by default here too.
+    # Loads the Alertmanager config Secrets into Mimir Alertmanager. See doc/ALERTING.md.
+    # Must match the Platform chart's `mimir.enabled` and `mimir.mimir.alertmanager.enabled`.
     alertmanager:
-      enabled: false
+      enabled: true
     # Agent credentials feed Giant Swarm gateway Secrets; the external API authenticates
     # writes with JWTs instead, so nothing here would read them.
     agentCredential:
@@ -47,6 +49,7 @@ tracing:
 # Must match the Platform chart's `global.tenant`.
 defaultTenant: default
 alerting:
+  alertmanagerURL: "http://mimir-alertmanager.monitoring.svc:8080"
   alertmanagerSecret:
     # -- Don't ship Giant Swarm's Alertmanager routing (Slack, PagerDuty) to standalone installs.
     enabled: false
