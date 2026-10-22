@@ -1,0 +1,95 @@
+{{/*
+Local object store with backend s3: a single-node Garage, an S3-compatible store,
+standing in for a real one. Development only - see doc/LOCAL_DEV.md.
+*/}}
+{{- if include "observability-platform.localObjectStorage.garage.enabled" . }}
+{{- $name := include "observability-platform.garage.serviceName" . }}
+{{- $port := include "observability-platform.garage.port" . | int }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "labels.common" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "labels.selector" . | nindent 6 }}
+      app.kubernetes.io/component: {{ $name }}
+  template:
+    metadata:
+      labels:
+        {{- include "labels.selector" . | nindent 8 }}
+        app.kubernetes.io/component: {{ $name }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        # The data directory is an emptyDir, which the kubelet group-owns to fsGroup.
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: {{ $name }}
+          image: {{ .Values.localObjectStorage.garage.image | quote }}
+          command: ["/garage"]
+          # --single-node lays out the cluster on this one node. --default-access-key
+          # creates the key from the two variables below on every start, so the key
+          # survives a pod restart even though the emptyDir does not.
+          args:
+            - server
+            - --single-node
+            - --default-access-key
+          env:
+            - name: GARAGE_DEFAULT_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: garage-credentials
+                  key: AWS_ACCESS_KEY_ID
+            - name: GARAGE_DEFAULT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: garage-credentials
+                  key: AWS_SECRET_ACCESS_KEY
+          ports:
+            - name: s3
+              containerPort: {{ $port }}
+          # TCP, not HTTP: every S3 request requires a signature.
+          readinessProbe:
+            tcpSocket:
+              port: s3
+          livenessProbe:
+            tcpSocket:
+              port: s3
+          securityContext:
+            # Garage writes to /var/lib/garage only, which is the emptyDir below.
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/garage.toml
+              subPath: garage.toml
+            - name: data
+              mountPath: /var/lib/garage
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $name }}-config
+        # No PVC on purpose: this is a development backend, and its data is expected to
+        # not survive the pod.
+        - name: data
+          emptyDir: {}
+{{- end }}

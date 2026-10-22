@@ -188,3 +188,31 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: 'localObjectStorage\.enabled is true, which computes the connection string'
+
+  - it: renders Garage without s3.endpoint
+    set:
+      global.objectStorage.backend: s3
+      global.objectStorage.s3.store: compatible
+      localObjectStorage.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: fails when s3.endpoint is set with Garage
+    values:
+      - values/s3-compatible.yaml
+    set:
+      localObjectStorage.enabled: true
+    asserts:
+      - failedTemplate:
+          errorPattern: 'localObjectStorage\.enabled runs Garage and computes global\.objectStorage\.s3\.endpoint'
+
+  - it: fails when s3.region is set with Garage
+    set:
+      global.objectStorage.backend: s3
+      global.objectStorage.s3.store: compatible
+      global.objectStorage.s3.region: eu-west-1
+      localObjectStorage.enabled: true
+    asserts:
+      - failedTemplate:
+          errorPattern: 'localObjectStorage\.enabled runs Garage and computes global\.objectStorage\.s3\.region'

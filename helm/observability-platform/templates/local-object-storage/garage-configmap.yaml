@@ -1,0 +1,27 @@
+{{/*
+Garage configuration. A single node holds every replica, and data lives in the emptyDir
+of garage-deployment.yaml.
+*/}}
+{{- if include "observability-platform.localObjectStorage.garage.enabled" . }}
+{{- $name := include "observability-platform.garage.serviceName" . }}
+{{- $rpcPort := include "observability-platform.garage.rpcPort" . }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "labels.common" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+data:
+  garage.toml: |
+    metadata_dir = "/var/lib/garage/meta"
+    data_dir = "/var/lib/garage/data"
+    replication_factor = 1
+    rpc_bind_addr = "[::]:{{ $rpcPort }}"
+    rpc_public_addr = "127.0.0.1:{{ $rpcPort }}"
+    rpc_secret = {{ include "observability-platform.garage.rpcSecret" . | quote }}
+    [s3_api]
+    s3_region = {{ include "observability-platform.garage.region" . | quote }}
+    api_bind_addr = "[::]:{{ include "observability-platform.garage.port" . }}"
+{{- end }}

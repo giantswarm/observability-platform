@@ -125,7 +125,8 @@ tempo:
     enabled: false
 observabilityPlatformApi:
   enabled: false
-# Local object store for data storage: Azurite with backend `azure`.
+# Local object store for data storage: Azurite with backend `azure`, Garage with
+# backend `s3`.
 # Development only. See doc/LOCAL_DEV.md.
 localObjectStorage:
   enabled: false
@@ -133,6 +134,10 @@ localObjectStorage:
     image: mcr.microsoft.com/azure-storage/azurite:3.37.0
     # Job that creates the containers, which Azurite does not create itself.
     initImage: mcr.microsoft.com/azure-cli:2.91.0
+  garage:
+    image: dxflrs/garage:v2.4.1
+    # Job that creates the buckets, which Garage does not create itself.
+    initImage: amazon/aws-cli:2.31.0
 
 # ---------------------------------------------------------------------------
 # Default organization: a GrafanaOrganization that takes over Grafana's default
