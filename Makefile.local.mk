@@ -6,10 +6,12 @@ HELM := helm --kube-context kind-kind
 # observability-operator release installed before the chart. Keep in step with the
 # version the platform is tested against.
 OPERATOR_VERSION := 0.86.0
+# Object storage backend of the local setup: `s3` runs Garage, `azure` runs Azurite.
+LOCAL_BACKEND ?= s3
 
 .PHONY: local-up local-token local-down
 
-local-up: ## Create a kind cluster running the chart and the external API.
+local-up: ## Create a kind cluster running the chart and the external API. LOCAL_BACKEND=azure runs Azurite.
 	kind create cluster --config $(LOCAL)/kind.yaml
 	$(HELM) upgrade --install eg oci://docker.io/envoyproxy/gateway-helm --version 1.9.1 \
 	  --namespace envoy-gateway-system --create-namespace --wait --timeout 10m
@@ -31,7 +33,8 @@ local-up: ## Create a kind cluster running the chart and the external API.
 	$(HELM) upgrade --install observability-platform helm/observability-platform \
 	  --namespace monitoring --create-namespace \
 	  --values helm/observability-platform/values-local.yaml \
-	  --values $(LOCAL)/values.yaml
+	  --values $(LOCAL)/values.yaml \
+	  $(if $(filter azure,$(LOCAL_BACKEND)),--values $(LOCAL)/values-azure.yaml)
 
 local-token: ## Print a JWT for the external API, valid for one hour.
 	@$(LOCAL)/jwt.sh token
