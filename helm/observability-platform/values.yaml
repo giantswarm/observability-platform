@@ -44,7 +44,7 @@ global:
       region: ""
       # -- Plain HTTP.
       insecure: false
-    # -- Existing containers, one per consumer.
+    # -- Existing containers (azure) or buckets (s3), one per consumer. Same names on both backends.
     buckets:
       mimirBlocks: mimir-blocks
       mimirAlertmanager: mimir-alertmanager
