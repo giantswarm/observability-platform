@@ -44,6 +44,21 @@
         }
       }
     },
+    "defaultOrganization": {
+      "type": "object",
+      "description": "The GrafanaOrganization that takes over Grafana's org 1 (\"Main Org.\") with datasources reading the tenant set in global.tenant.",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "admins": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "defaultAlertmanagerConfig": {
+      "type": "object",
+      "description": "The Alertmanager config Secret for the tenant set in global.tenant, rendered from files/alertmanager.",
+      "properties": {
+        "enabled": { "type": "boolean" }
+      }
+    },
     "localBlobStorage": {
       "type": "object",
       "description": "Azurite, the Azure Storage emulator, as the blob backend instead of a real storage account. Development only - see doc/LOCAL_DEV.md.",

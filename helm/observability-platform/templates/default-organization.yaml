@@ -1,0 +1,30 @@
+{{- /*
+Declares the platform's default GrafanaOrganization. Its display name is Grafana's default
+organization name, so the observability-operator takes over Grafana's org 1 and gives it
+the platform's datasources. The operator and its CRDs are installed as a separate release
+beforehand. See
+https://github.com/giantswarm/observability-operator/blob/main/docs/grafana-organization.md
+*/ -}}
+{{- if .Values.defaultOrganization.enabled }}
+{{- with .Values.defaultOrganization }}
+apiVersion: observability.giantswarm.io/v1alpha2
+kind: GrafanaOrganization
+metadata:
+  name: main-org
+  labels:
+    {{- include "labels.common" $ | nindent 4 }}
+spec:
+  # Grafana's default organization (org 1). Any other name would create a separate org.
+  displayName: "Main Org."
+  rbac:
+    admins:
+      {{- toYaml .admins | nindent 6 }}
+  tenants:
+  - name: {{ $.Values.global.tenant | quote }}
+    types:
+    - data
+    {{- if and $.Values.mimir.enabled $.Values.mimir.mimir.alertmanager.enabled }}
+    - alerting
+    {{- end }}
+{{- end }}
+{{- end }}

@@ -12,16 +12,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The local kind cluster inherits no DNS search domain from the host. A host search domain no longer slows in-cluster lookups.
 - The `helm.sh/chart` label is valid for long chart versions: the 63-character cut trims the whole trailing run of `-`, `.` and `_`.
 
+### Changed
+
+- Install the observability-operator as its own release, before this chart, with `values/observability-operator.yaml`.
+
 ### Added
 
 - Add `doc/GATEWAY.md`. It installs Envoy Gateway and cert-manager, and creates the Gateway, its certificate and its DNS record.
 - List the network access the platform needs in the README.
+- Enable Mimir Alertmanager.
+- Load Alertmanager config Secrets into Mimir Alertmanager through the observability-operator. See `doc/ALERTING.md`.
+- Add a default Alertmanager config Secret for `global.tenant`. Its config lives in `files/alertmanager/alertmanager.yaml`.
+- Give Grafana's default organization (org 1) the platform's datasources, with alerting access while Mimir's Alertmanager is enabled.
 - Enable Tempo by default. It runs multi-tenant and stores traces in Azure Blob.
 - Add the `tempo` Azure Blob container configuration.
 - Run the observability-operator with only its GrafanaOrganization and Dashboard controllers.
 - Add the Observability Platform API wiring for Loki and Mimir
 - Route Tempo traffic through the Observability Platform API.
+- Add Tempo to `doc/EXTERNAL_API.md` and `doc/LOCAL_DEV.md`.
 - Serve Grafana over HTTPS at `https://grafana.localhost:8443` in the local kind setup.
+- Add `doc/EXTERNAL_API.md`, walking through values and requests.
 - Add `make local-up`, `make local-token` and `make local-down`. They run the chart and the external API on kind.
 - Add a kind port mapping to the local setup. Envoy Gateway serves Grafana at `grafana.localhost:8080` and the external API at `observability.localhost:8080`.
 - Add support for deploying the stack locally, with Azurite managing object storage  
@@ -34,8 +44,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Stop shipping Giant Swarm's Alertmanager routing with the observability-operator release (`values/observability-operator.yaml`).
 - The external API routes attach only to the Gateway listener named `https`, so the API is no longer served over plain HTTP.
-- Update `observability-operator` from 0.72.2 to 0.84.0.
+- Update `observability-operator` from 0.72.2 to 0.85.0.
 - Update `observability-platform-api` from 0.4.0 to 0.5.0.
 - Set project description and update header of the README
 - Regenerated `.circleci` config with `devctl gen circleci` — adopt the dynamic-config setup workflow (`config.yml` + `workflows.yml`) and bump the architect orb to v9.5.2.
