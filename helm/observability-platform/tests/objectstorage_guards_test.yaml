@@ -54,6 +54,15 @@ tests:
       - failedTemplate:
           errorPattern: endpoint
 
+  - it: fails when store is aws and region is empty
+    set:
+      global.objectStorage.backend: s3
+      global.objectStorage.s3.store: aws
+      global.objectStorage.s3.endpoint: s3.eu-west-1.amazonaws.com
+    asserts:
+      - failedTemplate:
+          errorPattern: 'global\.objectStorage\.s3\.store is "aws" and global\.objectStorage\.s3\.region is empty'
+
   - it: renders with backend azure
     values:
       - values/azure.yaml
