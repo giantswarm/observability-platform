@@ -60,7 +60,7 @@ Then check the pods:
 kubectl get pods -n monitoring
 ```
 
-Expect 23 Running. Mimir and Loki may restart once or twice while Garage starts.
+Expect 24 Running. Mimir and Loki may restart once or twice while Garage starts.
 Tempo's ingester, querier, query-frontend and compactor restart until the hook creates the
 `tempo` bucket, two to four times each.
 
