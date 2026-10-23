@@ -1,0 +1,8 @@
+# Azure override for the local setup. `make local-up LOCAL_BACKEND=azure` adds it after
+# values.yaml. It switches the backend to `azure`, and localObjectStorage runs Azurite.
+# The chart computes the account name and the connection string.
+global:
+  objectStorage:
+    backend: azure
+    # `null` drops the s3 block of values-local.yaml. No s3 value stays set.
+    s3: null
