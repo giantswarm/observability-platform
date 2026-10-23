@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Disable the Loki chart's `loki-backend-kubeapiserver-egress` NetworkPolicy. With the other Loki policies disabled, it alone default-denied all other backend egress (gossip, DNS, object storage) on any CNI that enforces NetworkPolicies, and Loki reads failed.
 - The local kind cluster inherits no DNS search domain from the host. A host search domain no longer slows in-cluster lookups.
 - The `helm.sh/chart` label is valid for long chart versions: the 63-character cut trims the whole trailing run of `-`, `.` and `_`.
 
@@ -19,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add `make local-test`: verify the local install with workloads ready, Grafana up, and one write/read round trip per signal through the external API.
+- Run the kind install test in CI on every pull request.
 - Enable Mimir Alertmanager.
 - Load Alertmanager config Secrets into Mimir Alertmanager through the observability-operator. See `doc/ALERTING.md`.
 - Add a default Alertmanager config Secret for `global.tenant`. Its config lives in `files/alertmanager/alertmanager.yaml`.

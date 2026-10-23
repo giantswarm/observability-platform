@@ -1,0 +1,86 @@
+# Repo-owned CircleCI config. The setup workflow in .circleci/config.yml
+# deep-merges this file into the generated workflows.yml at pipeline runtime.
+
+jobs:
+  # End-to-end install test on kind. Runs the same `make local-up` as local
+  # development, then `make local-test`: workloads ready, Grafana up, one
+  # write/read round trip per signal through the external API.
+  e2e-kind:
+    machine:
+      image: ubuntu-2404:current
+    # The stack runs 23 pods plus Envoy Gateway. On 4 vCPUs they starve: liveness
+    # probes fail, components restart mid-test, and reads return 500.
+    resource_class: xlarge
+    steps:
+      - checkout
+      - run:
+          name: Install kind, kubectl, helm and xxd
+          command: |
+            curl -fsSLo kind https://github.com/kubernetes-sigs/kind/releases/download/v0.29.0/kind-linux-amd64
+            curl -fsSLo kubectl https://dl.k8s.io/release/v1.33.1/bin/linux/amd64/kubectl
+            chmod +x kind kubectl
+            sudo mv kind kubectl /usr/local/bin/
+            curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | DESIRED_VERSION=v3.18.4 bash
+            sudo apt-get update -qq && sudo apt-get install -y -qq xxd
+      - run:
+          name: Install the platform on a kind cluster
+          command: make local-up
+          no_output_timeout: 15m
+      - run:
+          name: Verify the install
+          command: make local-test
+          no_output_timeout: 15m
+      - run:
+          name: Collect cluster state on failure
+          command: |
+            KUBECTL="kubectl --context kind-kind"
+            $KUBECTL get pods -n monitoring -o wide
+            $KUBECTL get events -n monitoring --sort-by=.lastTimestamp | tail -n 80
+            echo "=== loki-backend"
+            $KUBECTL logs -n monitoring loki-backend-0 -c backend --tail=300
+            echo "=== loki-read"
+            $KUBECTL logs -n monitoring deploy/loki-read --tail=100
+            echo "=== kindnet"
+            $KUBECTL logs -n kube-system -l app=kindnet --tail=50
+            set +e
+            echo "=== network diagnostics from inside loki-backend-0 (broken) and loki-write-0 (healthy)"
+            READ_IP=$($KUBECTL get pod -n monitoring -l app.kubernetes.io/component=read -o jsonpath='{.items[0].status.podIP}')
+            for pod in loki-backend-0 loki-write-0; do
+              $KUBECTL debug -n monitoring "$pod" --image=busybox:1.36 --container=netdbg -- sh -c "
+                echo '--- ip addr'; ip addr
+                echo '--- ip route'; ip route
+                echo '--- ip neigh'; ip neigh
+                nc -z -w 3 $READ_IP 7946 && echo 'OK   tcp -> loki-read:7946' || echo 'FAIL tcp -> loki-read:7946'
+                nslookup kubernetes.default.svc.cluster.local 10.96.0.10 && echo 'OK   dns' || echo 'FAIL dns'
+                ip neigh"
+            done
+            sleep 20
+            for pod in loki-backend-0 loki-write-0; do
+              echo "=== netdbg $pod"
+              $KUBECTL logs -n monitoring "$pod" -c netdbg
+            done
+            echo "=== node routes, neighbors, conntrack, inotify"
+            docker exec kind-control-plane sh -c 'ip route; ip neigh; cat /proc/sys/net/netfilter/nf_conntrack_count /proc/sys/net/netfilter/nf_conntrack_max; sysctl fs.inotify.max_user_instances fs.inotify.max_user_watches'
+            docker exec kind-control-plane sh -c 'dmesg | tail -n 40'
+            true
+          when: on_fail
+
+workflows:
+  build:
+    jobs:
+      # Hold the e2e job until someone clicks "e2e-approval" in the CircleCI
+      # workflow. It runs a 10-minute xlarge machine job.
+      - e2e-approval:
+          type: approval
+          filters:
+            branches:
+              ignore:
+                - main
+      - e2e-kind:
+          requires:
+            - build-chart
+            - e2e-approval
+          filters:
+            branches:
+              ignore:
+                - main
