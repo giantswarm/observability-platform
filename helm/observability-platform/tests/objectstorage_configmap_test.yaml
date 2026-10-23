@@ -1,3 +1,4 @@
+# Stories covered: 3, 1, 2, 11, 12, 5, 33, 35, 31, 32.
 suite: object storage configmap
 templates:
   - templates/objectstorage.yaml

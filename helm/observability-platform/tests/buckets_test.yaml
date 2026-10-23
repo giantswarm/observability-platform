@@ -1,3 +1,4 @@
+# Stories covered: 20, 22.
 suite: buckets
 templates:
   - templates/objectstorage.yaml
