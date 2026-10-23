@@ -25,12 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Give Grafana's default organization (org 1) the platform's datasources, with alerting access while Mimir's Alertmanager is enabled.
 - Enable Tempo by default. It runs multi-tenant and stores traces in Azure Blob.
 - Add the `tempo` Azure Blob container configuration.
+- Add `doc/GATEWAY.md`. It installs Envoy Gateway and cert-manager, and creates the Gateway, its certificate and its DNS record.
+- List the network access the platform needs in the README.
 - Run the observability-operator with only its GrafanaOrganization and Dashboard controllers.
 - Add the Observability Platform API wiring for Loki and Mimir
 - Route Tempo traffic through the Observability Platform API.
 - Add Tempo to `doc/EXTERNAL_API.md` and `doc/LOCAL_DEV.md`.
 - Serve Grafana over HTTPS at `https://grafana.localhost:8443` in the local kind setup.
 - Add `doc/EXTERNAL_API.md`, walking through values and requests.
+- `doc/EXTERNAL_API.md` links `doc/GATEWAY.md` and covers the egress of the Envoy proxy pods: DNS, JWKS, xDS and backends.
 - Add `make local-up`, `make local-token` and `make local-down`. They run the chart and the external API on kind.
 - Add a kind port mapping to the local setup. Envoy Gateway serves Grafana at `grafana.localhost:8080` and the external API at `observability.localhost:8080`.
 - Add support for deploying the stack locally, with Azurite managing object storage  
