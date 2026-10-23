@@ -782,7 +782,63 @@ Keep the system roots in place:
 
 Restart the pods after a change to the ConfigMap. The components read the roots at startup.
 
-<!-- Story 24 and story 25 add "## Subchart overrides" here. -->
+## Subchart overrides
+
+The Platform chart sets `backend`, `s3.store`, `s3.endpoint`, `s3.region`, `s3.insecure`,
+the buckets and the Secret. Set every other S3 option through the subchart values. Examples
+are path style, SSE, storage class and signature version.
+
+Each subchart takes its raw component config under `structuredConfig`:
+
+| Subchart | Values path |
+| --- | --- |
+| Mimir | `mimir.mimir.mimir.structuredConfig` |
+| Loki | `loki.loki.loki.structuredConfig` |
+| Tempo | `tempo.tempo.tempo.structuredConfig` |
+
+The chart writes its S3 blocks below these paths:
+
+- Mimir: `common.storage.s3`.
+- Loki's default client: `storage_config.aws`.
+- Loki thanos mode: `storage_config.object_store.s3`.
+- Tempo: `storage.trace.s3`.
+
+Helm merges your values into these blocks key by key. Your keys land next to the chart's
+keys. A list replaces the chart's list. Leave the chart's own keys unset.
+
+Example: force path style on Mimir.
+
+```yaml
+mimir:
+  mimir:
+    mimir:
+      structuredConfig:
+        common:
+          storage:
+            s3:
+              bucket_lookup_type: path
+```
+
+Check the rendered Mimir config:
+
+```bash
+helm template observability-platform helm/observability-platform \
+  --namespace monitoring --values values.yaml --values overrides.yaml \
+  --show-only charts/mimir/charts/mimir/templates/mimir-config.yaml \
+  | grep -A 3 bucket_lookup_type
+```
+
+```text
+          bucket_lookup_type: path
+          endpoint: ${OBS_S3_ENDPOINT}
+          insecure: ${OBS_S3_INSECURE}
+          region: ${OBS_S3_REGION}
+```
+
+Mimir, Tempo and Loki thanos mode pick path style by themselves for non-AWS endpoints.
+Loki's default client needs `s3forcepathstyle: true` on an S3-compatible store.
+
+<!-- Story 25 adds the per-component override table here. -->
 
 <!-- Story 29 adds "## Switching backend" here. -->
 
