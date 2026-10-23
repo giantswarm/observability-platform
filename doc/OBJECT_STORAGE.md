@@ -5,7 +5,7 @@ object storage.
 
 **Azure Blob Storage is the only backend supported for now.** No other provider is wired
 into the chart. This guide provisions an Azure storage account with the Azure CLI and
-hands it to the platform chart, which configures Mimir and Loki from it.
+hands it to the platform chart, which configures Mimir, Loki and Tempo from it.
 
 For development you do not need any of this: `localObjectStorage.enabled` runs the Azurite
 emulator in the cluster instead, and needs no Azure account at all. See
@@ -38,7 +38,7 @@ same account.
 | Minimum TLS        | `TLS1_2`       | Reject legacy TLS                                        |
 | HTTPS only         | `true`         | No plaintext access                                      |
 | Blob public access | `false`        | No container is ever public                              |
-| Shared key access  | `true`         | Mimir and Loki authenticate with the account key         |
+| Shared key access  | `true`         | Mimir, Loki and Tempo authenticate with the account key  |
 
 Shared key access means a long-lived credential in a Kubernetes secret with no built-in
 rotation. If your environment supports it, prefer Azure Workload Identity and disable
@@ -173,8 +173,10 @@ az storage container list --account-name "$ACCOUNT" --account-key "$KEY" \
 
 ## Step 4 — Create the Kubernetes secret
 
-Skip this step under `localObjectStorage.enabled` — the chart creates this secret itself
-there, deliberately empty. See [LOCAL_DEV.md](./LOCAL_DEV.md).
+Skip this step under `localObjectStorage.enabled`. The chart creates no
+`observability-platform-object-storage` secret there. It creates its own dev credentials
+instead: `garage-credentials` for Garage, `azurite-credentials` for Tempo on Azurite. See
+[LOCAL_DEV.md](./LOCAL_DEV.md).
 
 One secret, in the namespace you install the platform into. The name is fixed:
 
@@ -191,7 +193,7 @@ kubectl create secret generic observability-platform-object-storage \
 
 Both the secret name and the key name matter:
 
-- **`observability-platform-object-storage`** — the Mimir and Loki subcharts name this
+- **`observability-platform-object-storage`** — the Mimir, Loki and Tempo subcharts name this
   secret from static values, and Helm will not let the umbrella chart compute a
   subchart's values, so the name cannot be configurable. Setting
   `global.objectStorage.existingSecret` to anything else fails the render.
@@ -204,7 +206,7 @@ chart needs it at render time.
 
 ## Step 5 — Point the platform chart at it
 
-The chart configures Mimir and Loki for you. All it needs is the backend, the account
+The chart configures Mimir, Loki and Tempo for you. All it needs is the backend, the account
 name and, if you renamed anything, the container names:
 
 ```yaml
@@ -239,10 +241,11 @@ helm install observability-platform . --namespace monitoring
 
 What the chart does with this, so it is not a black box: it renders the container names
 and account name into a ConfigMap, injects that ConfigMap and your secret as environment
-variables into the Mimir and Loki pods only, and points
-`blocks_storage`, `alertmanager_storage`, `ruler_storage` and Loki's `storage`,
-`schemaConfig` and `bucketNames` at them. Both charts already run every component with
-`-config.expand-env=true`, so nothing extra is needed to expand the references.
+variables into the Mimir, Loki and Tempo pods only, and points
+`blocks_storage`, `alertmanager_storage`, `ruler_storage`, Loki's `storage`,
+`schemaConfig` and `bucketNames`, and Tempo's `storage.trace` at them. The Mimir and Loki
+charts already run every component with `-config.expand-env=true`. The chart adds the flag
+to every Tempo component.
 
 All three Loki `bucketNames` point at the same `loki` container. They become key prefixes
 inside the container rather than separate containers, so one serves all three without
@@ -297,14 +300,14 @@ group exists — empty is not a failure signal there.
 
 ## Alternative: workload identity
 
-To avoid a long-lived key, give the Mimir and Loki service accounts a federated identity
+To avoid a long-lived key, give the Mimir, Loki and Tempo service accounts a federated identity
 with the **Storage Blob Data Contributor** role on the account, then create it with
-`--allow-shared-key-access false` and drop the key from both configs. Mimir uses
+`--allow-shared-key-access false` and drop the key from every config. Mimir uses
 `azure.user_assigned_id`; Loki uses `azure.useManagedIdentity` with `userAssignedId`.
 This requires an OIDC-enabled cluster, so it is not the default here.
 
 The chart has no interface for this yet — `global.objectStorage` always wires up an
-account key. Getting there means overriding the Mimir and Loki storage values directly
+account key. Getting there means overriding the Mimir, Loki and Tempo storage values directly
 through raw pass-through, which also means dropping the `${AZURE_STORAGE_KEY}`
 references the chart puts in.
 
