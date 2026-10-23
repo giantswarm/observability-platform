@@ -674,7 +674,89 @@ helm install observability-platform helm/observability-platform \
   --namespace monitoring --values values.yaml
 ```
 
-<!-- Story 18 and story 19 add "## Custom CA" here. -->
+## Custom CA
+
+Use this section when the store presents a certificate from a private CA.
+
+The Platform chart has no CA value, no CA ConfigMap and no CA mount. Mount the CA bundle
+through the subchart values of Mimir, Loki and Tempo.
+
+Create a ConfigMap with the PEM bundle in the release namespace:
+
+```bash
+kubectl create configmap object-storage-ca \
+  --namespace monitoring --from-file=ca.crt=./ca.crt
+```
+
+The bundle may hold several PEM certificates, for example a root and an intermediate CA.
+
+Mount the ConfigMap into each subchart. `SSL_CERT_DIR` points the components at the mount:
+
+```yaml
+mimir:
+  global:
+    extraEnv:
+      - name: SSL_CERT_DIR
+        value: /etc/ssl/object-storage-ca
+    extraVolumes:
+      - name: object-storage-ca
+        configMap:
+          name: object-storage-ca
+    extraVolumeMounts:
+      - name: object-storage-ca
+        mountPath: /etc/ssl/object-storage-ca
+        readOnly: true
+loki:
+  global:
+    extraEnv:
+      - name: SSL_CERT_DIR
+        value: /etc/ssl/object-storage-ca
+    extraVolumes:
+      - name: object-storage-ca
+        configMap:
+          name: object-storage-ca
+    extraVolumeMounts:
+      - name: object-storage-ca
+        mountPath: /etc/ssl/object-storage-ca
+        readOnly: true
+tempo:
+  tempo:
+    defaults:
+      extraEnv:
+        - name: SSL_CERT_DIR
+          value: /etc/ssl/object-storage-ca
+      extraVolumes:
+        - name: object-storage-ca
+          configMap:
+            name: object-storage-ca
+      extraVolumeMounts:
+        - name: object-storage-ca
+          mountPath: /etc/ssl/object-storage-ca
+          readOnly: true
+```
+
+| Subchart | Values path | Workloads reached | Mount path |
+| --- | --- | --- | --- |
+| Mimir | `mimir.global.extraVolumes`, `.extraVolumeMounts`, `.extraEnv` | All Mimir workloads, including `mimir-gateway` and the `mimir-smoke-test` Job | `/etc/ssl/object-storage-ca` |
+| Loki | `loki.global.extraVolumes`, `.extraVolumeMounts`, `.extraEnv` | `loki-read`, `loki-write`, `loki-backend` | `/etc/ssl/object-storage-ca` |
+| Tempo | `tempo.tempo.defaults.extraVolumes`, `.extraVolumeMounts`, `.extraEnv` | All Tempo components except `tempo-memcached` | `/etc/ssl/object-storage-ca` |
+
+Workloads without bucket access ignore the mount and the variable:
+
+- `mimir-gateway`: nginx. It gets the mount and the variable.
+- `loki-chunks-cache` and `loki-results-cache`: memcached. They get the variable only.
+- `loki-gateway` and `tempo-memcached`: they get neither.
+
+Helm merges the subchart maps. The chart's `extraEnvFrom` under `mimir.global`,
+`loki.global` and `tempo.tempo.defaults` stays in place.
+
+The Mimir, Loki and Tempo images keep their system roots in
+`/etc/ssl/certs/ca-certificates.crt`. The mount uses a separate directory and leaves that
+file in place.
+
+<!-- Story 19 adds "added to the system roots, not replacing them" here. -->
+
+Restart the pods after a change to the ConfigMap. The components read the roots at startup.
 
 <!-- Story 24 and story 25 add "## Subchart overrides" here. -->
 
