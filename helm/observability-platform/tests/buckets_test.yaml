@@ -1,0 +1,147 @@
+suite: buckets
+templates:
+  - templates/objectstorage.yaml
+  - templates/local-object-storage/azurite-init-job.yaml
+  - templates/local-object-storage/garage-init-job.yaml
+release:
+  name: obs
+  namespace: monitoring
+tests:
+  - it: uses the default bucket names with backend azure
+    values:
+      - values/azure.yaml
+    template: templates/objectstorage.yaml
+    asserts:
+      - equal:
+          path: data.OBS_BUCKET_MIMIR_BLOCKS
+          value: mimir-blocks
+      - equal:
+          path: data.OBS_BUCKET_MIMIR_ALERTMANAGER
+          value: mimir-alertmanager
+      - equal:
+          path: data.OBS_BUCKET_MIMIR_RULER
+          value: mimir-ruler
+      - equal:
+          path: data.OBS_BUCKET_LOKI
+          value: loki
+      - equal:
+          path: data.OBS_BUCKET_TEMPO
+          value: tempo
+
+  - it: uses the default bucket names with backend s3 and store aws
+    values:
+      - values/s3-aws.yaml
+    template: templates/objectstorage.yaml
+    asserts:
+      - equal:
+          path: data.OBS_BUCKET_MIMIR_BLOCKS
+          value: mimir-blocks
+      - equal:
+          path: data.OBS_BUCKET_MIMIR_ALERTMANAGER
+          value: mimir-alertmanager
+      - equal:
+          path: data.OBS_BUCKET_MIMIR_RULER
+          value: mimir-ruler
+      - equal:
+          path: data.OBS_BUCKET_LOKI
+          value: loki
+      - equal:
+          path: data.OBS_BUCKET_TEMPO
+          value: tempo
+
+  - it: uses the default bucket names with backend s3 and store compatible
+    values:
+      - values/s3-compatible.yaml
+    template: templates/objectstorage.yaml
+    asserts:
+      - equal:
+          path: data.OBS_BUCKET_MIMIR_BLOCKS
+          value: mimir-blocks
+      - equal:
+          path: data.OBS_BUCKET_MIMIR_ALERTMANAGER
+          value: mimir-alertmanager
+      - equal:
+          path: data.OBS_BUCKET_MIMIR_RULER
+          value: mimir-ruler
+      - equal:
+          path: data.OBS_BUCKET_LOKI
+          value: loki
+      - equal:
+          path: data.OBS_BUCKET_TEMPO
+          value: tempo
+
+  - it: passes overridden bucket names with backend azure
+    values:
+      - values/azure.yaml
+    set: &overrides
+      global.objectStorage.buckets.mimirBlocks: acme-mimir-blocks
+      global.objectStorage.buckets.mimirAlertmanager: acme-mimir-alertmanager
+      global.objectStorage.buckets.mimirRuler: acme-mimir-ruler
+      global.objectStorage.buckets.loki: acme-loki
+      global.objectStorage.buckets.tempo: acme-tempo
+    template: templates/objectstorage.yaml
+    asserts: &overridden
+      - equal:
+          path: data.OBS_BUCKET_MIMIR_BLOCKS
+          value: acme-mimir-blocks
+      - equal:
+          path: data.OBS_BUCKET_MIMIR_ALERTMANAGER
+          value: acme-mimir-alertmanager
+      - equal:
+          path: data.OBS_BUCKET_MIMIR_RULER
+          value: acme-mimir-ruler
+      - equal:
+          path: data.OBS_BUCKET_LOKI
+          value: acme-loki
+      - equal:
+          path: data.OBS_BUCKET_TEMPO
+          value: acme-tempo
+
+  - it: passes overridden bucket names with backend s3 and store aws
+    values:
+      - values/s3-aws.yaml
+    set: *overrides
+    template: templates/objectstorage.yaml
+    asserts: *overridden
+
+  - it: passes overridden bucket names with backend s3 and store compatible
+    values:
+      - values/s3-compatible.yaml
+    set: *overrides
+    template: templates/objectstorage.yaml
+    asserts: *overridden
+
+  - it: creates the five buckets with Azurite
+    set:
+      global.objectStorage.backend: azure
+      localObjectStorage.enabled: true
+    template: templates/local-object-storage/azurite-init-job.yaml
+    asserts: &initJob
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            configMapRef:
+              name: observability-platform-object-storage
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: \$OBS_BUCKET_MIMIR_BLOCKS
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: \$OBS_BUCKET_MIMIR_ALERTMANAGER
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: \$OBS_BUCKET_MIMIR_RULER
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: \$OBS_BUCKET_LOKI
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: \$OBS_BUCKET_TEMPO
+
+  - it: creates the five buckets with Garage
+    set:
+      global.objectStorage.backend: s3
+      global.objectStorage.s3.store: compatible
+      localObjectStorage.enabled: true
+    template: templates/local-object-storage/garage-init-job.yaml
+    asserts: *initJob
