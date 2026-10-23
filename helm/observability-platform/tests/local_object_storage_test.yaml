@@ -1,4 +1,4 @@
-# Stories covered: 33, 35, 36, 31, 32.
+# Stories covered: 33, 35, 36, 31, 32, 14.
 suite: local object storage
 templates:
   - templates/local-object-storage/azurite-deployment.yaml
@@ -176,6 +176,43 @@ tests:
           path: stringData.AWS_SECRET_ACCESS_KEY
           pattern: ^.{16,}$
         template: templates/local-object-storage/garage-secret.yaml
+
+  - it: names the Garage dev Secret keys AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+    set:
+      global.objectStorage.backend: s3
+      global.objectStorage.s3.store: compatible
+      localObjectStorage.enabled: true
+    template: templates/local-object-storage/garage-secret.yaml
+    asserts:
+      - exists:
+          path: stringData.AWS_ACCESS_KEY_ID
+      - isNotEmpty:
+          path: stringData.AWS_ACCESS_KEY_ID
+      - exists:
+          path: stringData.AWS_SECRET_ACCESS_KEY
+      - isNotEmpty:
+          path: stringData.AWS_SECRET_ACCESS_KEY
+      - notExists:
+          path: stringData.AZURE_STORAGE_KEY
+      - notExists:
+          path: data
+
+  - it: names the Azurite dev Secret key AZURE_STORAGE_KEY
+    set:
+      global.objectStorage.backend: azure
+      localObjectStorage.enabled: true
+    template: templates/local-object-storage/azurite-secret.yaml
+    asserts:
+      - exists:
+          path: stringData.AZURE_STORAGE_KEY
+      - isNotEmpty:
+          path: stringData.AZURE_STORAGE_KEY
+      - notExists:
+          path: stringData.AWS_ACCESS_KEY_ID
+      - notExists:
+          path: stringData.AWS_SECRET_ACCESS_KEY
+      - notExists:
+          path: data
 
   - it: runs garage with --single-node and --default-access-key
     set:

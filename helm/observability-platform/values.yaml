@@ -234,6 +234,8 @@ observability-platform-api:
 #   2. That ConfigMap and the credentials Secret are injected as environment
 #      variables into the Mimir, Loki and Tempo pods. Injection is scoped per
 #      component family, so the credentials reach Mimir, Loki and Tempo only.
+#      The Secret variables are `AZURE_STORAGE_KEY` for backend `azure`, and
+#      `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` for backend `s3`.
 #   3. The values below reference those variables as `${...}`. mimir-distributed and
 #      the upstream Loki chart pass `-config.expand-env=true` to every component.
 #      Tempo gets it from `tempo.tempo.defaults.extraArgs`. The references expand

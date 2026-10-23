@@ -210,7 +210,17 @@ kubectl create secret generic observability-platform-object-storage \
 Under `localObjectStorage.enabled` the chart renders the dev Secret `garage-credentials`
 with the same two key names. The local setup exercises the same path.
 
-<!-- Story 14 adds the Secret key table here. -->
+Secret keys:
+
+| Key | Backend | Required | Consumer |
+|---|---|---|---|
+| `AZURE_STORAGE_KEY` | `azure` | Yes, unless `azure.connectionString` is set | Mimir, Loki, Tempo |
+| `AWS_ACCESS_KEY_ID` | `s3` | Optional. Set it together with `AWS_SECRET_ACCESS_KEY`. | Mimir, Loki, Tempo |
+| `AWS_SECRET_ACCESS_KEY` | `s3` | Optional. Set it together with `AWS_ACCESS_KEY_ID`. | Mimir, Loki, Tempo |
+
+The S3 key names follow the AWS SDK convention. The observability-operator `LogExport`
+reads the same two keys from its `credentialsRef` Secret. See
+[`logexport_types.go`](https://github.com/giantswarm/observability-operator/blob/main/api/v1alpha1/logexport_types.go).
 
 <!-- Stories 15, 16 and 17 add "### Ambient credentials and IRSA" here. -->
 
