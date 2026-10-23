@@ -14,6 +14,9 @@ global:
   # -- Tenant that platform data is written under and read back from.
   tenant: default
   objectStorage:
+    # -- (string) Object storage backend for Mimir, Loki and Tempo: `azure` or `s3`.
+    # Required. No default.
+    # backend:
     # -- Name of the Secret holding the storage account key. The name is fixed:
     # the subcharts reference it from static values. Create the Secret yourself,
     # with this name and one key, `AZURE_STORAGE_KEY`. The key reaches the pods as

@@ -204,12 +204,13 @@ chart needs it at render time.
 
 ## Step 5 — Point the platform chart at it
 
-The chart configures Mimir and Loki for you. All it needs is the account name and, if
-you renamed anything, the container names:
+The chart configures Mimir and Loki for you. All it needs is the backend, the account
+name and, if you renamed anything, the container names:
 
 ```yaml
 global:
   objectStorage:
+    backend: azure
     azure:
       accountName: obsplatform
     buckets:
@@ -226,8 +227,9 @@ But Tempo does not support it. So, with `tempo.enabled`, set `accountName` and t
 secret from Step 4. The render fails on `connectionString` outside `localBlobStorage`.
 
 The `buckets` values above are the defaults, so with the container names from this guide
-only `accountName` is actually required. Leave it out and the render fails rather than
-installing something that cannot reach its storage.
+only `backend` and `accountName` are actually required. `backend` has no default. Leave
+either out and the render fails rather than installing something that cannot reach its
+storage.
 
 Install into the namespace holding the secret from Step 4:
 

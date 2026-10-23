@@ -1,0 +1,7 @@
+global:
+  objectStorage:
+    backend: s3
+    s3:
+      store: aws
+      endpoint: s3.eu-west-1.amazonaws.com
+      region: eu-west-1

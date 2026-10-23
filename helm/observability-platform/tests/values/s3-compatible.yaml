@@ -1,0 +1,6 @@
+global:
+  objectStorage:
+    backend: s3
+    s3:
+      store: compatible
+      endpoint: s3.example.internal:9000

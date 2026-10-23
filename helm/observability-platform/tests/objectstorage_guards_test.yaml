@@ -1,0 +1,49 @@
+suite: object storage guards
+templates:
+  - templates/objectstorage.yaml
+release:
+  name: obs
+  namespace: monitoring
+tests:
+  - it: fails when backend is unset
+    set:
+      global.objectStorage.azure.accountName: obsplatform
+    asserts:
+      - failedTemplate:
+          errorPattern: 'global\.objectStorage\.backend is ""\. Set it to "azure" or "s3"'
+
+  - it: fails when backend is gcs
+    set:
+      global.objectStorage.backend: gcs
+      global.objectStorage.azure.accountName: obsplatform
+    asserts:
+      - failedTemplate:
+          errorPattern: backend
+
+  - it: renders with backend azure
+    values:
+      - values/azure.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: renders with backend s3 and no Azure account
+    values:
+      - values/s3-compatible.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: renders with backend s3 and store aws
+    values:
+      - values/s3-aws.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: keeps the Azure accountName guard with backend azure
+    set:
+      global.objectStorage.backend: azure
+    asserts:
+      - failedTemplate:
+          errorPattern: 'global\.objectStorage\.azure\.accountName is empty'
