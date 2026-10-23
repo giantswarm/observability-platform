@@ -9,16 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `doc/OBJECT_STORAGE.md` states that Tempo reads the same storage values, and no longer claims an empty credentials Secret.
 - The local kind cluster inherits no DNS search domain from the host. A host search domain no longer slows in-cluster lookups.
 - The `helm.sh/chart` label is valid for long chart versions: the 63-character cut trims the whole trailing run of `-`, `.` and `_`.
 
 ### Changed
 
+- **Breaking:** `global.objectStorage.backend` is required: `azure` or `s3`, with no default. The render fails without it. Azure installs: add `backend: azure` to your values before upgrading ([giantswarm#38467](https://github.com/giantswarm/giantswarm/issues/38467)).
+- **Breaking:** `localBlobStorage` is renamed `localObjectStorage`. `localBlobStorage.init.image` moves to `localObjectStorage.azurite.initImage`.
+- The local kind setup runs the `s3` backend with Garage by default.
+- `doc/OBJECT_STORAGE.md` covers both backends: Azure Blob, AWS S3 and S3-compatible stores, credentials, IRSA, a custom CA, subchart overrides and the backend switching warning.
+- The README and `doc/LOCAL_DEV.md` list both backends. `doc/EKS_CLUSTER.md` uses the `s3` backend with `store: aws`.
 - Install observability-operator 0.86.0 in the local kind setup. Uninstalling the chart now deletes the default `GrafanaOrganization` instead of leaving it stuck.
 - Install the observability-operator as its own release, before this chart, with `values/observability-operator.yaml`.
 
 ### Added
 
+- Add the `s3` object storage backend for Mimir, Loki and Tempo, with `global.objectStorage.s3.store` (`aws` or `compatible`), `endpoint`, `region` and `insecure`. The credentials Secret holds `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
+- Add the `OBS_BACKEND`, `OBS_S3_ENDPOINT`, `OBS_S3_REGION`, `OBS_S3_INSECURE` and `OBS_LOKI_THANOS` keys to the object storage ConfigMap.
+- Run Loki in thanos object store mode with `store: compatible`. Azure Blob and AWS S3 keep Loki's default client.
+- Add render guards for the `s3` values. They reject a missing `store`, `endpoint` or `region`, Azure values with `s3`, S3 values with `azure`, and `localObjectStorage` with `store: aws`.
+- Run a dev Garage with `localObjectStorage.enabled` and `backend: s3`. A Job creates the five buckets.
+- Add `LOCAL_BACKEND` to `make local-up`. `LOCAL_BACKEND=azure` runs Azurite.
+- Add helm-unittest suites for the Platform chart. `make helm-test` runs them.
 - Enable Mimir Alertmanager.
 - Load Alertmanager config Secrets into Mimir Alertmanager through the observability-operator. See `doc/ALERTING.md`.
 - Add a default Alertmanager config Secret for `global.tenant`. Its config lives in `files/alertmanager/alertmanager.yaml`.
