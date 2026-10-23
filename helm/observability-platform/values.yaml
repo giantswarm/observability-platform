@@ -17,6 +17,7 @@ global:
   objectStorage:
     # -- (string) Object storage backend for Mimir, Loki and Tempo: `azure` or `s3`.
     # Required. No default.
+    # Changing it on an existing install is unsupported. See doc/OBJECT_STORAGE.md.
     # backend:
     # -- Name of the Secret holding the object storage credentials. The name is
     # fixed: the subcharts reference it from static values. Create the Secret
@@ -39,6 +40,7 @@ global:
       # -- (string) `aws` or `compatible`. Required with backend `s3`. No default.
       # Picks Loki's storage client only: Loki thanos mode for `compatible`,
       # Loki's default client for `aws`.
+      # Changing it on an existing install is unsupported. See doc/OBJECT_STORAGE.md.
       # store:
       # -- Store endpoint, host[:port], no scheme. Required with backend `s3`.
       # Examples: `s3.eu-west-1.amazonaws.com`, `minio.storage.internal:9000`.

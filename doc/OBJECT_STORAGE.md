@@ -925,7 +925,26 @@ helm template observability-platform helm/observability-platform \
           forcepathstyle: true
 ```
 
-<!-- Story 29 adds "## Switching backend" here. -->
+## Switching backend or store
+
+Switching `backend` or `s3.store` on an existing install is unsupported. The chart has no
+data migration.
+
+If you switch anyway:
+
+- The new store starts empty.
+- Old data stays in the old store.
+- Loki's un-flushed WAL and pending retention markers are orphaned.
+
+The components start against the new store. The chart copies no data. Mimir blocks, Mimir
+ruler rules, Mimir Alertmanager state, Loki chunks, Loki index, Loki rules and Tempo traces
+stay in the old store.
+
+An `s3.store` change switches Loki's storage client as well. See
+[Loki storage client](#loki-storage-client). Treat an `s3.store` change as a new store.
+
+The chart does not block a switch. Helm renders the templates from the current values
+only. The render guards never see the values of the previous release.
 
 ## Verification
 
