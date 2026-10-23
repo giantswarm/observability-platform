@@ -838,7 +838,92 @@ helm template observability-platform helm/observability-platform \
 Mimir, Tempo and Loki thanos mode pick path style by themselves for non-AWS endpoints.
 Loki's default client needs `s3forcepathstyle: true` on an S3-compatible store.
 
-<!-- Story 25 adds the per-component override table here. -->
+### Keys per component
+
+Each cell gives the full values path from the Platform chart root and an example value.
+The keys match Mimir 3.2.1, Loki 3.7.6 and Tempo 2.10.7.
+
+| Option | Mimir | Loki default client | Loki thanos mode | Tempo |
+| --- | --- | --- | --- | --- |
+| Path style | `mimir.mimir.mimir.structuredConfig.common.storage.s3.bucket_lookup_type: path` | `loki.loki.loki.structuredConfig.storage_config.aws.s3forcepathstyle: true` | `loki.loki.loki.structuredConfig.storage_config.object_store.s3.bucket_lookup_type: path` | `tempo.tempo.tempo.structuredConfig.storage.trace.s3.forcepathstyle: true` |
+| SSE | `mimir.mimir.mimir.structuredConfig.common.storage.s3.sse.type: SSE-S3` | `loki.loki.loki.structuredConfig.storage_config.aws.sse.type: SSE-S3` | `loki.loki.loki.structuredConfig.storage_config.object_store.s3.sse.type: SSE-S3` | `tempo.tempo.tempo.structuredConfig.storage.trace.s3.sse.type: SSE-S3` |
+| Storage class | `mimir.mimir.mimir.structuredConfig.common.storage.s3.storage_class: STANDARD_IA` | `loki.loki.loki.structuredConfig.storage_config.aws.storage_class: STANDARD_IA` | `loki.loki.loki.structuredConfig.storage_config.object_store.s3.storage_class: STANDARD_IA` | `tempo.tempo.tempo.structuredConfig.storage.trace.s3.storage_class: STANDARD_IA` |
+| Signature version | `mimir.mimir.mimir.structuredConfig.common.storage.s3.signature_version: v2` | `loki.loki.loki.structuredConfig.storage_config.aws.signature_version: v4` | No key | `tempo.tempo.tempo.structuredConfig.storage.trace.s3.signature_v2: true` |
+| Dual stack | `mimir.mimir.mimir.structuredConfig.common.storage.s3.dualstack_enabled: false` | `loki.loki.loki.structuredConfig.storage_config.aws.disable_dualstack: true` | `loki.loki.loki.structuredConfig.storage_config.object_store.s3.dualstack_enabled: false` | `tempo.tempo.tempo.structuredConfig.storage.trace.s3.enable_dual_stack: true` |
+
+- SSE takes `SSE-S3` or `SSE-KMS` on all four clients. `SSE-KMS` also needs `sse.kms_key_id`.
+- Loki's default client accepts only signature `v4`.
+- Mimir's `common.storage.s3` block covers the blocks, ruler and Alertmanager stores.
+
+### Loki ruler
+
+Loki keeps the rules in a separate store. `OBS_LOKI_THANOS` picks the block:
+
+| `OBS_LOKI_THANOS` | Ruler block | Keys |
+| --- | --- | --- |
+| `false` | `loki.loki.loki.structuredConfig.ruler.storage.s3` | Loki default client column |
+| `true` | `loki.loki.loki.structuredConfig.ruler_storage.s3` | Loki thanos mode column |
+
+Set each option in the ruler block too. The ruler block takes the same keys as its
+`storage_config` counterpart.
+
+### Example: path style on every client
+
+```yaml
+mimir:
+  mimir:
+    mimir:
+      structuredConfig:
+        common:
+          storage:
+            s3:
+              bucket_lookup_type: path
+loki:
+  loki:
+    loki:
+      structuredConfig:
+        storage_config:
+          aws:
+            s3forcepathstyle: true
+          object_store:
+            s3:
+              bucket_lookup_type: path
+        ruler:
+          storage:
+            s3:
+              s3forcepathstyle: true
+        ruler_storage:
+          s3:
+            bucket_lookup_type: path
+tempo:
+  tempo:
+    tempo:
+      structuredConfig:
+        storage:
+          trace:
+            s3:
+              forcepathstyle: true
+```
+
+Check the rendered configs:
+
+```bash
+helm template observability-platform helm/observability-platform \
+  --namespace monitoring --values values.yaml --values overrides.yaml \
+  --show-only charts/mimir/charts/mimir/templates/mimir-config.yaml \
+  --show-only charts/loki/charts/loki/templates/config.yaml \
+  --show-only charts/tempo/charts/tempo/templates/configmap-tempo.yaml \
+  | grep -E 'bucket_lookup_type|forcepathstyle'
+```
+
+```text
+          bucket_lookup_type: path
+          s3forcepathstyle: true
+        bucket_lookup_type: path
+        s3forcepathstyle: true
+          bucket_lookup_type: path
+          forcepathstyle: true
+```
 
 <!-- Story 29 adds "## Switching backend" here. -->
 
