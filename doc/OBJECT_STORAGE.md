@@ -754,7 +754,31 @@ The Mimir, Loki and Tempo images keep their system roots in
 `/etc/ssl/certs/ca-certificates.crt`. The mount uses a separate directory and leaves that
 file in place.
 
-<!-- Story 19 adds "added to the system roots, not replacing them" here. -->
+`SSL_CERT_DIR` adds the CA bundle to the system roots. It does not replace them. Go reads
+the roots from two sources:
+
+- The roots file `/etc/ssl/certs/ca-certificates.crt`. `SSL_CERT_FILE` replaces it.
+- Every file in the roots directories. `SSL_CERT_DIR` replaces the default directories.
+
+The guide sets `SSL_CERT_DIR` only. Go reads the roots file and every file in
+`/etc/ssl/object-storage-ca`. Public endpoints keep working, for example the AWS STS
+endpoint that IRSA calls for credentials.
+
+Keep the system roots in place:
+
+- Do not set `SSL_CERT_FILE`. Together with `SSL_CERT_DIR`, it leaves the CA bundle as the
+  only root. TLS to STS and to AWS S3 then fails with `x509: certificate signed by unknown
+  authority`.
+- Do not mount the ConfigMap over `/etc/ssl/certs`. The mount hides the roots file.
+- Do not set the components' own CA fields. Each one replaces the system roots for the
+  storage client. The IRSA credential client ignores them.
+
+| Component | CA field |
+| --- | --- |
+| Mimir | `common.storage.s3.http.tls_ca_path` |
+| Loki thanos mode | `storage_config.object_store.s3.http.tls_ca_path` |
+| Loki's default client | `storage_config.aws.http_config.ca_file` |
+| Tempo | `storage.trace.s3.tls_ca_path` |
 
 Restart the pods after a change to the ConfigMap. The components read the roots at startup.
 
