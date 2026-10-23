@@ -4,7 +4,8 @@ The observability platform needs a Kubernetes cluster with persistent volume sup
 and enough headroom for Mimir, Loki, Grafana and their caches. This guide creates one
 on AWS EKS with `eksctl`.
 
-Object storage is provisioned separately — see [OBJECT_STORAGE.md](OBJECT_STORAGE.md).
+Object storage is provisioned separately. Use the `s3` backend with `store: aws` — see
+[OBJECT_STORAGE.md](OBJECT_STORAGE.md#aws-s3-and-s3-compatible-stores).
 
 ## What you get
 
@@ -483,5 +484,6 @@ aws ec2 describe-volumes --region "$REGION" \
   --filters "Name=status,Values=available" --query "Volumes[].VolumeId" --output json
 ```
 
-Object storage lives outside the cluster and is **not** removed by this — delete it
-separately if you are done with the data.
+Object storage lives outside the cluster and is **not** removed by this — delete the
+buckets separately if you are done with the data. See
+[OBJECT_STORAGE.md](OBJECT_STORAGE.md#teardown).

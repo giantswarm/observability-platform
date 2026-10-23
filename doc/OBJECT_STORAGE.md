@@ -1,32 +1,194 @@
 # Object Storage
 
-The observability platform stores metrics, alerting state, recording rules and logs in
-object storage.
+The observability platform stores metrics, alerting state, recording rules, logs and traces
+in object storage. Mimir, Loki and Tempo read it.
 
-**Azure Blob Storage is the only backend supported for now.** No other provider is wired
-into the chart. This guide provisions an Azure storage account with the Azure CLI and
-hands it to the platform chart, which configures Mimir, Loki and Tempo from it.
+The chart supports two backends:
 
-For development you do not need any of this: `localObjectStorage.enabled` runs the Azurite
-emulator in the cluster instead, and needs no Azure account at all. See
-[LOCAL_DEV.md](./LOCAL_DEV.md).
+- `azure`: Azure Blob Storage.
+- `s3`: AWS S3, or an S3-compatible store.
 
-## Layout
+One value, `global.objectStorage.backend`, picks the backend for Mimir, Loki and Tempo
+together. It has no default.
 
-Use **a single storage account** with **one container per component that needs one**.
-Containers are already an isolation boundary within an account, so splitting across
-several accounts only adds key sets to rotate and endpoints to manage.
+For development you need none of this. `localObjectStorage.enabled` runs a store in the
+cluster: Garage for `s3`, Azurite for `azure`. See [LOCAL_DEV.md](./LOCAL_DEV.md).
 
-| Container            | Consumer                     | Contents                           |
-| -------------------- | ---------------------------- | ---------------------------------- |
-| `mimir-blocks`       | Mimir `blocks_storage`       | TSDB blocks (the bulk of the data) |
-| `mimir-alertmanager` | Mimir `alertmanager_storage` | Alertmanager state and configs     |
-| `mimir-ruler`        | Mimir `ruler_storage`        | Recording and alerting rule groups |
-| `loki`               | Loki chunks, index, ruler, admin | Log data                       |
-| `tempo`              | Tempo `storage.trace`        | Trace blocks                       |
+## Shared model
 
-This chart does not deploy Pyroscope yet. Pyroscope will get its own container in the
-same account.
+### Values
+
+All storage values live under `global.objectStorage`:
+
+| Key | Backend | Meaning |
+| --- | --- | --- |
+| `backend` | both | `azure` or `s3`. Required. No default. |
+| `existingSecret` | both | Credentials Secret. Fixed: `observability-platform-object-storage`. |
+| `buckets.*` | both | Container (azure) or bucket (s3) names. See [Buckets](#buckets). |
+| `azure.accountName` | `azure` | Storage account holding the containers. |
+| `azure.connectionString` | `azure` | Full connection string. Not read by Tempo. |
+| `s3.store` | `s3` | `aws` or `compatible`. Required. No default. |
+| `s3.endpoint` | `s3` | Store endpoint, `host[:port]`, no scheme. Required. |
+| `s3.region` | `s3` | Signing region. Required with `store: aws`. Optional with `store: compatible`. |
+| `s3.insecure` | `s3` | Plain HTTP. Defaults to `false`. |
+
+`existingSecret` accepts only its fixed name. The Mimir, Loki and Tempo values reference
+the Secret from static values, and Helm cannot compute a subchart's values. The values
+schema rejects any other name.
+
+The schema also rejects an endpoint with a scheme, such as `https://s3.example.com`.
+
+### Render guards
+
+The render fails when the values cannot reach a store. Each message names the value to fix.
+
+| Guard | Fails when |
+| --- | --- |
+| 1 | `backend` is unset, or not `azure` or `s3`. |
+| 2 | `backend` is `s3` and `s3.store` is unset, or not `aws` or `compatible`. |
+| 3 | `backend` is `s3` and `s3.endpoint` is empty. Skipped under Garage. |
+| 4 | `s3.store` is `aws` and `s3.region` is empty. |
+| 5 | `localObjectStorage.enabled` is set and `s3.store` is `aws`. |
+| 6 | `backend` is `s3` and `azure.accountName` or `azure.connectionString` is set. |
+| 7 | `backend` is `azure` and `s3.store`, `s3.endpoint` or `s3.region` is set, or `s3.insecure` is `true`. |
+| Garage | Garage runs and `s3.endpoint` or `s3.region` is set. |
+
+Empty strings and `insecure: false` count as unset. The defaults never trip guards 6 and 7.
+
+The messages, as `helm template` prints them:
+
+1. `global.objectStorage.backend is "". Set it to "azure" or "s3" - see doc/OBJECT_STORAGE.md.`
+2. `global.objectStorage.s3.store must be "aws" or "compatible" with backend "s3", but it is "" - see doc/OBJECT_STORAGE.md.`
+3. `global.objectStorage.backend is "s3" and global.objectStorage.s3.endpoint is empty. Set it to the store endpoint, host[:port] without a scheme - see doc/OBJECT_STORAGE.md.`
+4. `global.objectStorage.s3.store is "aws" and global.objectStorage.s3.region is empty. Set it to the AWS region of the buckets - see doc/OBJECT_STORAGE.md.`
+5. `localObjectStorage.enabled runs Garage, an S3-compatible store, but global.objectStorage.s3.store is "aws". Set it to "compatible", or unset localObjectStorage.enabled - see doc/LOCAL_DEV.md.`
+6. `global.objectStorage.backend is "s3", but global.objectStorage.azure.accountName is set. Unset it: the s3 backend reads no Azure values - see doc/OBJECT_STORAGE.md.`
+7. `global.objectStorage.backend is "azure", but global.objectStorage.s3.region is set. Unset it: the azure backend reads no S3 values - see doc/OBJECT_STORAGE.md.`
+8. Garage: `localObjectStorage.enabled runs Garage and computes global.objectStorage.s3.endpoint, but it is set as well and would be ignored. Unset one of the two - see doc/LOCAL_DEV.md.`
+
+Guards 6, 7 and the Garage guard name the key that is set: `accountName` or
+`connectionString`; `store`, `endpoint`, `region` or `insecure`; `endpoint` or `region`.
+
+With `backend: azure`, the Azure guards run as well:
+
+- `global.objectStorage.azure.accountName is empty. Set it to the Azure storage account holding the containers, or set global.objectStorage.azure.connectionString to reach an endpoint of your own, or set localObjectStorage.enabled to run against a local Azurite emulator - see doc/OBJECT_STORAGE.md.`
+- `tempo.enabled is true and global.objectStorage.azure.connectionString is set. Tempo reads no connection string: it needs global.objectStorage.azure.accountName and the account key in the credentials Secret. Set accountName instead of connectionString, or set tempo.enabled to false - see doc/OBJECT_STORAGE.md.`
+- Two Azurite guards fail on `azure.accountName` or `azure.connectionString` set next to
+  `localObjectStorage.enabled`. See [LOCAL_DEV.md](./LOCAL_DEV.md).
+
+### Generated ConfigMap
+
+The chart renders the ConfigMap `observability-platform-object-storage` in the release
+namespace. It renders while Mimir, Loki or Tempo is enabled. Every key is always present.
+
+| Key | `azure` | `s3` |
+| --- | --- | --- |
+| `OBS_TENANT` | `global.tenant` | `global.tenant` |
+| `OBS_BACKEND` | `azure` | `s3` |
+| `OBS_AZURE_ACCOUNT_NAME` | `azure.accountName` | empty |
+| `OBS_AZURE_CONNECTION_STRING` | `azure.connectionString` | empty |
+| `OBS_BUCKET_MIMIR_BLOCKS` | `buckets.mimirBlocks` | `buckets.mimirBlocks` |
+| `OBS_BUCKET_MIMIR_ALERTMANAGER` | `buckets.mimirAlertmanager` | `buckets.mimirAlertmanager` |
+| `OBS_BUCKET_MIMIR_RULER` | `buckets.mimirRuler` | `buckets.mimirRuler` |
+| `OBS_BUCKET_LOKI` | `buckets.loki` | `buckets.loki` |
+| `OBS_BUCKET_TEMPO` | `buckets.tempo` | `buckets.tempo` |
+| `OBS_AZURE_ENDPOINT_SUFFIX` | `blob.core.windows.net` | `blob.core.windows.net` |
+| `OBS_S3_ENDPOINT` | empty | `s3.endpoint` |
+| `OBS_S3_REGION` | empty | `s3.region` |
+| `OBS_S3_INSECURE` | `false` | `s3.insecure`, `true` or `false` |
+| `OBS_LOKI_THANOS` | `false` | `true` with `store: compatible`, else `false` |
+
+Under `localObjectStorage.enabled` the chart computes the Azurite or Garage values instead.
+See [LOCAL_DEV.md](./LOCAL_DEV.md).
+
+How the values reach the components:
+
+1. The chart renders the ConfigMap above.
+2. The ConfigMap and the credentials Secret reach the Mimir, Loki and Tempo pods as
+   environment variables, through `extraEnvFrom`. No other pod gets them.
+3. The component configs read `${OBS_*}` references. The Mimir and Loki charts run every
+   component with `-config.expand-env=true`. The chart adds the flag to every Tempo
+   component.
+
+Every component config carries both an `azure` and an `s3` block. The `backend` fields read
+`${OBS_BACKEND}`, so the backend is picked at startup. Mimir and Tempo ignore `s3.store`.
+
+### Loki storage client
+
+Loki has two storage clients. `s3.store` picks one through `OBS_LOKI_THANOS`:
+
+| Backend | Store | Loki client | `OBS_LOKI_THANOS` |
+| --- | --- | --- | --- |
+| `azure` | Azure Blob Storage, Azurite | Loki's default client | `false` |
+| `s3` | `aws` | Loki's default client | `false` |
+| `s3` | `compatible`, Garage | Loki thanos mode | `true` |
+
+Loki's `storage_config.use_thanos_objstore` reads `${OBS_LOKI_THANOS}`. Loki thanos mode
+avoids the forced trailing checksums of Loki's default client. Many S3-compatible stores
+reject them ([grafana/loki#21926](https://github.com/grafana/loki/issues/21926)).
+
+Loki validates both client configs at every start. The ruler logs a warning about the
+unused one.
+
+### Credentials Secret
+
+The operator creates one Secret in the release namespace. The chart never renders it.
+
+- Name: `observability-platform-object-storage`, the `existingSecret` value.
+- Keys for `azure`: `AZURE_STORAGE_KEY`.
+- Keys for `s3`: `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
+
+The keys reach the pods as environment variables, so each key name must be a valid variable
+name. The pods reference the Secret with `optional: true`.
+
+Under `localObjectStorage.enabled` the chart renders its own dev Secret instead:
+`garage-credentials` for Garage, `azurite-credentials` for Tempo on Azurite.
+
+### What the chart does not set
+
+Set these through the subchart values if you need them:
+
+- **Loki retention.** `compactor.retention_enabled: true` also needs
+  `compactor.delete_request_store: ${OBS_BACKEND}`. Otherwise deletion requests have
+  nowhere to live.
+- **A later schema period.** The chart pins `from: 2024-04-01`. Date a new period forward.
+  It cannot start in the past relative to data written under another schema.
+
+## Buckets
+
+The chart uses five containers (azure) or buckets (s3). The names are the same on both
+backends:
+
+| Value | Default | Consumer | Contents |
+| --- | --- | --- | --- |
+| `buckets.mimirBlocks` | `mimir-blocks` | Mimir `blocks_storage` | TSDB blocks, the bulk of the data |
+| `buckets.mimirAlertmanager` | `mimir-alertmanager` | Mimir `alertmanager_storage` | Alertmanager state and configs |
+| `buckets.mimirRuler` | `mimir-ruler` | Mimir `ruler_storage` | Recording and alerting rule groups |
+| `buckets.loki` | `loki` | Loki chunks, index, ruler, admin | Log data |
+| `buckets.tempo` | `tempo` | Tempo `storage.trace` | Trace blocks |
+
+Create them before install. The chart creates none, except under
+`localObjectStorage.enabled`.
+
+Loki uses one bucket for chunks, ruler and admin. They become key prefixes inside it.
+
+This chart does not deploy Pyroscope yet. Pyroscope will get its own container or bucket.
+
+<!-- Story 21 adds the AWS S3 global bucket name warning here. -->
+
+<!-- Story 23 adds "### Create the buckets" here. -->
+
+<!-- Story 13 and story 14 add "## Credentials" here. -->
+
+<!-- Stories 15, 16 and 17 add "### Ambient credentials and IRSA" here. -->
+
+## Azure Blob Storage
+
+This section provisions an Azure storage account with the Azure CLI and hands it to the
+chart.
+
+Use **a single storage account** with **one container per bucket** from
+[Buckets](#buckets). Containers are already an isolation boundary within an account.
 
 ### Account settings
 
@@ -42,15 +204,15 @@ same account.
 
 Shared key access means a long-lived credential in a Kubernetes secret with no built-in
 rotation. If your environment supports it, prefer Azure Workload Identity and disable
-shared key access — see [Alternative: workload identity](#alternative-workload-identity).
+shared key access — see [Workload identity](#workload-identity).
 
-## Prerequisites
+### Prerequisites
 
 - `az` CLI, logged in (`az login`)
 - `Contributor` on the target resource group
 - An existing resource group, or permission to create one
 
-## Step 1 — Set variables
+### Step 1 — Set variables
 
 Adjust these to your environment:
 
@@ -92,7 +254,7 @@ Create the resource group if you do not have one:
 az group create --name "$RESOURCE_GROUP" --location "$LOCATION"
 ```
 
-## Step 2 — Create the storage account
+### Step 2 — Create the storage account
 
 ```bash
 az storage account create \
@@ -129,7 +291,7 @@ az storage account show --name "$ACCOUNT" --resource-group "$RESOURCE_GROUP" \
 }
 ```
 
-## Step 3 — Create the containers
+### Step 3 — Create the containers
 
 Fetch the account key once and reuse it:
 
@@ -171,12 +333,10 @@ az storage container list --account-name "$ACCOUNT" --account-key "$KEY" \
 
 `publicAccess: null` means private. Anything else is a misconfiguration.
 
-## Step 4 — Create the Kubernetes secret
+### Step 4 — Create the Kubernetes secret
 
-Skip this step under `localObjectStorage.enabled`. The chart creates no
-`observability-platform-object-storage` secret there. It creates its own dev credentials
-instead: `garage-credentials` for Garage, `azurite-credentials` for Tempo on Azurite. See
-[LOCAL_DEV.md](./LOCAL_DEV.md).
+Skip this step under `localObjectStorage.enabled`. See
+[Credentials Secret](#credentials-secret).
 
 One secret, in the namespace you install the platform into. The name is fixed:
 
@@ -191,23 +351,16 @@ kubectl create secret generic observability-platform-object-storage \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
 
-Both the secret name and the key name matter:
+The key name matters. `envFrom` skips any key that is not a valid environment variable
+name. A key called `account-key` is dropped silently, and the components come up with no
+credentials at all.
 
-- **`observability-platform-object-storage`** — the Mimir, Loki and Tempo subcharts name this
-  secret from static values, and Helm will not let the umbrella chart compute a
-  subchart's values, so the name cannot be configurable. Setting
-  `global.objectStorage.existingSecret` to anything else fails the render.
-- **`AZURE_STORAGE_KEY`** — the key reaches the pods through `envFrom`, which skips any
-  key that is not a valid environment variable name. A key called `account-key` is
-  dropped silently and the components come up with no credentials at all.
+The account name is not in the secret. It is not a credential, and the chart needs it at
+render time.
 
-The account name is deliberately not in the secret. It is not a credential, and the
-chart needs it at render time.
+### Step 5 — Point the platform chart at it
 
-## Step 5 — Point the platform chart at it
-
-The chart configures Mimir, Loki and Tempo for you. All it needs is the backend, the account
-name and, if you renamed anything, the container names:
+Set the backend and the account name:
 
 ```yaml
 global:
@@ -223,44 +376,117 @@ global:
       tempo: tempo
 ```
 
-`accountName` has one alternative: `global.objectStorage.azure.connectionString` takes a
-full connection string `https://<account>.<suffix>` — see [LOCAL_DEV.md](./LOCAL_DEV.md).
-But Tempo does not support it. So, with `tempo.enabled`, set `accountName` and the
-secret from Step 4. The render fails on `connectionString` outside `localObjectStorage`.
+The `buckets` values above are the defaults. With the container names from this guide,
+only `backend` and `accountName` are required.
 
-The `buckets` values above are the defaults, so with the container names from this guide
-only `backend` and `accountName` are actually required. `backend` has no default. Leave
-either out and the render fails rather than installing something that cannot reach its
-storage.
+`accountName` has one alternative: `global.objectStorage.azure.connectionString` takes a
+full connection string — see [LOCAL_DEV.md](./LOCAL_DEV.md). Tempo does not support it.
+With `tempo.enabled`, set `accountName` and the secret from Step 4. The render fails on
+`connectionString` with Tempo enabled outside `localObjectStorage`.
 
 Install into the namespace holding the secret from Step 4:
 
 ```bash
-helm install observability-platform . --namespace monitoring
+helm install observability-platform helm/observability-platform \
+  --namespace monitoring --values values.yaml
 ```
 
-What the chart does with this, so it is not a black box: it renders the container names
-and account name into a ConfigMap, injects that ConfigMap and your secret as environment
-variables into the Mimir, Loki and Tempo pods only, and points
-`blocks_storage`, `alertmanager_storage`, `ruler_storage`, Loki's `storage`,
-`schemaConfig` and `bucketNames`, and Tempo's `storage.trace` at them. The Mimir and Loki
-charts already run every component with `-config.expand-env=true`. The chart adds the flag
-to every Tempo component.
+Loki runs its default client against Azure Blob Storage.
 
-All three Loki `bucketNames` point at the same `loki` container. They become key prefixes
-inside the container rather than separate containers, so one serves all three without
-collision.
+### Workload identity
 
-Two things the chart does not set, and you may want through raw subchart pass-through:
+To avoid a long-lived key, give the Mimir, Loki and Tempo service accounts a federated identity
+with the **Storage Blob Data Contributor** role on the account, then create it with
+`--allow-shared-key-access false` and drop the key from every config. Mimir uses
+`azure.user_assigned_id`; Loki uses `azure.useManagedIdentity` with `userAssignedId`.
+This requires an OIDC-enabled cluster, so it is not the default here.
 
-- **Loki retention.** `compactor.retention_enabled: true` also requires
-  `compactor.delete_request_store: azure`, otherwise deletion requests have nowhere to
-  live.
-- **A later schema period.** The chart pins `from: 2024-04-01`. A new period cannot start
-  in the past relative to data already written under a different schema, so if you add
-  one, date it forward.
+The chart has no interface for this yet — `global.objectStorage` always wires up an
+account key. Getting there means overriding the Mimir, Loki and Tempo storage values directly
+through raw pass-through, which also means dropping the `${AZURE_STORAGE_KEY}`
+references the chart puts in.
+
+## AWS S3 and S3-compatible stores
+
+The `s3` backend covers AWS S3 and any S3-compatible store. `s3.store` names which one:
+
+| `s3.store` | Store | Loki client |
+| --- | --- | --- |
+| `aws` | AWS S3 | Loki's default client |
+| `compatible` | Any other S3 API, for example an on-prem store | Loki thanos mode |
+
+`s3.store` picks Loki's client only. Mimir and Tempo use the same client for both stores.
+
+The other values reach the store:
+
+- `s3.endpoint`: the store endpoint, `host[:port]`, no scheme. Required.
+- `s3.region`: the signing region. Required with `store: aws`. Set it with
+  `store: compatible` when the store checks the signing region.
+- `s3.insecure`: `true` reaches the endpoint over plain HTTP. Defaults to `false`.
+
+The credentials Secret holds `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. See
+[Credentials Secret](#credentials-secret).
+
+### AWS S3
+
+```yaml
+global:
+  objectStorage:
+    backend: s3
+    s3:
+      store: aws
+      endpoint: s3.eu-west-1.amazonaws.com
+      region: eu-west-1
+```
+
+Set `endpoint` to the regional endpoint, `s3.<region>.amazonaws.com`.
+
+### S3-compatible store
+
+```yaml
+global:
+  objectStorage:
+    backend: s3
+    s3:
+      store: compatible
+      endpoint: minio.storage.internal:9000
+```
+
+Add `region` when the store checks the signing region. Add `insecure: true` when the
+endpoint serves plain HTTP.
+
+Install into the namespace holding the credentials Secret:
+
+```bash
+helm install observability-platform helm/observability-platform \
+  --namespace monitoring --values values.yaml
+```
+
+<!-- Story 18 and story 19 add "## Custom CA" here. -->
+
+<!-- Story 24 and story 25 add "## Subchart overrides" here. -->
+
+<!-- Story 29 adds "## Switching backend" here. -->
 
 ## Verification
+
+### The chart
+
+Check the storage values the components read:
+
+```bash
+kubectl get configmap observability-platform-object-storage \
+  --namespace monitoring -o yaml
+```
+
+`OBS_BACKEND` names the backend. `OBS_LOKI_THANOS` is `true` only with
+`store: compatible`.
+
+Once the platform is running, `mimir-blocks` and `loki` fill within a few minutes.
+`mimir-alertmanager` and `mimir-ruler` stay empty until an Alertmanager config or a rule
+group exists. Empty is not a failure signal there.
+
+### Azure Blob Storage
 
 Round-trip a blob to prove the credentials work end to end:
 
@@ -294,24 +520,31 @@ Expect `PublicAccessNotPermitted` for the first and `AccountRequiresHttps` for t
 second. Any other response means `--allow-blob-public-access false` or `--https-only`
 did not take effect.
 
-Once the platform is running, `mimir-blocks` and `loki` fill within a few minutes.
-`mimir-alertmanager` and `mimir-ruler` stay empty until an Alertmanager config or a rule
-group exists — empty is not a failure signal there.
+### AWS S3 and S3-compatible stores
 
-## Alternative: workload identity
+Round-trip an object with the keys from the credentials Secret:
 
-To avoid a long-lived key, give the Mimir, Loki and Tempo service accounts a federated identity
-with the **Storage Blob Data Contributor** role on the account, then create it with
-`--allow-shared-key-access false` and drop the key from every config. Mimir uses
-`azure.user_assigned_id`; Loki uses `azure.useManagedIdentity` with `userAssignedId`.
-This requires an OIDC-enabled cluster, so it is not the default here.
+```bash
+export AWS_ACCESS_KEY_ID=<access-key-id>
+export AWS_SECRET_ACCESS_KEY=<secret-access-key>
+ENDPOINT=s3.eu-west-1.amazonaws.com   # s3.endpoint
+REGION=eu-west-1                      # s3.region
 
-The chart has no interface for this yet — `global.objectStorage` always wires up an
-account key. Getting there means overriding the Mimir, Loki and Tempo storage values directly
-through raw pass-through, which also means dropping the `${AZURE_STORAGE_KEY}`
-references the chart puts in.
+echo ok | aws s3 cp - s3://mimir-blocks/.connectivity-check \
+  --endpoint-url "https://$ENDPOINT" --region "$REGION"
+
+aws s3 cp s3://mimir-blocks/.connectivity-check - \
+  --endpoint-url "https://$ENDPOINT" --region "$REGION"
+
+aws s3 rm s3://mimir-blocks/.connectivity-check \
+  --endpoint-url "https://$ENDPOINT" --region "$REGION"
+```
+
+The second command prints `ok`. Use `http://` with `s3.insecure: true`.
 
 ## Teardown
+
+### Azure Blob Storage
 
 Deleting the account deletes every container and all data in it:
 
@@ -328,3 +561,17 @@ az storage container delete --name mimir-ruler \
 
 A deleted container name stays unavailable for up to 30 seconds afterwards, so a
 scripted delete-then-recreate needs a retry.
+
+### AWS S3 and S3-compatible stores
+
+Deleting a bucket with `--force` deletes every object in it first:
+
+```bash
+for b in mimir-blocks mimir-alertmanager mimir-ruler loki tempo; do
+  aws s3 rb "s3://$b" --force \
+    --endpoint-url "https://$ENDPOINT" --region "$REGION"
+done
+```
+
+Use the bucket names from your `buckets` values. To drop a single component's data, delete
+only its bucket.

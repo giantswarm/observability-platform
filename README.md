@@ -122,9 +122,10 @@ Standalone, it has been installed and verified on a vanilla EKS cluster.
 Some apps have restrictions on how they can be deployed.
 Not following these limitations will most likely result in a broken deployment.
 
-- Azure Blob is the only supported object storage backend for now. For development,
-  `localObjectStorage.enabled` runs the Azurite emulator in-cluster instead of a real
-  storage account — see [doc/LOCAL_DEV.md](doc/LOCAL_DEV.md).
+- Object storage is Azure Blob Storage (`azure`) or S3 (`s3`), AWS S3 or an S3-compatible
+  store. There is no default backend — see [doc/OBJECT_STORAGE.md](doc/OBJECT_STORAGE.md).
+  For development, `localObjectStorage.enabled` runs a store in the cluster: Garage for
+  `s3`, Azurite for `azure` — see [doc/LOCAL_DEV.md](doc/LOCAL_DEV.md).
 - One sizing profile, tuned for a small cluster. There is no answer yet for real ingest volume.
 - The chart creates no Gateway and no TLS certificate. The external API and Grafana are
   exposed over HTTPS on a Gateway you provide, and you must set the name and namespace of that
