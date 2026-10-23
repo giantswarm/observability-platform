@@ -212,3 +212,23 @@ tests:
       - equal:
           path: data.OBS_S3_INSECURE
           value: "true"
+
+  - it: selects s3, Garage and Loki thanos mode with values-local.yaml
+    values:
+      - ../values-local.yaml
+    asserts:
+      - equal:
+          path: data.OBS_BACKEND
+          value: s3
+      - equal:
+          path: data.OBS_S3_ENDPOINT
+          value: garage.monitoring.svc.cluster.local:3900
+      - equal:
+          path: data.OBS_S3_REGION
+          value: garage
+      - equal:
+          path: data.OBS_S3_INSECURE
+          value: "true"
+      - equal:
+          path: data.OBS_LOKI_THANOS
+          value: "true"
