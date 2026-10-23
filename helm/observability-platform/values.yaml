@@ -49,6 +49,7 @@ global:
       insecure: false
     # -- Existing containers (azure) or buckets (s3), one per consumer. Same names on both backends.
     # Create them before install. The chart creates none, except under `localObjectStorage.enabled`.
+    # AWS S3 names are global: override them.
     buckets:
       mimirBlocks: mimir-blocks
       mimirAlertmanager: mimir-alertmanager
