@@ -15,13 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Generate the local JWT signing key and certificate in the kind cluster. The local setup no longer needs `openssl` or `xxd` on the host.
 - Install observability-operator 0.86.0 in the local kind setup. Uninstalling the chart now deletes the default `GrafanaOrganization` instead of leaving it stuck.
 - Install the observability-operator as its own release, before this chart, with `values/observability-operator.yaml`.
 
 ### Added
 
-- Add `make local-test`: verify the local install with workloads ready, Grafana up, and one write/read round trip per signal through the external API.
-- Run the kind install test in CI on every pull request.
+- Add the app-test-suite smoke test in `tests/ats`: workloads ready, Grafana up, and one write/read round trip per signal through the external API. `make local-ats` runs it on kind.
+- Run the app-test-suite smoke test in CI on every pull request, after a click on `e2e-approval`.
 - Enable Mimir Alertmanager.
 - Load Alertmanager config Secrets into Mimir Alertmanager through the observability-operator. See `doc/ALERTING.md`.
 - Add a default Alertmanager config Secret for `global.tenant`. Its config lives in `files/alertmanager/alertmanager.yaml`.
