@@ -1,0 +1,24 @@
+# app-test-suite (ATS) test dependencies. Copied from the canonical set in
+# giantswarm/devctl (pkg/gen/input/ats/internal/file). devctl does not generate
+# them here: this repo runs ATS from .circleci/custom.yml.
+#
+# ATS runs `uv sync` in this directory and `uv run pytest -m <scenario>`.
+# Renovate updates the pins. `uv lock` here refreshes uv.lock.
+[project]
+name = "ats-tests"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "pytest-helm-charts==1.3.5",
+    "pytest==9.1.1",
+    "pykube-ng==23.6.0",
+    "pytest-rerunfailures==16.7",
+    "requests==2.34.2",
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "smoke: fast sanity checks run first",
+    "functional: full feature tests",
+    "upgrade: run during upgrade scenario (before and after helm upgrade)",
+]

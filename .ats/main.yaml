@@ -1,5 +1,8 @@
-# We disable all app-test-suite tests until we write proper ones in tests/ats
+# app-test-suite configuration. The ats job in .circleci/custom.yml and
+# `make local-ats` run it.
 #
-# When tests are added, drop the matching entry from skip-steps and set the
-# cluster type for that scenario, e.g. `smoke-tests-cluster-type: kind`.
-skip-steps: [smoke, functional, upgrade]
+# ATS skips its own chart deploy. The tests install the prerequisites and the
+# chart with hack/local/install.sh. See tests/ats/conftest.py.
+app-tests-skip-app-deploy: true
+app-tests-deploy-namespace: monitoring
+skip-steps: [functional, upgrade]

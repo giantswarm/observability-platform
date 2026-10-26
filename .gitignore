@@ -1,1 +1,3 @@
 helm/*/charts/
+tests/ats/.venv/
+__pycache__/
