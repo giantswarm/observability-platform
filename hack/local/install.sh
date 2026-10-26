@@ -16,8 +16,10 @@ OPERATOR_VERSION=0.86.0
 KUBECTL=(kubectl ${KUBE_CONTEXT:+--context "$KUBE_CONTEXT"})
 HELM=(helm ${KUBE_CONTEXT:+--kube-context "$KUBE_CONTEXT"})
 
+# --force-conflicts: app-test-suite applies its own Gateway API CRDs first. The
+# chart's Gateway API CRDs take over their fields.
 "${HELM[@]}" upgrade --install eg oci://docker.io/envoyproxy/gateway-helm --version 1.9.1 \
-  --namespace envoy-gateway-system --create-namespace --wait --timeout 10m
+  --namespace envoy-gateway-system --create-namespace --force-conflicts --wait --timeout 10m
 
 # The signer generates the JWT signing key and the Gateway certificate. See jwks.yaml.
 "${KUBECTL[@]}" create namespace jwt-issuer --dry-run=client -o yaml | "${KUBECTL[@]}" apply -f -

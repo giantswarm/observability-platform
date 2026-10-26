@@ -9,7 +9,7 @@ Microsoft's Azure Storage emulator, running in the cluster.
 
 ## Prerequisites
 
-- [kind](https://kind.sigs.k8s.io/), `helm`, `kubectl`, `curl`
+- [kind](https://kind.sigs.k8s.io/), `helm` 4, `kubectl`, `curl`
 - Around 6 GiB of memory free
 - No kind cluster named `kind`
 - Commands run from the repository root
