@@ -10,7 +10,7 @@ OPERATOR_VERSION := 0.86.0
 .PHONY: local-up local-test local-token local-down
 
 local-up: ## Create a kind cluster running the chart and the external API.
-	kind create cluster --config $(LOCAL)/kind.yaml
+	kind create cluster --config .ats/kind-config.yaml
 	$(HELM) upgrade --install eg oci://docker.io/envoyproxy/gateway-helm --version 1.9.1 \
 	  --namespace envoy-gateway-system --create-namespace --wait --timeout 10m
 	$(LOCAL)/tls.sh
