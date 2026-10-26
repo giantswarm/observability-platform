@@ -33,7 +33,81 @@ The chart does not install these, but the Makefile does for local kind setups (`
 - A Gateway with an HTTPS listener. Its hostname covers `observability.<global.domain>`, or it
   has none. It accepts routes from the release namespace. See [Serve HTTPS](#serve-https).
 - An OIDC issuer. Envoy fetches its JWKS, so the JWKS URI must be reachable from the
-  Envoy pods.
+  Envoy pods. See [Allow JWKS egress](#allow-jwks-egress).
+
+[GATEWAY.md](./GATEWAY.md) installs Envoy Gateway and creates this Gateway on EKS.
+
+### Allow JWKS egress
+
+The Envoy proxy pods fetch the JWKS URI over HTTPS and refresh it every 5 minutes. They run
+in the Envoy Gateway namespace, `envoy-gateway-system` by default. They keep the last JWKS when
+a refresh fails. A proxy pod without a JWKS answers every request with a `401`. This affects new
+pods, restarted pods and issuer key rotations.
+
+If a NetworkPolicy restricts egress there, allow the proxy pods to reach:
+
+- DNS
+- the JWKS URI, on TCP 443
+- the Envoy Gateway controller, on TCP 18000 for xDS
+- the backends, in the `monitoring` namespace
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: envoy-proxy-egress
+  namespace: envoy-gateway-system
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: envoy
+      app.kubernetes.io/component: proxy
+  policyTypes:
+    - Egress
+  egress:
+    # DNS
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # JWKS
+    - ports:
+        - protocol: TCP
+          port: 443
+    # xDS from the Envoy Gateway controller
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: gateway-helm
+      ports:
+        - protocol: TCP
+          port: 18000
+    # Backends
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+```
+
+This policy covers the proxy pods only. The Envoy Gateway controller also needs egress to the
+Kubernetes API server.
+
+A NetworkPolicy selects IP ranges, not host names. To allow only the JWKS host, use a policy
+with FQDN rules, such as a CiliumNetworkPolicy with `toFQDNs`. An egress proxy or firewall
+outside the cluster must allow the host of the JWKS URI.
+
+Check that a proxy pod reaches the JWKS URI:
+
+```bash
+kubectl -n envoy-gateway-system debug -q -i --image=curlimages/curl:8.16.0 \
+  "$(kubectl -n envoy-gateway-system get pod -l app.kubernetes.io/component=proxy -o name | head -1)" \
+  -- sh -c "sleep 2; curl -sS -o /dev/null -w '%{http_code}\n' https://issuer.example.com/keys"
+```
+
+```
+200
+```
 
 ## Values
 
@@ -71,7 +145,8 @@ To check your values are valid, you can run `helm template` without a cluster. P
 > Giant Swarm installations and in the [local setup](./LOCAL_DEV.md). On your cluster, set the
 > `parentRefs` of **every** component (`loki`, `mimir`, `tempo` and `basicAuth`) to the name
 > and namespace of your Gateway, and to the name of its HTTPS listener in `sectionName`. If they
-> don't match, the routes are never attached and the API doesn't answer.
+> don't match, the routes are never attached and the API doesn't answer. Or create a Gateway
+> that matches the defaults with [GATEWAY.md](./GATEWAY.md).
 
 Each component has its own `parentRefs`, so each can use a different Gateway. Setting
 `parentRefs` replaces the whole default list, so give every field:
@@ -117,6 +192,9 @@ this namespace.
 
 ## Serve HTTPS
 
+[GATEWAY.md](./GATEWAY.md) creates a Gateway that matches the default `parentRefs`, with a
+Let's Encrypt certificate. This section lists what any Gateway needs.
+
 A minimal Gateway with an HTTPS listener named `https`:
 
 ```yaml
@@ -159,6 +237,10 @@ It creates the Secret named in the listener's `certificateRefs`. Its Gateway API
 beta feature that is **off by default**: enable it in the cert-manager controller with
 `--enable-gateway-api`, or `gatewayAPI.enabled: true` in the controller configuration. See the
 [cert-manager documentation](https://cert-manager.io/docs/usage/gateway/).
+
+Let's Encrypt issues the wildcard hostname of the example above through a DNS-01 solver only. An
+HTTP-01 solver needs one hostname per listener and a plain HTTP listener for the challenge, as in
+[GATEWAY.md](./GATEWAY.md).
 
 ### Certificate from a file
 
