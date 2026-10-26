@@ -16,8 +16,9 @@ OPERATOR_VERSION=0.86.0
 KUBECTL=(kubectl ${KUBE_CONTEXT:+--context "$KUBE_CONTEXT"})
 HELM=(helm ${KUBE_CONTEXT:+--kube-context "$KUBE_CONTEXT"})
 
-# --force-conflicts: app-test-suite applies its own Gateway API CRDs first. The
-# chart's Gateway API CRDs take over their fields.
+# --force-conflicts: app-test-suite applies its own Gateway API and Prometheus
+# Operator CRDs first. The CRDs of the Envoy Gateway chart and of this chart take
+# over their fields.
 "${HELM[@]}" upgrade --install eg oci://docker.io/envoyproxy/gateway-helm --version 1.9.1 \
   --namespace envoy-gateway-system --create-namespace --force-conflicts --wait --timeout 10m
 
@@ -44,6 +45,6 @@ trap 'rm -f "$KEY"' EXIT
   --namespace monitoring --create-namespace \
   --values "$ROOT/values/observability-operator.yaml" --wait --timeout 5m
 "${HELM[@]}" upgrade --install observability-platform "$CHART" \
-  --namespace monitoring --create-namespace \
+  --namespace monitoring --create-namespace --force-conflicts \
   --values "$ROOT/helm/observability-platform/values-local.yaml" \
   --values "$DIR/values.yaml"
