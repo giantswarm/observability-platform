@@ -2,3 +2,4 @@ helm/*/charts/
 tests/ats/.venv/
 __pycache__/
 build/
+tests/ats/test_results_*.xml
