@@ -84,6 +84,16 @@ The requests in [EXTERNAL_API.md](./EXTERNAL_API.md#send-data) then run as writt
 
 The token expires after one hour. Run the `AUTH=` line again for a new one.
 
+## Test
+
+```bash
+make local-ats
+```
+
+`make local-ats` runs the app-test-suite smoke test in `tests/ats` on a new kind cluster
+named `ats`, then deletes the cluster. The `e2e-ats` CI job runs the same test. It needs
+Docker and port 8443 free: run `make local-down` first.
+
 ## Teardown
 
 ```bash
