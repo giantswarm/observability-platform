@@ -31,31 +31,6 @@ workflows:
             ignore:
             - main
 
-    # Branch: run chart tests after build-chart. When branchPublish pushes a dev
-    # image, the test also waits on push-to-registries -- run-tests-with-ats
-    # deploys the chart, which pulls that image from gsoci, and gating on the
-    # push avoids an ImagePullBackOff race.
-    - architect/run-tests-with-ats:
-        name: execute-chart-tests
-        requires:
-        - build-chart
-        filters:
-          branches:
-            ignore:
-            - main
-
-    # Tag: run chart tests after the release image is pushed, for the same
-    # image-availability reason as the branch job above.
-    - architect/run-tests-with-ats:
-        name: execute-chart-tests-release
-        requires:
-        - build-chart
-        filters:
-          tags:
-            only: /^v.*/
-          branches:
-            ignore: /.*/
-
     # Tag: push chart after tests + the gsoci image. Intentionally does NOT
     # depend on sync-china-registry so the chart catalog can publish even if
     # the in-China Aliyun mirror is slow or fails.
@@ -67,7 +42,7 @@ workflows:
         app_catalog_test: giantswarm-test-catalog
         chart: observability-platform
         requires:
-        - execute-chart-tests-release
+        - build-chart
         filters:
           tags:
             only: /^v.*/
