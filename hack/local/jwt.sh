@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# Local JWT issuer for the external API. `make local-up` and `make local-token` run it.
+# Local JWT issuer for the external API. The `signer` container in jwks.yaml runs it,
+# and `make local-token` runs it there through `kubectl exec`.
 # Do not use this anywhere real.
 #
 #   jwt.sh jwks    writes the signing key and its JWKS, once
 #   jwt.sh token   prints a token valid for one hour
 set -euo pipefail
 
-DIR="$(cd "$(dirname "$0")" && pwd)/.keys"
+DIR=/keys
 ISSUER=http://jwks.jwt-issuer.svc.cluster.local
 
 b64url() { base64 | tr -d '\n=' | tr '+/' '-_'; }

@@ -9,7 +9,7 @@ Microsoft's Azure Storage emulator, running in the cluster.
 
 ## Prerequisites
 
-- [kind](https://kind.sigs.k8s.io/), `helm`, `kubectl`, `openssl`, `xxd`, `curl`
+- [kind](https://kind.sigs.k8s.io/), `helm`, `kubectl`, `curl`
 - Around 6 GiB of memory free
 - No kind cluster named `kind`
 - Commands run from the repository root
@@ -57,8 +57,9 @@ stores it in the `grafana` secret:
 kubectl get secret grafana -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d; echo
 ```
 
-The `https` listener serves a self-signed certificate that `make local-up` generates in
-`hack/local/.keys/`, so browsers show a security warning. For `curl`, pass the certificate:
+The `https` listener serves a self-signed certificate, so browsers show a security warning.
+A signer pod in the `jwt-issuer` namespace generates it, and `make local-up` copies it to
+`hack/local/.keys/`. For `curl`, pass the certificate:
 
 ```bash
 curl --cacert hack/local/.keys/tls.crt https://grafana.localhost:8443/api/health
@@ -69,7 +70,7 @@ Storage lives in an `emptyDir`: restarting the emulator discards the data.
 ## Send data through the external API
 
 The local setup replaces the OIDC issuer with a static JWKS served in the cluster.
-`make local-token` signs tokens with a local key. Do not use this anywhere real.
+`make local-token` signs tokens with a key the signer pod generates. Do not use this anywhere real.
 
 The API answers only on the `https` listener. `AUTH` also passes the self-signed certificate
 to `curl`:
