@@ -1,0 +1,5 @@
+global:
+  objectStorage:
+    backend: azure
+    azure:
+      accountName: obsplatform
