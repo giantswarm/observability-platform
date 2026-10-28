@@ -277,6 +277,11 @@ loki:
     networkPolicy:
       enabled: false
       flavor: kubernetes
+      # Off: with the other policies disabled, this egress-only policy alone
+      # default-denies all other backend egress (gossip, DNS, object storage)
+      # on any CNI that enforces NetworkPolicies.
+      egressKubeApiserver:
+        enabled: false
     loki:
       # Repeated from loki-app's own values. Overriding a list replaces it.
       schemaConfig:

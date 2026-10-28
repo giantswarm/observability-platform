@@ -1,4 +1,4 @@
-# kind overlay: exposes the Envoy Service as NodePorts that kind.yaml maps to the host.
+# kind overlay: exposes the Envoy Service as NodePorts that .ats/kind-config.yaml maps to the host.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:

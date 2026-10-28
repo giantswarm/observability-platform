@@ -1,4 +1,8 @@
 # JWKS server for the local setup. The external API checks tokens against it.
+#
+# The `signer` container generates the JWT signing key and the Gateway certificate with
+# jwt.sh and tls.sh, mounted from the `local-scripts` ConfigMap. It keeps the keys in its
+# own emptyDir and copies only jwks.json to nginx. Restarting the pod discards the keys.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -19,12 +23,40 @@ spec:
           ports:
             - containerPort: 80
           volumeMounts:
-            - name: jwks
+            - name: public
               mountPath: /usr/share/nginx/html
+        - name: signer
+          image: alpine:3.22
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              apk add --no-cache bash openssl xxd >/dev/null
+              /scripts/jwt.sh jwks
+              /scripts/tls.sh
+              cp /keys/jwks.json /public/
+              exec sleep 1000000000
+          readinessProbe:
+            exec:
+              command: [test, -f, /public/jwks.json]
+            periodSeconds: 2
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+            - name: keys
+              mountPath: /keys
+            - name: public
+              mountPath: /public
       volumes:
-        - name: jwks
+        - name: scripts
           configMap:
-            name: jwks
+            name: local-scripts
+            defaultMode: 0755
+        - name: keys
+          emptyDir: {}
+        - name: public
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

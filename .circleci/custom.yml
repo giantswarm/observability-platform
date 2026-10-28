@@ -1,0 +1,26 @@
+# Repo-owned CircleCI config. The setup workflow in .circleci/config.yml
+# deep-merges this file into the generated workflows.yml at pipeline runtime.
+
+workflows:
+  build:
+    jobs:
+      # End-to-end test on kind with app-test-suite: tests/ats installs the
+      # platform with hack/local/install.sh, then checks workloads ready,
+      # Grafana up, one write/read round trip per signal through the external
+      # API.
+      - architect/run-tests-with-ats:
+          name: execute-chart-tests
+          context: architect
+          app-test-suite_container_tag: "1.1.0"
+          create_kind_cluster: true
+          kind_config: .ats/kind-config.yaml
+          chart_archive_prefix: observability-platform
+          # The stack runs 23 pods plus Envoy Gateway. On 4 vCPUs they starve:
+          # liveness probes fail, components restart mid-test, and reads return 500.
+          resource_class: xlarge
+          requires:
+            - build-chart
+          filters:
+            branches:
+              ignore:
+                - main
