@@ -4,12 +4,20 @@
 workflows:
   build:
     jobs:
+      # Hold the e2e job until someone clicks "e2e-approval" in the CircleCI
+      # workflow. It runs a 10-minute xlarge machine job.
+      - e2e-approval:
+          type: approval
+          filters:
+            branches:
+              ignore:
+                - main
       # End-to-end test on kind with app-test-suite: tests/ats installs the
       # platform with hack/local/install.sh, then checks workloads ready,
       # Grafana up, one write/read round trip per signal through the external
       # API.
       - architect/run-tests-with-ats:
-          name: execute-chart-tests
+          name: e2e-ats
           context: architect
           app-test-suite_container_tag: "1.1.0"
           create_kind_cluster: true
@@ -20,6 +28,7 @@ workflows:
           resource_class: xlarge
           requires:
             - build-chart
+            - e2e-approval
           filters:
             branches:
               ignore:
