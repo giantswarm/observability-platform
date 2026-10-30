@@ -4,7 +4,7 @@ dependencies:
   version: 2.41.0
 - name: loki
   repository: https://giantswarm.github.io/giantswarm-catalog/
-  version: 0.48.0
+  version: 0.50.0
 - name: mimir
   repository: https://giantswarm.github.io/control-plane-catalog/
   version: 0.30.1
@@ -14,5 +14,5 @@ dependencies:
 - name: tempo
   repository: https://giantswarm.github.io/control-plane-catalog/
   version: 0.18.0
-digest: sha256:67001020035a55f3c5465ab3f89c8d03e1cc1ab92e8218847a71326b23385fc3
-generated: "2026-10-20T12:09:56.089880239+02:00"
+digest: sha256:d3b5f7cb5a7837084e99675d451c71a9889b883d628b4354fbb6d860b50c1a02
+generated: "2026-10-29T11:33:14.175222209Z"

@@ -298,7 +298,8 @@ group exists — empty is not a failure signal there.
 To avoid a long-lived key, give the Mimir and Loki service accounts a federated identity
 with the **Storage Blob Data Contributor** role on the account, then create it with
 `--allow-shared-key-access false` and drop the key from both configs. Mimir uses
-`azure.user_assigned_id`; Loki uses `azure.useManagedIdentity` with `userAssignedId`.
+`azure.user_assigned_id`; Loki uses `object_store.azure.user_assigned_id` with an empty
+`account_key`.
 This requires an OIDC-enabled cluster, so it is not the default here.
 
 The chart has no interface for this yet — `global.objectStorage` always wires up an
