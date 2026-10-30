@@ -300,14 +300,16 @@ loki:
           chunks: ${OBS_BUCKET_LOKI}
           ruler: ${OBS_BUCKET_LOKI}
           admin: ${OBS_BUCKET_LOKI}
-        azure:
-          # The upstream chart derives `container_name` from `bucketNames` and
-          # passes extra keys through verbatim. Loki rejects unknown config keys.
-          accountName: ${OBS_AZURE_ACCOUNT_NAME}
-          accountKey: ${AZURE_STORAGE_KEY}
-          # See the note on Mimir's `connection_string` above. Empty is ignored:
-          # the client reads it only when non-empty.
-          connectionString: ${OBS_AZURE_CONNECTION_STRING}
+        object_store:
+          type: azure
+          azure:
+            # The upstream chart derives `container_name` from `bucketNames` and
+            # passes extra keys through verbatim. Loki rejects unknown config keys.
+            account_name: ${OBS_AZURE_ACCOUNT_NAME}
+            account_key: ${AZURE_STORAGE_KEY}
+            # See the note on Mimir's `connection_string` above. Empty is ignored:
+            # the client reads it only when non-empty.
+            connection_string: ${OBS_AZURE_CONNECTION_STRING}
 
 # ---------------------------------------------------------------------------
 # What global.* cannot reach
