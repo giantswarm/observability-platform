@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Install observability-operator 0.86.0 in the local kind setup. Uninstalling the chart now deletes the default `GrafanaOrganization` instead of leaving it stuck.
 - Install the observability-operator as its own release, before this chart, with `values/observability-operator.yaml`.
 - **Breaking:** `global.objectStorage.backend` is required, with no default. `azure` is the only accepted value. Mimir and Tempo read the backend from the `OBS_BACKEND` key of the object storage ConfigMap ([giantswarm#38467](https://github.com/giantswarm/giantswarm/issues/38467)).
+- Loki reads its backend from `OBS_BACKEND`. `storage_config.object_store` and `ruler_storage` hold the Azure block, in thanos object store mode. The ruler keeps its rules in the Loki bucket under `rules/`.
 
 ### Added
 
