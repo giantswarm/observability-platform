@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The local kind cluster inherits no DNS search domain from the host. A host search domain no longer slows in-cluster lookups.
 - The `helm.sh/chart` label is valid for long chart versions: the 63-character cut trims the whole trailing run of `-`, `.` and `_`.
-- `doc/OBJECT_STORAGE.md` states that Tempo reads the same storage values, and no longer claims an empty credentials Secret.
+- `doc/OBJECT_STORAGE.md` covers Tempo. It no longer documents an empty credentials Secret.
 
 ### Changed
 
@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Require `global.objectStorage.backend`, with no default. It accepts `azure` and `s3`.
 - Mimir and Tempo read the backend from the `OBS_BACKEND` key of the object storage ConfigMap.
 - Loki reads the backend from the `OBS_BACKEND` key of the object storage ConfigMap.
-- `doc/OBJECT_STORAGE.md`, the README and `doc/EKS_CLUSTER.md` cover the `s3` backend.
+- Document the `s3` backend in the README, `doc/OBJECT_STORAGE.md` and `doc/EKS_CLUSTER.md`.
 
 ### Added
 
@@ -51,9 +51,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add Artifact Hub metadata (`artifacthub.io/license`, `artifacthub.io/links`) in the chart template ([roadmap#3940](https://github.com/giantswarm/roadmap/issues/3940)).
 - Add the `observability-platform` umbrella chart skeleton.
 - Add helm-unittest suites for the object storage guards and ConfigMap. `make helm-test` runs them.
-- Add the `s3` object storage backend for Mimir, Loki and Tempo. It supports AWS S3 and S3-compatible stores.
-- Add `global.objectStorage.s3.endpoint`, `region` and `insecure`. `endpoint` is required with backend `s3`.
-- Add `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to the credentials Secret. Without them, the components use IRSA or the instance role.
+- Add the `s3` object storage backend for Mimir, Loki and Tempo. It works with AWS S3 and S3-compatible stores.
+- Add the `global.objectStorage.s3.endpoint`, `global.objectStorage.s3.region` and `global.objectStorage.s3.insecure` values. Backend `s3` requires `endpoint`.
+- Add the optional `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` keys to the credentials Secret. Without them, Mimir, Loki and Tempo use IRSA or the instance role.
 
 ### Changed
 
