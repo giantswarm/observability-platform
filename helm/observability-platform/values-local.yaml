@@ -7,8 +7,8 @@
 #
 # Optimised for a small memory footprint, roughly 5 Gi for the whole release.
 #
-# One of the values below is not sizing: `localBlobStorage.enabled` points the blob
-# backend at Azurite. The observability-operator is a separate release, installed
+# The storage values below are not sizing: they select the `azure` backend, and
+# `localBlobStorage.enabled` points it at Azurite. The observability-operator is a separate release, installed
 # first with values/observability-operator.yaml.
 #
 # Do not use this anywhere real. It has no headroom for ingest.
@@ -151,6 +151,11 @@ tempo:
     # The chart passes `cache` through verbatim without memcached. Empty: no cache.
     cache:
       caches: []
+
+# Azure Blob as the object storage backend, served by Azurite below.
+global:
+  objectStorage:
+    backend: azure
 
 # Azurite as the blob backend. Computes `accountName` and `connectionString`. Setting
 # either by hand on top of this profile fails the render.

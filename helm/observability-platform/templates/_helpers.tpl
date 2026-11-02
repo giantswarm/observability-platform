@@ -37,6 +37,10 @@ app.kubernetes.io/instance: {{ .Release.Name | quote }}
 Object storage validation.
 */}}
 {{- define "observability-platform.objectStorage.validate" -}}
+{{- $backend := .Values.global.objectStorage.backend | default "" -}}
+{{- if ne $backend "azure" -}}
+{{- fail (printf "global.objectStorage.backend is %q. Set it to \"azure\" - see doc/OBJECT_STORAGE.md." $backend) -}}
+{{- end -}}
 {{- $azure := .Values.global.objectStorage.azure -}}
 {{- if .Values.localBlobStorage.enabled -}}
 {{- if $azure.accountName -}}
