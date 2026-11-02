@@ -18,11 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgrade Loki app from 0.48.0 to 0.50.0. Loki reads object storage from `loki.loki.loki.storage.object_store`. Remove `loki.loki.loki.storage.azure`.
 - Install observability-operator 0.86.0 in the local kind setup. Uninstalling the chart now deletes the default `GrafanaOrganization` instead of leaving it stuck.
 - Install the observability-operator as its own release, before this chart, with `values/observability-operator.yaml`.
-- **Breaking:** `global.objectStorage.backend` is required, with no default. `azure` is the only accepted value. Mimir and Tempo read the backend from the `OBS_BACKEND` key of the object storage ConfigMap ([giantswarm#38467](https://github.com/giantswarm/giantswarm/issues/38467)).
-- Loki reads its backend from `OBS_BACKEND`. `storage_config.object_store` and `ruler_storage` hold the Azure block, in thanos object store mode. The ruler keeps its rules in the Loki bucket under `rules/`.
-- `global.objectStorage.backend` accepts `s3`.
-- `doc/OBJECT_STORAGE.md` covers both backends: Azure Blob, AWS S3 and S3-compatible stores, credentials, IRSA, a custom CA and subchart overrides.
-- The README lists both backends. `doc/EKS_CLUSTER.md` uses the `s3` backend.
+- Require `global.objectStorage.backend`, with no default. It accepts `azure` and `s3`.
+- Mimir and Tempo read the backend from the `OBS_BACKEND` key of the object storage ConfigMap.
+- Loki reads the backend from the `OBS_BACKEND` key of the object storage ConfigMap.
+- `doc/OBJECT_STORAGE.md`, the README and `doc/EKS_CLUSTER.md` cover the `s3` backend.
 
 ### Added
 
@@ -52,9 +51,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add Artifact Hub metadata (`artifacthub.io/license`, `artifacthub.io/links`) in the chart template ([roadmap#3940](https://github.com/giantswarm/roadmap/issues/3940)).
 - Add the `observability-platform` umbrella chart skeleton.
 - Add helm-unittest suites for the object storage guards and ConfigMap. `make helm-test` runs them.
-- Add the `s3` object storage backend for Mimir, Loki and Tempo, with `global.objectStorage.s3.endpoint`, `region` and `insecure`. The credentials Secret holds `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. Without them, the components fall back to IRSA or the instance role.
-- Add the `OBS_S3_ENDPOINT`, `OBS_S3_REGION` and `OBS_S3_INSECURE` keys to the object storage ConfigMap.
-- Add render guards for the `s3` values. They reject a missing `endpoint`, and `localBlobStorage.enabled` with backend `s3`.
+- Add the `s3` object storage backend for Mimir, Loki and Tempo. It supports AWS S3 and S3-compatible stores.
+- Add `global.objectStorage.s3.endpoint`, `region` and `insecure`. `endpoint` is required with backend `s3`.
+- Add `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to the credentials Secret. Without them, the components use IRSA or the instance role.
 
 ### Changed
 
