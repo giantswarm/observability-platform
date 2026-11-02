@@ -20,7 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Require `global.objectStorage.backend`, with no default. `azure` is the only accepted value.
 - Mimir and Tempo read the backend from the `OBS_BACKEND` key of the object storage ConfigMap.
 - Loki reads the backend from the `OBS_BACKEND` key of the object storage ConfigMap.
-- The Loki ruler stores its rules in the Loki bucket, under the `rules/` prefix.
 
 ### Added
 
