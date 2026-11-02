@@ -15,13 +15,13 @@
           "properties": {
             "backend": {
               "type": "string",
-              "enum": ["azure"],
+              "enum": ["azure", "s3"],
               "description": "Object storage backend for Mimir, Loki and Tempo. Required when Mimir, Loki or Tempo is enabled. No default. The objectStorage.validate helper fails the render while it is unset."
             },
             "existingSecret": {
               "type": "string",
               "const": "observability-platform-object-storage",
-              "description": "Fixed name. The Mimir, Loki and Tempo values reference this Secret from static values. Create the credentials Secret with this name."
+              "description": "Fixed name. The Mimir, Loki and Tempo values reference this Secret from static values. Create the credentials Secret with this name. It holds `AZURE_STORAGE_KEY` for backend `azure`, or `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` for backend `s3`."
             },
             "azure": {
               "type": "object",
@@ -32,6 +32,18 @@
                   "type": "string",
                   "description": "Full Azure Blob connection string, overriding the endpoint derived from accountName. It embeds the account key and travels in a ConfigMap rather than the credentials Secret, so it is for emulators and development endpoints, not a real storage account. Set localBlobStorage.enabled instead to have it computed for a local Azurite."
                 }
+              }
+            },
+            "s3": {
+              "type": "object",
+              "properties": {
+                "endpoint": {
+                  "type": "string",
+                  "pattern": "^([^/:]+(:[0-9]+)?)?$",
+                  "description": "Store endpoint, host[:port], no scheme. Required with backend s3. The objectStorage.validate helper fails the render while it is empty."
+                },
+                "region": { "type": "string" },
+                "insecure": { "type": "boolean" }
               }
             },
             "buckets": {

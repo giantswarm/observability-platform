@@ -1,5 +1,5 @@
-# Full-map assertions: the whole OBS_* ConfigMap per profile. An exact map also proves
-# the ConfigMap holds no credentials.
+# Full-map assertions: the whole OBS_* ConfigMap per backend, S3 store and local
+# profile. An exact map also proves the ConfigMap holds no credentials.
 suite: object storage matrix
 templates:
   - templates/objectstorage.yaml
@@ -8,7 +8,7 @@ release:
   namespace: monitoring
 tests:
 
-  - it: sets all 10 OBS_* keys with backend azure
+  - it: sets all 13 OBS_* keys with backend azure
     values:
       - values/azure.yaml
     asserts:
@@ -32,8 +32,11 @@ tests:
             OBS_BUCKET_LOKI: loki
             OBS_BUCKET_TEMPO: tempo
             OBS_AZURE_ENDPOINT_SUFFIX: blob.core.windows.net
+            OBS_S3_ENDPOINT: ""
+            OBS_S3_REGION: ""
+            OBS_S3_INSECURE: "false"
 
-  - it: sets all 10 OBS_* keys with values-local.yaml
+  - it: sets all 13 OBS_* keys with values-local.yaml
     values:
       - ../values-local.yaml
     asserts:
@@ -50,13 +53,82 @@ tests:
             OBS_BUCKET_LOKI: loki
             OBS_BUCKET_TEMPO: tempo
             OBS_AZURE_ENDPOINT_SUFFIX: azurite.monitoring.svc.cluster.local:10000
+            OBS_S3_ENDPOINT: ""
+            OBS_S3_REGION: ""
+            OBS_S3_INSECURE: "false"
       - matchRegex:
           path: data.OBS_AZURE_CONNECTION_STRING
           pattern: ^DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=[A-Za-z0-9+/]+=*;BlobEndpoint=http://azurite\.monitoring\.svc\.cluster\.local:10000/devstoreaccount1;$
 
+  - it: sets all 13 OBS_* keys with backend s3 on AWS S3
+    values:
+      - values/s3-aws.yaml
+    asserts:
+      - equal:
+          path: data
+          value:
+            OBS_TENANT: default
+            OBS_BACKEND: s3
+            OBS_AZURE_ACCOUNT_NAME: ""
+            OBS_AZURE_CONNECTION_STRING: ""
+            OBS_BUCKET_MIMIR_BLOCKS: mimir-blocks
+            OBS_BUCKET_MIMIR_ALERTMANAGER: mimir-alertmanager
+            OBS_BUCKET_MIMIR_RULER: mimir-ruler
+            OBS_BUCKET_LOKI: loki
+            OBS_BUCKET_TEMPO: tempo
+            OBS_AZURE_ENDPOINT_SUFFIX: blob.core.windows.net
+            OBS_S3_ENDPOINT: s3.eu-west-1.amazonaws.com
+            OBS_S3_REGION: eu-west-1
+            OBS_S3_INSECURE: "false"
+
+  - it: sets all 13 OBS_* keys with backend s3 on an S3-compatible store
+    values:
+      - values/s3-compatible.yaml
+    asserts:
+      - equal:
+          path: data
+          value:
+            OBS_TENANT: default
+            OBS_BACKEND: s3
+            OBS_AZURE_ACCOUNT_NAME: ""
+            OBS_AZURE_CONNECTION_STRING: ""
+            OBS_BUCKET_MIMIR_BLOCKS: mimir-blocks
+            OBS_BUCKET_MIMIR_ALERTMANAGER: mimir-alertmanager
+            OBS_BUCKET_MIMIR_RULER: mimir-ruler
+            OBS_BUCKET_LOKI: loki
+            OBS_BUCKET_TEMPO: tempo
+            OBS_AZURE_ENDPOINT_SUFFIX: blob.core.windows.net
+            OBS_S3_ENDPOINT: s3.example.internal:9000
+            OBS_S3_REGION: ""
+            OBS_S3_INSECURE: "false"
+
+  - it: leaves the Azure keys empty with backend s3
+    values:
+      - values/s3-aws.yaml
+    set:
+      global.objectStorage.azure.accountName: obsplatform
+      global.objectStorage.azure.connectionString: DefaultEndpointsProtocol=https
+    asserts:
+      - equal:
+          path: data.OBS_AZURE_ACCOUNT_NAME
+          value: ""
+      - equal:
+          path: data.OBS_AZURE_CONNECTION_STRING
+          value: ""
+
+  - it: sets OBS_S3_INSECURE to true when s3.insecure is true
+    values:
+      - values/s3-compatible.yaml
+    set:
+      global.objectStorage.s3.insecure: true
+    asserts:
+      - equal:
+          path: data.OBS_S3_INSECURE
+          value: "true"
+
   - it: passes overridden bucket names
     values:
-      - values/azure.yaml
+      - values/s3-aws.yaml
     set:
       global.objectStorage.buckets.mimirBlocks: acme-mimir-blocks
       global.objectStorage.buckets.mimirAlertmanager: acme-mimir-alertmanager

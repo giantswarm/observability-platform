@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The local kind cluster inherits no DNS search domain from the host. A host search domain no longer slows in-cluster lookups.
 - The `helm.sh/chart` label is valid for long chart versions: the 63-character cut trims the whole trailing run of `-`, `.` and `_`.
+- `doc/OBJECT_STORAGE.md` states that Tempo reads the same storage values, and no longer claims an empty credentials Secret.
 
 ### Changed
 
@@ -19,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Install the observability-operator as its own release, before this chart, with `values/observability-operator.yaml`.
 - **Breaking:** `global.objectStorage.backend` is required, with no default. `azure` is the only accepted value. Mimir and Tempo read the backend from the `OBS_BACKEND` key of the object storage ConfigMap ([giantswarm#38467](https://github.com/giantswarm/giantswarm/issues/38467)).
 - Loki reads its backend from `OBS_BACKEND`. `storage_config.object_store` and `ruler_storage` hold the Azure block, in thanos object store mode. The ruler keeps its rules in the Loki bucket under `rules/`.
+- `global.objectStorage.backend` accepts `s3`.
+- `doc/OBJECT_STORAGE.md` covers both backends: Azure Blob, AWS S3 and S3-compatible stores, credentials, IRSA, a custom CA and subchart overrides.
+- The README lists both backends. `doc/EKS_CLUSTER.md` uses the `s3` backend.
 
 ### Added
 
@@ -48,6 +52,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add Artifact Hub metadata (`artifacthub.io/license`, `artifacthub.io/links`) in the chart template ([roadmap#3940](https://github.com/giantswarm/roadmap/issues/3940)).
 - Add the `observability-platform` umbrella chart skeleton.
 - Add helm-unittest suites for the object storage guards and ConfigMap. `make helm-test` runs them.
+- Add the `s3` object storage backend for Mimir, Loki and Tempo, with `global.objectStorage.s3.endpoint`, `region` and `insecure`. The credentials Secret holds `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. Without them, the components fall back to IRSA or the instance role.
+- Add the `OBS_S3_ENDPOINT`, `OBS_S3_REGION` and `OBS_S3_INSECURE` keys to the object storage ConfigMap.
+- Add render guards for the `s3` values. They reject a missing `endpoint`, and `localBlobStorage.enabled` with backend `s3`.
 
 ### Changed
 

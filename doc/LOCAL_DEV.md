@@ -1,11 +1,11 @@
 # Local development
 
-Azure Blob is the only object storage backend this chart supports. By default
-`helm install` needs a real storage account - see
+By default `helm install` needs a real object store - see
 [doc/OBJECT_STORAGE.md](./OBJECT_STORAGE.md).
 
 `localBlobStorage.enabled` replaces it with [Azurite](https://github.com/Azure/Azurite),
-Microsoft's Azure Storage emulator, running in the cluster.
+Microsoft's Azure Storage emulator, running in the cluster. Azurite serves the `azure`
+backend only. `values-local.yaml` sets `backend: azure`.
 
 ## Prerequisites
 
@@ -113,7 +113,7 @@ The target installs the helm-unittest plugin on first run. It runs without subch
 the suites cover only the Platform chart's own templates.
 
 - Suites live in `helm/observability-platform/tests/` and end in `_test.yaml`.
-- Shared values files live in `helm/observability-platform/tests/values/`. A case lists
-  them under `values:`.
+- Shared values files live in `helm/observability-platform/tests/values/`: `azure.yaml`,
+  `s3-aws.yaml` and `s3-compatible.yaml`. A case lists them under `values:`.
 - Every suite renders with release `obs` in namespace `monitoring`.
 - Tests never contain the Azurite dev key literal. They match the key shape.
