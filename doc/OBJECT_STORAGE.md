@@ -11,8 +11,8 @@ The chart supports two backends:
 One value, `global.objectStorage.backend`, picks the backend for Mimir, Loki and Tempo
 together. It has no default.
 
-For development you need none of this. `localBlobStorage.enabled` runs the Azurite
-emulator in the cluster for the `azure` backend. See [LOCAL_DEV.md](./LOCAL_DEV.md).
+For development you need none of this. `localObjectStorage.enabled` runs a store in the
+cluster: Garage for `s3`, Azurite for `azure`. See [LOCAL_DEV.md](./LOCAL_DEV.md).
 
 ## Shared model
 
@@ -44,18 +44,16 @@ The render fails when the values cannot reach a store. Each message names the va
 | Guard | Fails when |
 | --- | --- |
 | 1 | `backend` is unset, or not `azure` or `s3`. |
-| 2 | `backend` is `s3` and `s3.endpoint` is empty. |
+| 2 | `backend` is `s3` and `s3.endpoint` is empty. Skipped under Garage. |
 | 3 | `backend` is `azure` and `azure.accountName` and `azure.connectionString` are empty. Skipped under Azurite. |
 | 4 | `backend` is `azure`, Tempo is enabled and `azure.connectionString` is set. Skipped under Azurite. |
-| 5 | `backend` is `s3` and `localBlobStorage.enabled` is `true`. |
 
 The messages, as `helm template` prints them:
 
 1. `global.objectStorage.backend is "". Set it to "azure" or "s3" - see doc/OBJECT_STORAGE.md.`
 2. `global.objectStorage.backend is "s3" and global.objectStorage.s3.endpoint is empty. Set it to the store endpoint, host[:port] without a scheme - see doc/OBJECT_STORAGE.md.`
-3. `global.objectStorage.azure.accountName is empty. Set it to the Azure storage account holding the containers, or set global.objectStorage.azure.connectionString to reach an endpoint of your own, or set localBlobStorage.enabled to run against a local Azurite emulator - see doc/OBJECT_STORAGE.md.`
+3. `global.objectStorage.azure.accountName is empty. Set it to the Azure storage account holding the containers, or set global.objectStorage.azure.connectionString to reach an endpoint of your own, or set localObjectStorage.enabled to run against a local Azurite emulator - see doc/OBJECT_STORAGE.md.`
 4. `tempo.enabled is true and global.objectStorage.azure.connectionString is set. Tempo reads no connection string: it needs global.objectStorage.azure.accountName and the account key in the credentials Secret. Set accountName instead of connectionString, or set tempo.enabled to false - see doc/OBJECT_STORAGE.md.`
-5. `global.objectStorage.backend is "s3" and localBlobStorage.enabled is true. localBlobStorage runs Azurite, which serves backend "azure" only. Set the backend to "azure" or set localBlobStorage.enabled to false - see doc/LOCAL_DEV.md.`
 
 Each backend reads only its own values. Values of the other backend are ignored.
 
@@ -80,7 +78,7 @@ namespace. It renders while Mimir, Loki or Tempo is enabled. Every key is always
 | `OBS_S3_REGION` | empty | `s3.region` |
 | `OBS_S3_INSECURE` | `false` | `s3.insecure`, `true` or `false` |
 
-Under `localBlobStorage.enabled` the chart computes the Azurite values instead.
+Under `localObjectStorage.enabled` the chart computes the Azurite or Garage values instead.
 See [LOCAL_DEV.md](./LOCAL_DEV.md).
 
 How the values reach the components:
@@ -115,8 +113,8 @@ The operator creates one Secret in the release namespace. The chart never render
 The keys reach the pods as environment variables, so each key name must be a valid variable
 name. The pods reference the Secret with `optional: true`.
 
-Under `localBlobStorage.enabled` the chart renders its own dev Secret instead:
-`azurite-credentials`, for Tempo.
+Under `localObjectStorage.enabled` the chart renders its own dev Secret instead:
+`garage-credentials` for Garage, `azurite-credentials` for Tempo on Azurite.
 
 ### What the chart does not set
 
@@ -142,7 +140,7 @@ backends:
 | `buckets.tempo` | `tempo` | Tempo `storage.trace` | Trace blocks |
 
 Create them before install. The chart creates none, except under
-`localBlobStorage.enabled`.
+`localObjectStorage.enabled`.
 
 Loki uses one bucket for chunks, ruler and admin. They become key prefixes inside it.
 
@@ -256,6 +254,9 @@ kubectl create secret generic observability-platform-object-storage \
   --from-literal=AWS_ACCESS_KEY_ID="<access-key-id>" \
   --from-literal=AWS_SECRET_ACCESS_KEY="<secret-access-key>"
 ```
+
+Under `localObjectStorage.enabled` the chart renders the dev Secret `garage-credentials`
+with the same two key names. The local setup exercises the same path.
 
 Secret keys:
 
@@ -506,7 +507,7 @@ az storage container list --account-name "$ACCOUNT" --account-key "$KEY" \
 
 ### Step 4 — Create the Kubernetes secret
 
-Skip this step under `localBlobStorage.enabled`. See
+Skip this step under `localObjectStorage.enabled`. See
 [Credentials Secret](#credentials-secret).
 
 One secret, in the namespace you install the platform into. The name is fixed:
@@ -553,7 +554,7 @@ only `backend` and `accountName` are required.
 `accountName` has one alternative: `global.objectStorage.azure.connectionString` takes a
 full connection string — see [LOCAL_DEV.md](./LOCAL_DEV.md). Tempo does not support it.
 With `tempo.enabled`, set `accountName` and the secret from Step 4. The render fails on
-`connectionString` with Tempo enabled outside `localBlobStorage`.
+`connectionString` with Tempo enabled outside `localObjectStorage`.
 
 Install into the namespace holding the secret from Step 4:
 

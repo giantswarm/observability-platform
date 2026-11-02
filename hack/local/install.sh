@@ -5,6 +5,8 @@
 #   install.sh <chart>   <chart> is the chart directory or a packaged .tgz
 #
 # KUBE_CONTEXT selects the kubeconfig context. Unset, the current context applies.
+# LOCAL_BACKEND selects the object storage backend: `s3` (default) runs Garage, `azure`
+# runs Azurite.
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -44,7 +46,11 @@ trap 'rm -f "$KEY"' EXIT
   --repo https://giantswarm.github.io/control-plane-catalog/ --version "$OPERATOR_VERSION" \
   --namespace monitoring --create-namespace \
   --values "$ROOT/values/observability-operator.yaml" --wait --timeout 5m
+BACKEND_VALUES=()
+if [ "${LOCAL_BACKEND:-s3}" = azure ]; then
+  BACKEND_VALUES=(--values "$DIR/values-azure.yaml")
+fi
 "${HELM[@]}" upgrade --install observability-platform "$CHART" \
   --namespace monitoring --create-namespace --force-conflicts \
   --values "$ROOT/helm/observability-platform/values-local.yaml" \
-  --values "$DIR/values.yaml"
+  --values "$DIR/values.yaml" "${BACKEND_VALUES[@]}"

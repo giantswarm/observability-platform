@@ -28,15 +28,6 @@ tests:
       - failedTemplate:
           errorPattern: 'global\.objectStorage\.backend is "s3" and global\.objectStorage\.s3\.endpoint is empty'
 
-  - it: fails when backend is s3 and localBlobStorage is enabled
-    values:
-      - values/s3-compatible.yaml
-    set:
-      localBlobStorage.enabled: true
-    asserts:
-      - failedTemplate:
-          errorPattern: 'global\.objectStorage\.backend is "s3" and localBlobStorage\.enabled is true'
-
   - it: rejects an endpoint with a scheme
     values:
       - values/s3-compatible.yaml
@@ -74,10 +65,18 @@ tests:
       - failedTemplate:
           errorPattern: 'global\.objectStorage\.azure\.accountName is empty'
 
-  - it: renders with localBlobStorage enabled and backend azure
+  - it: renders with localObjectStorage enabled and backend azure
     set:
       global.objectStorage.backend: azure
-      localBlobStorage.enabled: true
+      localObjectStorage.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: renders Garage without s3.endpoint
+    set:
+      global.objectStorage.backend: s3
+      localObjectStorage.enabled: true
     asserts:
       - hasDocuments:
           count: 1

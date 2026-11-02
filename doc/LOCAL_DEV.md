@@ -3,9 +3,20 @@
 By default `helm install` needs a real object store - see
 [doc/OBJECT_STORAGE.md](./OBJECT_STORAGE.md).
 
-`localBlobStorage.enabled` replaces it with [Azurite](https://github.com/Azure/Azurite),
-Microsoft's Azure Storage emulator, running in the cluster. Azurite serves the `azure`
-backend only. `values-local.yaml` sets `backend: azure`.
+`localObjectStorage.enabled` replaces it with a store running in the cluster. The store
+follows `global.objectStorage.backend`:
+
+- `s3`: [Garage](https://garagehq.deuxfleurs.fr/), a single-node S3-compatible store.
+- `azure`: [Azurite](https://github.com/Azure/Azurite), Microsoft's Azure Storage emulator.
+
+The kind setup runs Garage by default. `values-local.yaml` sets `backend: s3` and
+`localObjectStorage.enabled: true`.
+
+The chart computes the Garage endpoint, the region `garage` and plain HTTP. It ignores
+`global.objectStorage.s3.endpoint` and `global.objectStorage.s3.region`.
+
+Garage creates a fixed, well-known dev key on every start. The `garage-credentials` Secret
+holds it. Mimir, Loki and Tempo read it from there. Do not use this key anywhere real.
 
 ## Prerequisites
 
@@ -23,21 +34,21 @@ make local-up
 `make local-up` creates a kind cluster and installs these components:
 
 - the observability-operator, as its own release, with `values/observability-operator.yaml`
-- the chart in namespace `monitoring`, with `values-local.yaml`
+- the chart in namespace `monitoring`, with `values-local.yaml`, on the `s3` backend with Garage
 - the external API, with Envoy Gateway and a JWKS server. See [EXTERNAL_API.md](./EXTERNAL_API.md).
 
 ## Verify
 
-A `post-install` hook creates the storage containers, so `make local-up` returns once it
-has finished:
+A `post-install` hook creates the five buckets, so `make local-up` returns once it has
+finished:
 
 ```bash
-kubectl get job azurite-init -n monitoring
+kubectl get job garage-init -n monitoring
 ```
 
 ```
-NAME           STATUS     COMPLETIONS   DURATION   AGE
-azurite-init   Complete   1/1           14s        30s
+NAME          STATUS     COMPLETIONS   DURATION   AGE
+garage-init   Complete   1/1           14s        30s
 ```
 
 Then check the pods:
@@ -46,9 +57,9 @@ Then check the pods:
 kubectl get pods -n monitoring
 ```
 
-Expect 23 Running. Mimir and Loki may restart once or twice while the emulator starts.
+Expect 24 Running. Mimir and Loki may restart once or twice while Garage starts.
 Tempo's ingester, querier, query-frontend and compactor restart until the hook creates the
-`tempo` container, two to four times each.
+`tempo` bucket, two to four times each.
 
 Log in at <https://grafana.localhost:8443> as `admin`. The chart generates a random password and
 stores it in the `grafana` secret:
@@ -65,7 +76,33 @@ A signer pod in the `jwt-issuer` namespace generates it, and `make local-up` cop
 curl --cacert hack/local/.keys/tls.crt https://grafana.localhost:8443/api/health
 ```
 
-Storage lives in an `emptyDir`: restarting the emulator discards the data.
+Garage keeps its data and its buckets in an `emptyDir`: restarting the `garage` pod
+discards both. The dev key survives: Garage creates it again on every start.
+
+## Run on Azurite
+
+```bash
+make local-up LOCAL_BACKEND=azure
+```
+
+`LOCAL_BACKEND` defaults to `s3`. `LOCAL_BACKEND=azure` adds `hack/local/values-azure.yaml`
+after the other values files. It sets `backend: azure`. The rest of the setup is the same.
+
+These parts differ:
+
+- Azurite runs in place of Garage.
+- The chart computes the dev account name and the connection string. Mimir and Loki read the
+  connection string. Tempo reads the dev account key from the `azurite-credentials` Secret.
+- The `azurite-init` hook creates the five containers:
+
+```bash
+kubectl get job azurite-init -n monitoring
+```
+
+Azurite keeps its data in an `emptyDir`: restarting the `azurite` pod discards the data.
+
+`make local-down` deletes the cluster for both backends. Pass `LOCAL_BACKEND=azure` again on
+the next `make local-up` to stay on Azurite.
 
 ## Send data through the external API
 
@@ -116,4 +153,4 @@ the suites cover only the Platform chart's own templates.
 - Shared values files live in `helm/observability-platform/tests/values/`: `azure.yaml`,
   `s3-aws.yaml` and `s3-compatible.yaml`. A case lists them under `values:`.
 - Every suite renders with release `obs` in namespace `monitoring`.
-- Tests never contain the Azurite dev key literal. They match the key shape.
+- Tests never contain the Azurite or Garage dev key literals. They match the key shape.

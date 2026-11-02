@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `global.objectStorage.backend` accepts `s3`.
 - `doc/OBJECT_STORAGE.md` covers both backends: Azure Blob, AWS S3 and S3-compatible stores, credentials, IRSA, a custom CA and subchart overrides.
 - The README lists both backends. `doc/EKS_CLUSTER.md` uses the `s3` backend.
+- **Breaking:** `localBlobStorage` is renamed `localObjectStorage`. `localBlobStorage.init.image` moves to `localObjectStorage.azurite.initImage`.
+- The local kind setup runs the `s3` backend with Garage by default.
+- `doc/LOCAL_DEV.md` covers both local stores.
 
 ### Added
 
@@ -54,7 +57,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add helm-unittest suites for the object storage guards and ConfigMap. `make helm-test` runs them.
 - Add the `s3` object storage backend for Mimir, Loki and Tempo, with `global.objectStorage.s3.endpoint`, `region` and `insecure`. The credentials Secret holds `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. Without them, the components fall back to IRSA or the instance role.
 - Add the `OBS_S3_ENDPOINT`, `OBS_S3_REGION` and `OBS_S3_INSECURE` keys to the object storage ConfigMap.
-- Add render guards for the `s3` values. They reject a missing `endpoint`, and `localBlobStorage.enabled` with backend `s3`.
+- Add a render guard for the `s3` values. It rejects a missing `endpoint`.
+- Run a dev Garage with `localObjectStorage.enabled` and `backend: s3`. A Job creates the five buckets.
+- Add `LOCAL_BACKEND` to `make local-up`. `LOCAL_BACKEND=azure` runs Azurite.
+- Add a helm-unittest suite for the local object stores.
+
+### Removed
+
+- Remove the render guards that reject `azure.accountName` and `azure.connectionString` under `localObjectStorage.enabled`. The chart ignores both values there.
 
 ### Changed
 
