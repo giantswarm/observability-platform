@@ -13,8 +13,8 @@ at its HTTPS listener. The routes attach only to that listener.
 All paths are served at `observability.<global.domain>`.
 
 > [!NOTE]
-> Agents can also push without a JWT, with AgentCredentials, through the backends' own routes
-> as on Giant Swarm installations. Those pushes don't go through this API, which they then
+> Agents can also push without a JWT, with AgentCredentials, through the backends' own routes.
+> Those pushes don't go through this API, which they then
 > only need for reads. See [AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md).
 
 | Backend | Write | Read |
