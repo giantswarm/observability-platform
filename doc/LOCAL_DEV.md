@@ -25,7 +25,8 @@ make local-up
 - the observability-operator, as its own release, with `values/observability-operator.yaml`
 - the chart in namespace `monitoring`, with `values-local.yaml`
 - the external API, with Envoy Gateway and a JWKS server. See [EXTERNAL_API.md](./EXTERNAL_API.md).
-- the basic-auth write routes for AgentCredentials, at `observability-basic.localhost`
+- the basic-auth write routes for AgentCredentials, at `observability-basic.localhost`, with one
+  AgentCredential per backend in namespace `agents` (`hack/local/agentcredentials.yaml`)
 
 ## Verify
 
@@ -87,19 +88,10 @@ The token expires after one hour. Run the `AUTH=` line again for a new one.
 
 ## Push with an AgentCredential
 
-Create a credential for Loki, then read its Secret:
+`make local-up` creates the AgentCredentials `metrics`, `logs` and `traces` in namespace `agents`.
+The operator writes a Secret of the same name next to each. Read the logs one:
 
 ```bash
-kubectl create namespace agents
-kubectl apply -f - <<'YAML'
-apiVersion: observability.giantswarm.io/v1alpha1
-kind: AgentCredential
-metadata:
-  name: logs
-  namespace: agents
-spec:
-  backend: logs
-YAML
 BASIC=https://observability-basic.localhost:8443
 CRED="$(kubectl get secret logs -n agents -o jsonpath='{.data.username}' | base64 -d):$(kubectl get secret logs -n agents -o jsonpath='{.data.password}' | base64 -d)"
 ```

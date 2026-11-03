@@ -8,7 +8,6 @@ The tests run in file order and build on each other.
 import base64
 import json
 import secrets
-import subprocess
 import time
 
 import pytest
@@ -132,19 +131,11 @@ def test_auth_read_no_token(api):
 # == AgentCredential basic auth
 
 
-def agent_credential(backend: str) -> tuple[str, str]:
-    """Create an AgentCredential and return the username and password of its Secret."""
-    name = f"{RUN}-{backend}"
-    manifest = (
-        "apiVersion: observability.giantswarm.io/v1alpha1\n"
-        "kind: AgentCredential\n"
-        f"metadata: {{name: {name}, namespace: {NAMESPACE}}}\n"
-        f"spec: {{backend: {backend}}}\n"
-    )
-    subprocess.run(["kubectl", "apply", "-f", "-"], input=manifest, text=True, check=True, capture_output=True)
+def agent_credential(name: str) -> tuple[str, str]:
+    """Username and password of an AgentCredential from hack/local/agentcredentials.yaml."""
 
     def read_secret():
-        data = json.loads(kubectl("get", "secret", name, "-n", NAMESPACE, "-o", "jsonpath={.data}"))
+        data = json.loads(kubectl("get", "secret", name, "-n", "agents", "-o", "jsonpath={.data}"))
         return tuple(base64.b64decode(data[key]).decode() for key in ("username", "password"))
 
     return retry(120, read_secret)
@@ -157,8 +148,6 @@ def test_basic_auth_write_log(basic, api, token):
     retry(120, lambda: basic.request("POST", "/loki/api/v1/push", headers=headers, auth=credential, json=body).raise_for_status())
     read(api, token, "/loki/api/v1/query_range", f"basic auth from {RUN}", params={"query": f'{{job="{RUN}-basic"}}'})
 
-    # Mimir needs a credential of its own, or its routes answer 500 instead of 401.
-    metrics = agent_credential("metrics")
-    retry(120, lambda: basic.request("POST", "/otlp/v1/metrics", headers=headers, auth=metrics, json={}).raise_for_status())
+    # Mimir has a credential of its own, so a foreign one gets 401, not 500.
     response = basic.request("POST", "/otlp/v1/metrics", headers=headers, auth=credential, json={})
     assert response.status_code == 401, response.text
