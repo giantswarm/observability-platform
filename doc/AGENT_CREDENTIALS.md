@@ -43,13 +43,16 @@ These routes need Envoy Gateway, as the API does, but not the API itself.
 > [!IMPORTANT]
 > The default `parentRefs` of the four routes name a Gateway called `giantswarm-default` in the
 > `envoy-gateway-system` namespace, with a listener called `https`. That is the Gateway on Giant
-> Swarm installations and in the [local setup](./LOCAL_DEV.md). On your cluster, set the
-> `parentRefs` of **every** route (`mimir.routes.gateway`, `loki.gatewayRoute`,
-> `tempo.routes.https` and `tempo.routes.grpc`) to the name and namespace of the Gateway you
-> deployed, and to the name of its HTTPS listener in `sectionName`. If they don't match, the
-> routes are never attached and agents get no answer.
+> Swarm installations and in the [local setup](./LOCAL_DEV.md). On your cluster, update the
+> **observability-platform chart's values**: set the `parentRefs` of **every** backend route,
+> for Mimir (`mimir.routes.gateway`), Loki (`loki.gatewayRoute`) and Tempo (`tempo.routes.https`
+> and `tempo.routes.grpc`), to the name and namespace of the Gateway you deployed, and to the name
+> of its HTTPS listener in `sectionName`. If they don't match, the routes are never attached and
+> agents get no answer.
 
-Setting `parentRefs` replaces the whole default list, so give every field:
+Add this to the values you install the observability-platform chart with, next to the
+`enabled: true` lines above. Setting `parentRefs` replaces the whole default list, so give every
+field:
 
 ```yaml
 mimir:
