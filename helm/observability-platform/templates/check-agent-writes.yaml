@@ -4,7 +4,7 @@ is created from this template.
 
 The routes require:
 - `global.domain` to be set: they are served at mimir., write.loki. and tempo.<global.domain>.
-- the Gateway API and Envoy Gateway resources they render.
+- the Gateway API and its implementation's resources they render.
 Any of these conditions missing will fail the render.
 */}}
 {{- $routes := list }}
@@ -34,7 +34,7 @@ Any of these conditions missing will fail the render.
 {{- end }}
 {{- range $apiVersion := $apiVersions }}
 {{- if not ($.Capabilities.APIVersions.Has $apiVersion) }}
-{{- fail (printf "%s.enabled is true but the cluster serves no %s. Install Envoy Gateway first - see doc/AGENT_CREDENTIALS.md." $first $apiVersion) }}
+{{- fail (printf "%s.enabled is true but the cluster serves no %s. Install a Gateway API implementation first - see doc/AGENT_CREDENTIALS.md." $first $apiVersion) }}
 {{- end }}
 {{- end }}
 {{- end }}
