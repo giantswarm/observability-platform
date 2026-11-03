@@ -1,10 +1,9 @@
 # Push with AgentCredentials
 
-Agents that can't fetch a JWT push with basic auth instead, the same way agents do on Giant
-Swarm installations. You create one AgentCredential per agent and per backend. The
-observability-operator generates its password and adds it to that backend's htpasswd Secret.
-The Mimir, Loki and Tempo charts each serve their push paths on a hostname of their own, through
-their own gateway route, behind a SecurityPolicy that checks their backend's Secret.
+Agents that can't fetch a JWT push with basic auth instead You create one AgentCredential per agent 
+and per backend. The observability-operator generates its password and adds it to that backend's 
+htpasswd Secret.The Mimir, Loki and Tempo charts each serve their push paths on a hostname of their 
+own, through their own gateway route, behind a SecurityPolicy that checks their backend's Secret.
 
 These pushes don't go through the [Observability Platform API](./EXTERNAL_API.md). Agents that
 also need to read use the API for that, with a JWT or its
