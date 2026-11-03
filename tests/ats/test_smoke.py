@@ -1,11 +1,14 @@
 """Smoke test: workloads ready, Grafana up, one write/read round trip per signal
-through the external API, and a 401 without a token.
+through the external API, one log pushed with an AgentCredential, and 401s without
+a token or with another backend's credential.
 
 The tests run in file order and build on each other.
 """
 
 import base64
+import json
 import secrets
+import subprocess
 import time
 
 import pytest
@@ -123,4 +126,39 @@ def test_read_trace(api, token):
 
 def test_auth_read_no_token(api):
     response = api.request("GET", "/prometheus/api/v1/query", headers={"X-Scope-OrgID": TENANT}, params={"query": "up"})
+    assert response.status_code == 401, response.text
+
+
+# == AgentCredential basic auth
+
+
+def agent_credential(backend: str) -> tuple[str, str]:
+    """Create an AgentCredential and return the username and password of its Secret."""
+    name = f"{RUN}-{backend}"
+    manifest = (
+        "apiVersion: observability.giantswarm.io/v1alpha1\n"
+        "kind: AgentCredential\n"
+        f"metadata: {{name: {name}, namespace: {NAMESPACE}}}\n"
+        f"spec: {{backend: {backend}}}\n"
+    )
+    subprocess.run(["kubectl", "apply", "-f", "-"], input=manifest, text=True, check=True, capture_output=True)
+
+    def read_secret():
+        data = json.loads(kubectl("get", "secret", name, "-n", NAMESPACE, "-o", "jsonpath={.data}"))
+        return tuple(base64.b64decode(data[key]).decode() for key in ("username", "password"))
+
+    return retry(120, read_secret)
+
+
+def test_basic_auth_write_log(basic, api, token):
+    credential = agent_credential("logs")
+    body = {"streams": [{"stream": {"job": f"{RUN}-basic"}, "values": [[now_ns(), f"basic auth from {RUN}"]]}]}
+    headers = {"X-Scope-OrgID": TENANT}
+    retry(120, lambda: basic.request("POST", "/loki/api/v1/push", headers=headers, auth=credential, json=body).raise_for_status())
+    read(api, token, "/loki/api/v1/query_range", f"basic auth from {RUN}", params={"query": f'{{job="{RUN}-basic"}}'})
+
+    # Mimir needs a credential of its own, or its routes answer 500 instead of 401.
+    metrics = agent_credential("metrics")
+    retry(120, lambda: basic.request("POST", "/otlp/v1/metrics", headers=headers, auth=metrics, json={}).raise_for_status())
+    response = basic.request("POST", "/otlp/v1/metrics", headers=headers, auth=credential, json={})
     assert response.status_code == 401, response.text

@@ -66,6 +66,11 @@ def api(platform) -> Gateway:
 
 
 @pytest.fixture(scope="session")
+def basic(platform) -> Gateway:
+    return Gateway("observability-basic.localhost")
+
+
+@pytest.fixture(scope="session")
 def token(platform) -> str:
     return kubectl("exec", "-n", "jwt-issuer", "deploy/jwks", "-c", "signer", "--", "/scripts/jwt.sh", "token").strip()
 

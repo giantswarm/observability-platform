@@ -12,7 +12,7 @@ ROOT="$(cd "$DIR/../.." && pwd)"
 CHART=$1
 # observability-operator release installed before the chart. Keep in step with the
 # version the platform is tested against.
-OPERATOR_VERSION=0.86.0
+OPERATOR_VERSION=0.88.0
 KUBECTL=(kubectl ${KUBE_CONTEXT:+--context "$KUBE_CONTEXT"})
 HELM=(helm ${KUBE_CONTEXT:+--kube-context "$KUBE_CONTEXT"})
 

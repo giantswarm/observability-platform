@@ -5,12 +5,13 @@
 #
 #   tls.sh [hostname...]   writes a self-signed certificate for the hostnames, once
 #
-# The hostnames default to grafana.localhost and observability.localhost. The certificate
+# The hostnames default to grafana.localhost, observability.localhost and
+# observability-basic.localhost. The certificate
 # also covers 127.0.0.1, which the app-test-suite tests connect to.
 set -euo pipefail
 
 DIR=/keys
-[ $# -gt 0 ] || set -- grafana.localhost observability.localhost
+[ $# -gt 0 ] || set -- grafana.localhost observability.localhost observability-basic.localhost
 
 mkdir -p "$DIR"
 if [ ! -f "$DIR/tls.crt" ]; then

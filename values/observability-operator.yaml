@@ -12,7 +12,8 @@
 # The values below must agree with the Platform chart's: `tracing.enabled` with
 # `tempo.enabled`, `operator.controllers.alertmanager.enabled` with `mimir.enabled`
 # and `mimir.mimir.alertmanager.enabled`, `defaultTenant` with `global.tenant`, and
-# the URLs with the `monitoring` namespace. Nothing checks this across the two releases.
+# the URLs and the gateway namespaces with the `monitoring` namespace. Nothing checks
+# this across the two releases.
 #
 # Beware that some features won't work outside of a Giant Swarm management cluster.
 # ---------------------------------------------------------------------------
@@ -29,22 +30,35 @@ operator:
   controllers:
     # The cluster controller generates the observability-agents config for each Giantswarm-created cluster
     # This feature is only available for GiantSwarm management clusters.
+    # Keep it off explicitly: the operator turns it off by itself only while the
+    # AgentCredential controller is off.
     cluster:
       enabled: false
     # Loads the Alertmanager config Secrets into Mimir Alertmanager. See doc/ALERTING.md.
     # Must match the Platform chart's `mimir.enabled` and `mimir.mimir.alertmanager.enabled`.
     alertmanager:
       enabled: true
-    # Agent credentials feed Giant Swarm gateway Secrets; the external API authenticates
-    # writes with JWTs instead, so nothing here would read them.
+    # Turns AgentCredentials into the htpasswd Secrets that the basic-auth write routes
+    # of Mimir, Loki and Tempo check. See doc/EXTERNAL_API.md.
     agentCredential:
-      enabled: false
+      enabled: true
     logExport:
       enabled: false
+# The AgentCredential controller writes each backend's htpasswd Secret into its gateway
+# namespace. The Platform chart's write routes read them from the `monitoring` namespace,
+# under the default Secret names.
+monitoring:
+  gateway:
+    namespace: monitoring
+logging:
+  gateway:
+    namespace: monitoring
 # -- Provision Tempo datasources and trace links. Must match the Platform chart's
 # `tempo.enabled`.
 tracing:
   enabled: true
+  gateway:
+    namespace: monitoring
 # -- Tenant the operator assigns when a resource carries no tenant label.
 # Must match the Platform chart's `global.tenant`.
 defaultTenant: default

@@ -25,6 +25,7 @@ make local-up
 - the observability-operator, as its own release, with `values/observability-operator.yaml`
 - the chart in namespace `monitoring`, with `values-local.yaml`
 - the external API, with Envoy Gateway and a JWKS server. See [EXTERNAL_API.md](./EXTERNAL_API.md).
+- the basic-auth write routes for AgentCredentials, at `observability-basic.localhost`
 
 ## Verify
 
@@ -83,6 +84,40 @@ AUTH=(--cacert hack/local/.keys/tls.crt -H "Authorization: Bearer $(make -s loca
 The requests in [EXTERNAL_API.md](./EXTERNAL_API.md#send-data) then run as written.
 
 The token expires after one hour. Run the `AUTH=` line again for a new one.
+
+## Push with an AgentCredential
+
+Create a credential for Loki, then read its Secret:
+
+```bash
+kubectl create namespace agents
+kubectl apply -f - <<'YAML'
+apiVersion: observability.giantswarm.io/v1alpha1
+kind: AgentCredential
+metadata:
+  name: logs
+  namespace: agents
+spec:
+  backend: logs
+YAML
+BASIC=https://observability-basic.localhost:8443
+CRED="$(kubectl get secret logs -n agents -o jsonpath='{.data.username}' | base64 -d):$(kubectl get secret logs -n agents -o jsonpath='{.data.password}' | base64 -d)"
+```
+
+Push a log line with it:
+
+```bash
+curl -sS -o /dev/null -w '%{http_code}\n' --cacert hack/local/.keys/tls.crt -u "$CRED" \
+  -H "X-Scope-OrgID: default" -H "Content-Type: application/json" "$BASIC/loki/api/v1/push" \
+  -d '{"streams":[{"stream":{"job":"basic-auth-test"},"values":[["'"$(date +%s)"'000000000","hello"]]}]}'
+```
+
+```
+204
+```
+
+The same credential gets a `401` on `$BASIC/otlp/v1/metrics`, which belongs to Mimir. See
+[EXTERNAL_API.md](./EXTERNAL_API.md#push-with-agentcredentials) for the other backends.
 
 ## Test
 

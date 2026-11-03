@@ -95,6 +95,77 @@ tempo:
       enabled: false
   vulture:
     enabled: false
+  # Names the routes `tempo-https` and `tempo-grpc`, whatever the release name. The
+  # filter reference in `routes.https.filters` names it literally.
+  fullnameOverride: tempo
+  # Basic-auth writes for traces: OTLP/HTTP and OTLP/gRPC. See "Basic-auth writes" below.
+  routes:
+    https:
+      enabled: false
+      hostnames:
+        - "observability-basic.{{ .Values.global.domain }}"
+      parentRefs:
+        - name: giantswarm-default
+          namespace: envoy-gateway-system
+          sectionName: https
+      additionalRules:
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /v1/traces
+              headers:
+                - name: X-Scope-OrgID
+                  type: RegularExpression
+                  value: "^.+$"
+          backendRefs:
+            - name: tempo-distributor
+              port: 4318
+      # Requests without `X-Scope-OrgID` fall through to this rule and get a 401.
+      matches:
+        - path:
+            type: PathPrefix
+            value: /v1/traces
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: tempo-https
+      httpRouteFilter:
+        enabled: true
+        directResponse:
+          contentType: text/plain
+          statusCode: 401
+          body:
+            type: Inline
+            inline: "Missing X-Scope-OrgID header"
+      securityPolicy:
+        enabled: true
+        basicAuth:
+          users:
+            name: tempo-gateway-httproute-auth
+    grpc:
+      enabled: false
+      hostnames:
+        - "observability-basic.{{ .Values.global.domain }}"
+      parentRefs:
+        - name: giantswarm-default
+          namespace: envoy-gateway-system
+          sectionName: https
+      # gRPC has no fallback rule: a call without `X-Scope-OrgID` matches no route.
+      matches:
+        - method:
+            type: Exact
+            service: opentelemetry.proto.collector.trace.v1.TraceService
+          headers:
+            - name: X-Scope-OrgID
+              type: RegularExpression
+              value: "^.+$"
+      securityPolicy:
+        enabled: true
+        basicAuth:
+          users:
+            name: tempo-gateway-httproute-auth
 observabilityPlatformApi:
   enabled: false
 # Use a local Azurite for data storage.
@@ -157,6 +228,9 @@ observability-platform-api:
   # Gateway. If your HTTPS listener has another name, override these
   # `parentRefs`. See doc/EXTERNAL_API.md.
   basicAuth:
+    # Optional basic-auth reads share the hostname of the basic-auth writes. Off by
+    # default: they need an htpasswd Secret you create. See doc/EXTERNAL_API.md.
+    hostname: "observability-basic.{{ .Values.global.domain }}"
     parentRefs:
       - name: giantswarm-default
         namespace: envoy-gateway-system
@@ -187,6 +261,28 @@ observability-platform-api:
       - name: giantswarm-default
         namespace: envoy-gateway-system
         sectionName: https
+
+# ---------------------------------------------------------------------------
+# Basic-auth writes: agents push with AgentCredentials.
+#
+# The Mimir, Loki and Tempo charts each render an HTTPRoute, plus a GRPCRoute for
+# Tempo, on `observability-basic.<domain>`. They carry the write paths only. Each
+# backend's SecurityPolicy checks the htpasswd Secret that the observability-operator
+# aggregates from that backend's AgentCredentials, so a credential pushes to one
+# backend only. You create the AgentCredentials. See doc/EXTERNAL_API.md.
+#
+# Off by default. Turn on all four together:
+#
+#   mimir.routes.gateway.enabled
+#   loki.gatewayRoute.enabled
+#   tempo.routes.https.enabled
+#   tempo.routes.grpc.enabled
+#
+# The operator release must run its AgentCredential controller and write its
+# Secrets into this release's namespace, as values/observability-operator.yaml does.
+# Prerequisites are the same as the API's: Envoy Gateway and a Gateway whose HTTPS
+# listener covers the hostname. The Secret names are the operator's defaults.
+# ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
 # Object storage delivery.
@@ -220,6 +316,76 @@ mimir:
       - secretRef:
           name: observability-platform-object-storage
           optional: true
+  # Names the route `mimir-gateway`, whatever the release name. The filter reference
+  # in `routes.gateway.filters` names it literally. Also names the distributor HPA.
+  fullnameOverride: mimir
+  # Basic-auth writes for metrics: remote-write and OTLP. See "Basic-auth writes" below.
+  routes:
+    gateway:
+      enabled: false
+      hostnames:
+        - "observability-basic.{{ .Values.global.domain }}"
+      parentRefs:
+        - name: giantswarm-default
+          namespace: envoy-gateway-system
+          sectionName: https
+      additionalRules:
+        # Same path as on the JWT hostname. The Mimir gateway serves it at /api/v1/push.
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /prometheus/api/v1/push
+              headers:
+                - name: X-Scope-OrgID
+                  type: RegularExpression
+                  value: "^.+$"
+          filters:
+            - type: URLRewrite
+              urlRewrite:
+                path:
+                  type: ReplacePrefixMatch
+                  replacePrefixMatch: /api/v1/push
+          backendRefs:
+            - name: mimir-gateway
+              port: 80
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /otlp/v1/metrics
+              headers:
+                - name: X-Scope-OrgID
+                  type: RegularExpression
+                  value: "^.+$"
+          backendRefs:
+            - name: mimir-gateway
+              port: 80
+      # Requests without `X-Scope-OrgID` fall through to this rule and get a 401.
+      matches:
+        - path:
+            type: PathPrefix
+            value: /prometheus/api/v1/push
+        - path:
+            type: PathPrefix
+            value: /otlp/v1/metrics
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: mimir-gateway
+      httpRouteFilter:
+        enabled: true
+        directResponse:
+          contentType: text/plain
+          statusCode: 401
+          body:
+            type: Inline
+            inline: "Missing X-Scope-OrgID header"
+      securityPolicy:
+        enabled: true
+        basicAuth:
+          users:
+            name: mimir-gateway-httproute-auth
   mimir:
     # Pin the service name - see "Deterministic names" under grafana above.
     fullnameOverride: mimir
@@ -268,6 +434,64 @@ loki:
       - secretRef:
           name: observability-platform-object-storage
           optional: true
+  # Names the route `loki-gateway`, whatever the release name. The filter reference
+  # in `gatewayRoute.filters` names it literally.
+  fullnameOverride: loki
+  # Basic-auth writes for logs: native push and OTLP. See "Basic-auth writes" below.
+  gatewayRoute:
+    enabled: false
+    hostnames:
+      - "observability-basic.{{ .Values.global.domain }}"
+    parentRefs:
+      - name: giantswarm-default
+        namespace: envoy-gateway-system
+        sectionName: https
+    additionalRules:
+      - matches:
+          - path:
+              type: PathPrefix
+              value: /loki/api/v1/push
+            headers:
+              - name: X-Scope-OrgID
+                type: RegularExpression
+                value: "^.+$"
+          - path:
+              type: PathPrefix
+              value: /otlp/v1/logs
+            headers:
+              - name: X-Scope-OrgID
+                type: RegularExpression
+                value: "^.+$"
+        backendRefs:
+          - name: loki-gateway
+            port: 80
+    # Requests without `X-Scope-OrgID` fall through to this rule and get a 401.
+    matches:
+      - path:
+          type: PathPrefix
+          value: /loki/api/v1/push
+      - path:
+          type: PathPrefix
+          value: /otlp/v1/logs
+    filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: loki-gateway
+    httpRouteFilter:
+      enabled: true
+      directResponse:
+        contentType: text/plain
+        statusCode: 401
+        body:
+          type: Inline
+          inline: "Missing X-Scope-OrgID header"
+    securityPolicy:
+      enabled: true
+      basicAuth:
+        users:
+          name: loki-gateway-httproute-auth
   loki:
     # Pin the service name - see "Deterministic names" under grafana above.
     fullnameOverride: loki
