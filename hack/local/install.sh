@@ -40,10 +40,15 @@ trap 'rm -f "$KEY"' EXIT
   --dry-run=client -o yaml | "${KUBECTL[@]}" apply -f -
 "${KUBECTL[@]}" apply -k "$DIR/envoy-gateway/kind"
 
-"${HELM[@]}" upgrade --install observability-operator observability-operator \
-  --repo https://giantswarm.github.io/control-plane-catalog/ --version "$OPERATOR_VERSION" \
-  --namespace monitoring --create-namespace \
-  --values "$ROOT/values/observability-operator.yaml" --wait --timeout 5m
+# The catalog is served by GitHub Pages, which answers 503 now and then. Retry the install.
+for attempt in 1 2 3; do
+  "${HELM[@]}" upgrade --install observability-operator observability-operator \
+    --repo https://giantswarm.github.io/control-plane-catalog/ --version "$OPERATOR_VERSION" \
+    --namespace monitoring --create-namespace \
+    --values "$ROOT/values/observability-operator.yaml" --wait --timeout 5m && break
+  [ "$attempt" -lt 3 ] || exit 1
+  sleep 10
+done
 # One AgentCredential per backend, for the agent write routes.
 "${KUBECTL[@]}" apply -f "$DIR/agentcredentials.yaml"
 "${HELM[@]}" upgrade --install observability-platform "$CHART" \

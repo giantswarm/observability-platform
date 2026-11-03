@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add agent write routes for Mimir, Loki and Tempo, off by default: agents push with AgentCredentials you create, on the same hostnames and paths as on Giant Swarm installations. See `doc/AGENT_CREDENTIALS.md`.
 - Create one AgentCredential per backend in the local kind setup, in namespace `agents`.
+- The local kind setup retries the observability-operator install when the catalog is briefly unavailable.
 - Add the app-test-suite smoke test in CI: workloads ready, Grafana up, and one write/read round trip per signal.
 - Enable Mimir Alertmanager.
 - Load Alertmanager config Secrets into Mimir Alertmanager through the observability-operator. See `doc/ALERTING.md`.
