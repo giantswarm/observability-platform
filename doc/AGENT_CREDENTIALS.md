@@ -36,11 +36,68 @@ tempo:
       enabled: true
 ```
 
-The routes attach to the `https` listener of the Gateway `giantswarm-default` in
-`envoy-gateway-system`, like the API's routes. That listener's hostname must cover the three
-hostnames, for example with `*.<global.domain>`. To use another Gateway, set the `parentRefs` under
-each of the four keys. See [Point the routes at your Gateway](./EXTERNAL_API.md#point-the-routes-at-your-gateway).
 These routes need Envoy Gateway, as the API does, but not the API itself.
+
+## Point the routes at your Gateway
+
+> [!IMPORTANT]
+> The default `parentRefs` of the four routes name a Gateway called `giantswarm-default` in the
+> `envoy-gateway-system` namespace, with a listener called `https`. That is the Gateway on Giant
+> Swarm installations and in the [local setup](./LOCAL_DEV.md). On your cluster, set the
+> `parentRefs` of **every** route (`mimir.routes.gateway`, `loki.gatewayRoute`,
+> `tempo.routes.https` and `tempo.routes.grpc`) to the name and namespace of the Gateway you
+> deployed, and to the name of its HTTPS listener in `sectionName`. If they don't match, the
+> routes are never attached and agents get no answer.
+
+Setting `parentRefs` replaces the whole default list, so give every field:
+
+```yaml
+mimir:
+  routes:
+    gateway:
+      parentRefs:
+        - name: my-gateway             # your Gateway's name
+          namespace: my-gateway-ns     # your Gateway's namespace
+          sectionName: https           # your HTTPS listener's name
+loki:
+  gatewayRoute:
+    parentRefs:
+      - name: my-gateway
+        namespace: my-gateway-ns
+        sectionName: https
+tempo:
+  routes:
+    https:
+      parentRefs:
+        - name: my-gateway
+          namespace: my-gateway-ns
+          sectionName: https
+    grpc:
+      parentRefs:
+        - name: my-gateway
+          namespace: my-gateway-ns
+          sectionName: https
+```
+
+The listener's hostname must cover `mimir.<global.domain>`, `write.loki.<global.domain>` and
+`tempo.<global.domain>`, for example with `*.<global.domain>`, or it has none. It must accept
+routes from the release namespace. Keep `sectionName` on an HTTPS listener: without it, a route
+attaches to every listener of the Gateway, including a plain HTTP one, and credentials and
+telemetry travel unencrypted. The [API docs](./EXTERNAL_API.md#serve-https) show a minimal
+Gateway and how to get its certificate.
+
+Check that the routes are attached:
+
+```bash
+kubectl get httproute/mimir-gateway httproute/loki-gateway httproute/tempo-https grpcroute/tempo-grpc \
+  -n monitoring -o custom-columns='ROUTE:.metadata.name,PARENT:.status.parents[*].parentRef.name,LISTENER:.status.parents[*].parentRef.sectionName,ACCEPTED:.status.parents[*].conditions[?(@.type=="Accepted")].status'
+```
+
+Every route should show `ACCEPTED` as `True`. `NoMatchingParent` means no listener of that Gateway
+has the name in `sectionName`, and `NotAllowedByListeners` means the listener doesn't accept routes
+from this namespace.
+
+## Operator
 
 The observability-operator release must run its AgentCredential controller and write the
 htpasswd Secrets into `monitoring`. [values/observability-operator.yaml](../values/observability-operator.yaml)

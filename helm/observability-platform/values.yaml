@@ -104,6 +104,7 @@ tempo:
       enabled: false
       hostnames:
         - "tempo.{{ .Values.global.domain }}"
+      # Set to your Gateway: its name, namespace and HTTPS listener. See doc/AGENT_CREDENTIALS.md.
       parentRefs:
         - name: giantswarm-default
           namespace: envoy-gateway-system
@@ -149,6 +150,7 @@ tempo:
       enabled: false
       hostnames:
         - "tempo.{{ .Values.global.domain }}"
+      # Set to your Gateway: its name, namespace and HTTPS listener. See doc/AGENT_CREDENTIALS.md.
       parentRefs:
         - name: giantswarm-default
           namespace: envoy-gateway-system
@@ -285,6 +287,13 @@ observability-platform-api:
 # Secrets into this release's namespace, as values/observability-operator.yaml does.
 # They need Envoy Gateway and a Gateway whose HTTPS listener covers the three
 # hostnames. The Secret names are the operator's defaults.
+#
+# IMPORTANT: the default `parentRefs` of the four routes name the Gateway
+# `giantswarm-default` in `envoy-gateway-system` and its listener `https`. Unless
+# your Gateway matches, set `parentRefs` under each of the four keys above to the
+# name and namespace of your Gateway, and to the name of its HTTPS listener in
+# `sectionName`. If they don't match, the routes are never attached and agents get
+# no answer.
 # ---------------------------------------------------------------------------
 # Object storage delivery.
 #
@@ -326,6 +335,7 @@ mimir:
       enabled: false
       hostnames:
         - "mimir.{{ .Values.global.domain }}"
+      # Set to your Gateway: its name, namespace and HTTPS listener. See doc/AGENT_CREDENTIALS.md.
       parentRefs:
         - name: giantswarm-default
           namespace: envoy-gateway-system
@@ -430,6 +440,7 @@ loki:
     enabled: false
     hostnames:
       - "write.loki.{{ .Values.global.domain }}"
+    # Set to your Gateway: its name, namespace and HTTPS listener. See doc/AGENT_CREDENTIALS.md.
     parentRefs:
       - name: giantswarm-default
         namespace: envoy-gateway-system
