@@ -147,5 +147,6 @@ Not following these limitations will most likely result in a broken deployment.
 - The chart creates no Gateway and no TLS certificate. The external API and Grafana are
   exposed over HTTPS on a Gateway you provide, and you must set the name and namespace of that
   Gateway in each component's `parentRefs`. The external API also needs Envoy Gateway and an
-  OIDC issuer installed beforehand — see [doc/EXTERNAL_API.md](doc/EXTERNAL_API.md).
+  OIDC issuer installed beforehand — see [doc/EXTERNAL_API.md](doc/EXTERNAL_API.md). The agent
+  write routes need Envoy Gateway too — see [doc/AGENT_CREDENTIALS.md](doc/AGENT_CREDENTIALS.md).
 - Turning Mimir or Loki off leaves Grafana with a datasource pointing at nothing.

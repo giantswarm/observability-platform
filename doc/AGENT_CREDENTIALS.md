@@ -1,0 +1,192 @@
+# Push with AgentCredentials
+
+Agents that can't fetch a JWT push with basic auth instead, the same way agents do on Giant
+Swarm installations. You create one AgentCredential per agent and per backend. The
+observability-operator generates its password and adds it to that backend's htpasswd Secret.
+The Mimir, Loki and Tempo charts each serve their push paths on a hostname of their own, through
+their own gateway route, behind a SecurityPolicy that checks their backend's Secret.
+
+These pushes don't go through the [Observability Platform API](./EXTERNAL_API.md). Agents that
+also need to read use the API for that, with a JWT or its
+[read-only basic auth](./EXTERNAL_API.md#read-only-basic-auth).
+
+An AgentCredential can **only push, and only to its own backend**. It gets a `401` on another
+backend's hostname and on the API.
+
+| Backend | `spec.backend` | Hostname | Push paths |
+| --- | --- | --- | --- |
+| Mimir | `metrics` | `mimir.<global.domain>` | `/api/v1/push`, `/otlp/v1/metrics` |
+| Loki | `logs` | `write.loki.<global.domain>` | `/loki/api/v1/push`, `/otlp/v1/logs` |
+| Tempo | `traces` | `tempo.<global.domain>` | OTLP/gRPC on port 443, OTLP/HTTP at `/tempo/v1/traces` |
+
+## Turn it on
+
+```yaml
+mimir:
+  routes:
+    gateway:
+      enabled: true
+loki:
+  gatewayRoute:
+    enabled: true
+tempo:
+  routes:
+    https:
+      enabled: true
+    grpc:
+      enabled: true
+```
+
+The routes attach to the `https` listener of the Gateway `giantswarm-default` in
+`envoy-gateway-system`, like the API's routes. That listener's hostname must cover the three
+hostnames, for example with `*.<global.domain>`. To use another Gateway, set the `parentRefs` under
+each of the four keys. See [Point the routes at your Gateway](./EXTERNAL_API.md#point-the-routes-at-your-gateway).
+These routes need Envoy Gateway, as the API does, but not the API itself.
+
+The observability-operator release must run its AgentCredential controller and write the
+htpasswd Secrets into `monitoring`. [values/observability-operator.yaml](../values/observability-operator.yaml)
+does both.
+
+## Create a credential
+
+Create the AgentCredential in any namespace, with kubectl or GitOps:
+
+```yaml
+apiVersion: observability.giantswarm.io/v1alpha1
+kind: AgentCredential
+metadata:
+  name: alloy-metrics
+  namespace: my-team
+spec:
+  backend: metrics    # metrics, logs or traces
+```
+
+The operator creates a Secret with the same name and namespace. It holds three keys:
+`username`, `password` and `htpasswd`. The username is `<namespace>/<name>` of the
+AgentCredential, here `my-team/alloy-metrics`. Kubernetes keeps namespace and name unique, so no
+two credentials share a username. `spec.agentName` is deprecated and ignored.
+
+```bash
+kubectl get agentcredential alloy-metrics -n my-team
+kubectl get secret alloy-metrics -n my-team -o jsonpath='{.data.username}' | base64 -d; echo
+kubectl get secret alloy-metrics -n my-team -o jsonpath='{.data.password}' | base64 -d; echo
+```
+
+The gateway accepts a new credential within a few seconds.
+
+## Configure an agent
+
+Each Alloy component below reads the username and password from environment variables. Set
+them from the generated Secret, for example with `secretKeyRef`. The URLs are the ones the
+observability-operator gives agents on Giant Swarm installations.
+
+Metrics, through Prometheus remote-write:
+
+```alloy
+prometheus.remote_write "platform" {
+  endpoint {
+    url     = "https://mimir.example.com/api/v1/push"
+    headers = { "X-Scope-OrgID" = "<tenant>" }
+    basic_auth {
+      username = sys.env("METRICS_USERNAME")
+      password = sys.env("METRICS_PASSWORD")
+    }
+  }
+}
+```
+
+Logs, through the Loki push API:
+
+```alloy
+loki.write "platform" {
+  endpoint {
+    url     = "https://write.loki.example.com/loki/api/v1/push"
+    headers = { "X-Scope-OrgID" = "<tenant>" }
+    basic_auth {
+      username = sys.env("LOGS_USERNAME")
+      password = sys.env("LOGS_PASSWORD")
+    }
+  }
+}
+```
+
+Traces, through OTLP over gRPC:
+
+```alloy
+otelcol.auth.basic "traces" {
+  username = sys.env("TRACES_USERNAME")
+  password = sys.env("TRACES_PASSWORD")
+}
+
+otelcol.exporter.otlp "platform" {
+  client {
+    endpoint = "tempo.example.com:443"
+    headers  = { "X-Scope-OrgID" = "<tenant>" }
+    auth     = otelcol.auth.basic.traces.handler
+  }
+}
+```
+
+Over OTLP/HTTP, use `otelcol.exporter.otlphttp` with that backend's credential and one of these
+endpoints. The exporter appends `/v1/metrics`, `/v1/logs` or `/v1/traces`:
+
+- metrics: `https://mimir.example.com/otlp`
+- logs: `https://write.loki.example.com/otlp`
+- traces: `https://tempo.example.com/tempo`
+
+Try a credential with `curl`. A `401` means the credential is wrong or belongs to another
+backend:
+
+```bash
+curl -sS -o /dev/null -w '%{http_code}\n' -u "$USERNAME:$PASSWORD" -H "X-Scope-OrgID: <tenant>" \
+  -H "Content-Type: application/json" \
+  "https://write.loki.example.com/loki/api/v1/push" \
+  -d '{"streams":[{"stream":{"job":"agent-credential-test"},"values":[["'"$(date +%s)"'000000000","hello"]]}]}'
+```
+
+```
+204
+```
+
+Clients that put credentials in a URL must percent-encode the `/` of the username, as `%2F`.
+Alloy and Prometheus take the username in a separate field and need nothing.
+
+## Rotate and revoke
+
+- **Rotate:** delete the generated Secret. The operator creates it again with a new password, and
+  the old one stops working. Agents need the new password, so restart them if they read the
+  Secret only at startup.
+- **Revoke:** delete the AgentCredential. Its Secret goes with it, and its access ends within
+  a few seconds.
+
+## No credentials yet
+
+A backend with **no AgentCredentials** answers `500` on its push paths. The operator writes a
+backend's htpasswd Secret only once its first credential exists, and leaves it empty after the
+last one is deleted, and Envoy Gateway fails closed on a missing or empty Secret. Create an
+AgentCredential for that backend.
+
+## Tenants
+
+A credential doesn't bind a tenant. The client chooses it with `X-Scope-OrgID`, as with a JWT.
+Without the header, the HTTP paths answer `400` and Tempo rejects gRPC calls with `no org id`, as
+on Giant Swarm installations.
+
+## AgentCredentials or OAuth2
+
+Alloy can also fetch a JWT itself, through the OAuth2 client credentials flow, and push through
+the API. Use the `oauth2` block of `prometheus.remote_write` or `loki.write`, or
+`otelcol.auth.oauth2`. Choose:
+
+- **AgentCredentials** for per-agent, per-backend credentials that you create, rotate and revoke
+  through Kubernetes or GitOps, with no change in your identity provider. They can only push.
+- **OAuth2 client credentials** when you manage agents as clients in your identity provider, or
+  when an agent also needs to read.
+
+To enable the API you still need an OIDC issuer: AgentCredentials are an addition for agents,
+not a replacement for JWT.
+
+## Limitations
+
+- An AgentCredential can't be limited to a tenant, or to some of its backend's paths.
+- A client can send any `X-Scope-OrgID`.

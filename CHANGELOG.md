@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add basic-auth write routes for Mimir, Loki and Tempo at `observability-basic.<global.domain>`, off by default: agents push with AgentCredentials you create. See `doc/EXTERNAL_API.md`.
+- Add agent write routes for Mimir, Loki and Tempo, off by default: agents push with AgentCredentials you create, on the same hostnames and paths as on Giant Swarm installations. See `doc/AGENT_CREDENTIALS.md`.
 - Create one AgentCredential per backend in the local kind setup, in namespace `agents`.
 - Add the app-test-suite smoke test in CI: workloads ready, Grafana up, and one write/read round trip per signal.
 - Enable Mimir Alertmanager.

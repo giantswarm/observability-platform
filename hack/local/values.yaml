@@ -1,5 +1,5 @@
-# Chart values for the local setup. They enable the external API and the basic-auth
-# write routes. They expose Grafana through Envoy Gateway.
+# Chart values for the local setup. They enable the external API and the agent write
+# routes. They expose Grafana through Envoy Gateway.
 global:
   domain: localhost
 observabilityPlatformApi:

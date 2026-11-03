@@ -1,9 +1,9 @@
 {{/*
-Guards for the basic-auth write routes of Mimir, Loki and Tempo. No resource or
-config is created from this template.
+Guards for the agent write routes of Mimir, Loki and Tempo. No resource or config
+is created from this template.
 
 The routes require:
-- `global.domain` to be set: they are served at observability-basic.<global.domain>.
+- `global.domain` to be set: they are served at mimir., write.loki. and tempo.<global.domain>.
 - the Gateway API and Envoy Gateway resources they render.
 Any of these conditions missing will fail the render.
 */}}
@@ -25,16 +25,16 @@ Any of these conditions missing will fail the render.
 {{- $first := first $routes }}
 
 {{- if not .Values.global.domain }}
-{{- fail (printf "%s.enabled is true but global.domain is empty. The basic-auth write routes are served at observability-basic.<global.domain> - see doc/EXTERNAL_API.md." $first) }}
+{{- fail (printf "%s.enabled is true but global.domain is empty. The agent write routes are served at mimir., write.loki. and tempo.<global.domain> - see doc/AGENT_CREDENTIALS.md." $first) }}
 {{- end }}
 
-{{- $apiVersions := list "gateway.networking.k8s.io/v1/HTTPRoute" "gateway.envoyproxy.io/v1alpha1/SecurityPolicy" "gateway.envoyproxy.io/v1alpha1/HTTPRouteFilter" }}
+{{- $apiVersions := list "gateway.networking.k8s.io/v1/HTTPRoute" "gateway.envoyproxy.io/v1alpha1/SecurityPolicy" "gateway.envoyproxy.io/v1alpha1/HTTPRouteFilter" "gateway.envoyproxy.io/v1alpha1/BackendTrafficPolicy" }}
 {{- if has "tempo.routes.grpc" $routes }}
 {{- $apiVersions = append $apiVersions "gateway.networking.k8s.io/v1/GRPCRoute" }}
 {{- end }}
 {{- range $apiVersion := $apiVersions }}
 {{- if not ($.Capabilities.APIVersions.Has $apiVersion) }}
-{{- fail (printf "%s.enabled is true but the cluster serves no %s. Install Envoy Gateway first - see doc/EXTERNAL_API.md." $first $apiVersion) }}
+{{- fail (printf "%s.enabled is true but the cluster serves no %s. Install Envoy Gateway first - see doc/AGENT_CREDENTIALS.md." $first $apiVersion) }}
 {{- end }}
 {{- end }}
 {{- end }}

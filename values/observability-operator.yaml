@@ -38,8 +38,8 @@ operator:
     # Must match the Platform chart's `mimir.enabled` and `mimir.mimir.alertmanager.enabled`.
     alertmanager:
       enabled: true
-    # Turns AgentCredentials into the htpasswd Secrets that the basic-auth write routes
-    # of Mimir, Loki and Tempo check. See doc/EXTERNAL_API.md.
+    # Turns AgentCredentials into the htpasswd Secrets that the agent write routes
+    # of Mimir, Loki and Tempo check. See doc/AGENT_CREDENTIALS.md.
     agentCredential:
       enabled: true
     logExport:

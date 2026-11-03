@@ -128,7 +128,7 @@ def test_auth_read_no_token(api):
     assert response.status_code == 401, response.text
 
 
-# == AgentCredential basic auth
+# == AgentCredentials, through the backends' own routes
 
 
 def agent_credential(name: str) -> tuple[str, str]:
@@ -141,13 +141,13 @@ def agent_credential(name: str) -> tuple[str, str]:
     return retry(120, read_secret)
 
 
-def test_basic_auth_write_log(basic, api, token):
+def test_agent_credential_write_log(loki_write, mimir_write, api, token):
     credential = agent_credential("logs")
     body = {"streams": [{"stream": {"job": f"{RUN}-basic"}, "values": [[now_ns(), f"basic auth from {RUN}"]]}]}
     headers = {"X-Scope-OrgID": TENANT}
-    retry(120, lambda: basic.request("POST", "/loki/api/v1/push", headers=headers, auth=credential, json=body).raise_for_status())
+    retry(120, lambda: loki_write.request("POST", "/loki/api/v1/push", headers=headers, auth=credential, json=body).raise_for_status())
     read(api, token, "/loki/api/v1/query_range", f"basic auth from {RUN}", params={"query": f'{{job="{RUN}-basic"}}'})
 
     # Mimir has a credential of its own, so a foreign one gets 401, not 500.
-    response = basic.request("POST", "/otlp/v1/metrics", headers=headers, auth=credential, json={})
+    response = mimir_write.request("POST", "/otlp/v1/metrics", headers=headers, auth=credential, json={})
     assert response.status_code == 401, response.text

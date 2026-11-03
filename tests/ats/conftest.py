@@ -66,8 +66,13 @@ def api(platform) -> Gateway:
 
 
 @pytest.fixture(scope="session")
-def basic(platform) -> Gateway:
-    return Gateway("observability-basic.localhost")
+def loki_write(platform) -> Gateway:
+    return Gateway("write.loki.localhost")
+
+
+@pytest.fixture(scope="session")
+def mimir_write(platform) -> Gateway:
+    return Gateway("mimir.localhost")
 
 
 @pytest.fixture(scope="session")

@@ -25,8 +25,9 @@ make local-up
 - the observability-operator, as its own release, with `values/observability-operator.yaml`
 - the chart in namespace `monitoring`, with `values-local.yaml`
 - the external API, with Envoy Gateway and a JWKS server. See [EXTERNAL_API.md](./EXTERNAL_API.md).
-- the basic-auth write routes for AgentCredentials, at `observability-basic.localhost`, with one
-  AgentCredential per backend in namespace `agents` (`hack/local/agentcredentials.yaml`)
+- the agent write routes, at `mimir.localhost`, `write.loki.localhost` and `tempo.localhost`,
+  with one AgentCredential per backend in namespace `agents` (`hack/local/agentcredentials.yaml`).
+  See [AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md).
 
 ## Verify
 
@@ -92,7 +93,6 @@ The token expires after one hour. Run the `AUTH=` line again for a new one.
 The operator writes a Secret of the same name next to each. Read the logs one:
 
 ```bash
-BASIC=https://observability-basic.localhost:8443
 CRED="$(kubectl get secret logs -n agents -o jsonpath='{.data.username}' | base64 -d):$(kubectl get secret logs -n agents -o jsonpath='{.data.password}' | base64 -d)"
 ```
 
@@ -100,7 +100,7 @@ Push a log line with it:
 
 ```bash
 curl -sS -o /dev/null -w '%{http_code}\n' --cacert hack/local/.keys/tls.crt -u "$CRED" \
-  -H "X-Scope-OrgID: default" -H "Content-Type: application/json" "$BASIC/loki/api/v1/push" \
+  -H "X-Scope-OrgID: default" -H "Content-Type: application/json" https://write.loki.localhost:8443/loki/api/v1/push \
   -d '{"streams":[{"stream":{"job":"basic-auth-test"},"values":[["'"$(date +%s)"'000000000","hello"]]}]}'
 ```
 
@@ -108,8 +108,8 @@ curl -sS -o /dev/null -w '%{http_code}\n' --cacert hack/local/.keys/tls.crt -u "
 204
 ```
 
-The same credential gets a `401` on `$BASIC/otlp/v1/metrics`, which belongs to Mimir. See
-[EXTERNAL_API.md](./EXTERNAL_API.md#push-with-agentcredentials) for the other backends.
+The same credential gets a `401` on `https://mimir.localhost:8443/otlp/v1/metrics`. See
+[AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md) for the other backends.
 
 ## Test
 

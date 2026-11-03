@@ -44,7 +44,7 @@ trap 'rm -f "$KEY"' EXIT
   --repo https://giantswarm.github.io/control-plane-catalog/ --version "$OPERATOR_VERSION" \
   --namespace monitoring --create-namespace \
   --values "$ROOT/values/observability-operator.yaml" --wait --timeout 5m
-# One AgentCredential per backend, for the basic-auth write routes.
+# One AgentCredential per backend, for the agent write routes.
 "${KUBECTL[@]}" apply -f "$DIR/agentcredentials.yaml"
 "${HELM[@]}" upgrade --install observability-platform "$CHART" \
   --namespace monitoring --create-namespace --force-conflicts \
