@@ -16,14 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Run the observability-operator's AgentCredential controller, with its htpasswd Secrets in `monitoring`, through `values/observability-operator.yaml`.
 - Install observability-operator 0.88.0 in the local kind setup.
-- Rename the Mimir distributor's HorizontalPodAutoscaler to `mimir-distributor`, whatever the release name.
 - Upgrade Loki app from 0.48.0 to 0.50.0. Loki reads object storage from `loki.loki.loki.storage.object_store`. Remove `loki.loki.loki.storage.azure`.
 - Install observability-operator 0.86.0 in the local kind setup. Uninstalling the chart now deletes the default `GrafanaOrganization` instead of leaving it stuck.
 - Install the observability-operator as its own release, before this chart, with `values/observability-operator.yaml`.
 
 ### Added
 
-- Add agent write routes for Mimir, Loki and Tempo, off by default: agents push with AgentCredentials you create, on the same hostnames and paths as on Giant Swarm installations. See `doc/AGENT_CREDENTIALS.md`.
+- Add agent write routes for Mimir, Loki and Tempo.
 - Create one AgentCredential per backend in the local kind setup, in namespace `agents`.
 - The local kind setup retries the observability-operator install when the catalog is briefly unavailable.
 - Add the app-test-suite smoke test in CI: workloads ready, Grafana up, and one write/read round trip per signal.
