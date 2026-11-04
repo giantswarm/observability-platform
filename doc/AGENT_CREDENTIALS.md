@@ -53,34 +53,27 @@ These routes need Envoy Gateway, as the API does, but not the API itself.
 
 Add this to the values you install the observability-platform chart with, next to the
 `enabled: true` lines above. Setting `parentRefs` replaces the whole default list, so give every
-field:
+field. A YAML anchor (`&gateway`) lets you write the list once and reuse it (`*gateway`) for the
+other three routes. Anchors work only within one file, so keep all four keys in the same values
+file:
 
 ```yaml
 mimir:
   routes:
     gateway:
-      parentRefs:
+      parentRefs: &gateway
         - name: my-gateway             # your Gateway's name
           namespace: my-gateway-ns     # your Gateway's namespace
           sectionName: https           # your HTTPS listener's name
 loki:
   gatewayRoute:
-    parentRefs:
-      - name: my-gateway
-        namespace: my-gateway-ns
-        sectionName: https
+    parentRefs: *gateway
 tempo:
   routes:
     https:
-      parentRefs:
-        - name: my-gateway
-          namespace: my-gateway-ns
-          sectionName: https
+      parentRefs: *gateway
     grpc:
-      parentRefs:
-        - name: my-gateway
-          namespace: my-gateway-ns
-          sectionName: https
+      parentRefs: *gateway
 ```
 
 The listener's hostname must cover `mimir.<global.domain>`, `write.loki.<global.domain>` and
