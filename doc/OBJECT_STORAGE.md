@@ -364,6 +364,88 @@ tempo:
 Drop the `alertmanager` and `ruler` blocks to keep both on the shared `mimir`
 ServiceAccount. The role's trust policy must allow each ServiceAccount in the release
 namespace, for example `system:serviceaccount:monitoring:mimir`.
+See [S3 permissions](#s3-permissions).
+
+### S3 permissions
+
+The IAM user behind the static keys, or the IRSA role, needs these permissions:
+
+- `s3:ListBucket` on the five buckets.
+- `s3:GetObject`, `s3:PutObject` and `s3:DeleteObject` on the objects of the five buckets.
+- `s3:GetBucketLocation` on the five buckets when `s3.region` is empty. The client then
+  looks up the bucket region.
+
+Minimal policy, with the `acme-prod-*` names from [Buckets](#buckets):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:ListBucket", "s3:GetBucketLocation"],
+      "Resource": [
+        "arn:aws:s3:::acme-prod-mimir-blocks",
+        "arn:aws:s3:::acme-prod-mimir-alertmanager",
+        "arn:aws:s3:::acme-prod-mimir-ruler",
+        "arn:aws:s3:::acme-prod-loki",
+        "arn:aws:s3:::acme-prod-tempo"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+      "Resource": [
+        "arn:aws:s3:::acme-prod-mimir-blocks/*",
+        "arn:aws:s3:::acme-prod-mimir-alertmanager/*",
+        "arn:aws:s3:::acme-prod-mimir-ruler/*",
+        "arn:aws:s3:::acme-prod-loki/*",
+        "arn:aws:s3:::acme-prod-tempo/*"
+      ]
+    }
+  ]
+}
+```
+
+Trust policy for one IRSA role shared by all five ServiceAccounts in the `monitoring`
+namespace. Replace the account ID and the OIDC provider of your cluster:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::123456789012:oidc-provider/oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE:aud": "sts.amazonaws.com",
+          "oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE:sub": [
+            "system:serviceaccount:monitoring:mimir",
+            "system:serviceaccount:monitoring:mimir-alertmanager",
+            "system:serviceaccount:monitoring:mimir-ruler",
+            "system:serviceaccount:monitoring:loki",
+            "system:serviceaccount:monitoring:tempo"
+          ]
+        }
+      }
+    }
+  ]
+}
+```
+
+Print the OIDC provider of the cluster:
+
+```bash
+aws eks describe-cluster --name observability-platform \
+  --query 'cluster.identity.oidc.issuer' --output text
+```
+
+Drop `mimir-alertmanager` and `mimir-ruler` from the trust policy when they share the
+`mimir` ServiceAccount.
 
 ## Azure Blob Storage
 
