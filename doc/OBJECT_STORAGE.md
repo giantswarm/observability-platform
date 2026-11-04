@@ -101,8 +101,12 @@ Loki runs thanos mode on both backends: `storage_config.use_thanos_objstore` is 
 Loki reads `storage_config.object_store` for chunks and index, and `ruler_storage` for
 rules.
 
-The upstream Loki chart still renders `common.storage.object_store` and `ruler.storage`. Loki
-ignores both in thanos mode. The ruler logs a warning about `ruler.storage` at start.
+The upstream Loki chart still renders `common.storage.object_store` and `ruler.storage`:
+
+- `common.storage.object_store`: Loki copies it into `storage_config.object_store` as the
+  default. The chart's explicit `storage_config.object_store` then overrides it.
+- `ruler.storage`: Loki ignores it in thanos mode. The ruler logs a warning about it at
+  start.
 
 ### Credentials Secret
 
