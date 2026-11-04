@@ -15,9 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Enable AgentCredential support in the observability-operator.
+- Upgrade observability-operator from 0.86.0 to 0.88.0.
 - Disable the Mimir distributor and querier HorizontalPodAutoscalers. They targeted no Deployment, so nothing scaled before.
 - Upgrade Loki app from 0.48.0 to 0.50.0. Loki reads object storage from `loki.loki.loki.storage.object_store`. Remove `loki.loki.loki.storage.azure`.
-- Install observability-operator 0.88.0 in the local kind setup. Uninstalling the chart now deletes the default `GrafanaOrganization` instead of leaving it stuck.
+- Install observability-operator 0.86.0 in the local kind setup. Uninstalling the chart now deletes the default `GrafanaOrganization` instead of leaving it stuck.
 - Install the observability-operator as its own release, before this chart, with `values/observability-operator.yaml`.
 
 ### Added
