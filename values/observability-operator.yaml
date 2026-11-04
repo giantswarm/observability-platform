@@ -30,23 +30,19 @@ operator:
   controllers:
     # The cluster controller generates the observability-agents config for each Giantswarm-created cluster
     # This feature is only available for GiantSwarm management clusters.
-    # Keep it off explicitly: the operator turns it off by itself only while the
-    # AgentCredential controller is off.
+    # Keep cluster controller off explicitly.
     cluster:
       enabled: false
     # Loads the Alertmanager config Secrets into Mimir Alertmanager. See doc/ALERTING.md.
     # Must match the Platform chart's `mimir.enabled` and `mimir.mimir.alertmanager.enabled`.
     alertmanager:
       enabled: true
-    # Turns AgentCredentials into the htpasswd Secrets that the agent write routes
-    # of Mimir, Loki and Tempo check. See doc/AGENT_CREDENTIALS.md.
+    # Enable authentication for backends (Mimir, Loki and Tempo) write routes. See doc/AGENT_CREDENTIALS.md.
     agentCredential:
       enabled: true
     logExport:
       enabled: false
-# The AgentCredential controller writes each backend's htpasswd Secret into its gateway
-# namespace. The Platform chart's write routes read them from the `monitoring` namespace,
-# under the default Secret names.
+# Defines namespaces where AgentCredential secrets are written and read from.
 monitoring:
   gateway:
     namespace: monitoring

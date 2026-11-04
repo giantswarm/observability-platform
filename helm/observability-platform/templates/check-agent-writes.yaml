@@ -4,6 +4,8 @@ is created from this template.
 
 The routes require:
 - `global.domain` to be set: they are served at mimir., write.loki. and tempo.<global.domain>.
+- an observability-operator managing this release, so the release is in `monitoring`, where the
+  operator profile writes the htpasswd Secrets the routes' SecurityPolicies read.
 - the Gateway API and its implementation's resources they render.
 Any of these conditions missing will fail the render.
 */}}
@@ -23,6 +25,10 @@ Any of these conditions missing will fail the render.
 
 {{- if $routes }}
 {{- $first := first $routes }}
+
+{{- if not .Values.observabilityOperator.enabled }}
+{{- fail (printf "%s.enabled is true but observabilityOperator.enabled is false. The routes check the htpasswd Secrets that the observability-operator writes into the monitoring namespace (values/observability-operator.yaml); without them every push gets a 500 - see doc/AGENT_CREDENTIALS.md." $first) }}
+{{- end }}
 
 {{- if not .Values.global.domain }}
 {{- fail (printf "%s.enabled is true but global.domain is empty. The agent write routes are served at mimir., write.loki. and tempo.<global.domain> - see doc/AGENT_CREDENTIALS.md." $first) }}

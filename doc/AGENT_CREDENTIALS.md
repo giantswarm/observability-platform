@@ -1,16 +1,17 @@
 # Push with AgentCredentials
 
-Agents that can't fetch a JWT push with basic auth instead You create one AgentCredential per agent 
-and per backend. The observability-operator generates its password and adds it to that backend's 
-htpasswd Secret.The Mimir, Loki and Tempo charts each serve their push paths on a hostname of their 
+Agents that can't fetch a JWT push with basic auth instead. You create one AgentCredential per agent
+and per backend. The observability-operator generates its password and adds it to that backend's
+htpasswd Secret. The Mimir, Loki and Tempo charts each serve their push paths on a hostname of their
 own, through their own gateway route, behind a SecurityPolicy that checks their backend's Secret.
 
 These pushes don't go through the [Observability Platform API](./EXTERNAL_API.md). Agents that
 also need to read use the API for that, with a JWT or its
 [read-only basic auth](./EXTERNAL_API.md#read-only-basic-auth).
 
-An AgentCredential can **only push, and only to its own backend**. It gets a `401` on another
-backend's hostname and on the API.
+An AgentCredential can **only push, and only to its own backend**. It gets a `401` on the API, and
+on another backend's hostname while that backend has at least one AgentCredential. A backend with
+none answers `500` to every push: see [No credentials yet](#no-credentials-yet).
 
 | Backend | `spec.backend` | Hostname | Push paths |
 | --- | --- | --- | --- |

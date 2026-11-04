@@ -90,7 +90,8 @@ The token expires after one hour. Run the `AUTH=` line again for a new one.
 ## Push with an AgentCredential
 
 `make local-up` creates the AgentCredentials `metrics`, `logs` and `traces` in namespace `agents`.
-The operator writes a Secret of the same name next to each. Read the logs one:
+The operator writes a Secret of the same name next to each. Read the username and password of the
+`logs` credential from its Secret:
 
 ```bash
 CRED="$(kubectl get secret logs -n agents -o jsonpath='{.data.username}' | base64 -d):$(kubectl get secret logs -n agents -o jsonpath='{.data.password}' | base64 -d)"

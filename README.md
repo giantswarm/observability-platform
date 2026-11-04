@@ -54,8 +54,9 @@ this chart before the operator, which processes the deletion.
 - The release installs into the `monitoring` namespace while `observabilityOperator.enabled` is on.
 - The operator values must agree with this chart's: `tracing.enabled` with `tempo.enabled`,
   `operator.controllers.alertmanager.enabled` with `mimir.enabled` and `mimir.mimir.alertmanager.enabled`,
-  `defaultTenant` with `global.tenant`, and the Grafana and datasource URLs with the `monitoring`
-  namespace. Nothing checks this across the two releases.
+  `defaultTenant` with `global.tenant`, and the Grafana and datasource URLs and
+  `monitoring.gateway.namespace`, `logging.gateway.namespace` and `tracing.gateway.namespace` with
+  the `monitoring` namespace. Nothing checks this across the two releases.
 - The operator's admission webhooks are disabled, so mistakes in `GrafanaOrganization` resources or
   dashboard ConfigMaps show up only in the operator's logs and the resources' status.
 - Disabling Loki or Mimir leaves their datasources in Grafana, pointing at nothing.

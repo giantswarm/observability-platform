@@ -98,24 +98,25 @@ tempo:
   # Names the routes `tempo-https` and `tempo-grpc`, whatever the release name. The
   # filter reference in `routes.https.filters` names it literally.
   fullnameOverride: tempo
-  # Agent writes for traces, as on Giant Swarm installations. See "Agent writes" below.
+  # Agent writes for traces. See "Agent writes" below.
   routes:
     https:
       enabled: false
       hostnames:
         - "tempo.{{ .Values.global.domain }}"
       # Set to your Gateway: its name, namespace and HTTPS listener. See doc/AGENT_CREDENTIALS.md.
-      parentRefs:
+      # The other agent write routes reuse this list through the `gatewayRef` anchor.
+      parentRefs: &gatewayRef
         - name: giantswarm-default
           namespace: envoy-gateway-system
           sectionName: https
       # OTLP/HTTP under `/tempo`: `/tempo/v1/traces` reaches the distributor as `/v1/traces`.
       additionalRules:
         - matches:
-            - path:
+            - path: &tempoPath
                 type: PathPrefix
                 value: /tempo
-              headers:
+              headers: &scopeOrgIDHeader
                 - name: X-Scope-OrgID
                   type: RegularExpression
                   value: "^.+$"
@@ -128,11 +129,10 @@ tempo:
           backendRefs:
             - name: tempo-distributor
               port: 4318
-      # Requests without `X-Scope-OrgID` fall through to this rule and get a 400.
+      # Requests without `X-Scope-OrgID` fall through to this rule and get a 400. Same paths
+      # as above, through the anchors.
       matches:
-        - path:
-            type: PathPrefix
-            value: /tempo
+        - path: *tempoPath
       filters:
         - type: ExtensionRef
           extensionRef:
@@ -150,13 +150,8 @@ tempo:
       enabled: false
       hostnames:
         - "tempo.{{ .Values.global.domain }}"
-      # Set to your Gateway: its name, namespace and HTTPS listener. See doc/AGENT_CREDENTIALS.md.
-      parentRefs:
-        - name: giantswarm-default
-          namespace: envoy-gateway-system
-          sectionName: https
-      # OTLP/gRPC only. Giant Swarm installations also route `tempopb.*` queries here;
-      # reads go through the Observability Platform API instead.
+      parentRefs: *gatewayRef
+      # OTLP/gRPC only. Reads go through the Observability Platform API.
       matches:
         - method:
             type: RegularExpression
@@ -293,7 +288,8 @@ observability-platform-api:
 # your Gateway matches, set `parentRefs` under each of the four keys above to the
 # name and namespace of your Gateway, and to the name of its HTTPS listener in
 # `sectionName`. If they don't match, the routes are never attached and agents get
-# no answer.
+# no answer. The defaults share one list through the `gatewayRef` anchor, but an
+# override in your own values file replaces each key separately.
 # ---------------------------------------------------------------------------
 # Object storage delivery.
 #
@@ -327,48 +323,41 @@ mimir:
           name: observability-platform-object-storage
           optional: true
   # Names the route `mimir-gateway`, whatever the release name. The filter reference
-  # in `routes.gateway.filters` names it literally. Also names the distributor HPA.
+  # in `routes.gateway.filters` names it literally.
   fullnameOverride: mimir
-  # Agent writes for metrics, as on Giant Swarm installations. See "Agent writes" below.
+  # The wrapper's HPAs scale the Deployments that `fullnameOverride` above now names.
+  # Off: they would fight the Deployments' `replicas` on every upgrade.
+  hpa:
+    distributor:
+      enabled: false
+    querier:
+      enabled: false
+  # Agent writes for metrics. See "Agent writes" below.
   routes:
     gateway:
       enabled: false
       hostnames:
         - "mimir.{{ .Values.global.domain }}"
-      # Set to your Gateway: its name, namespace and HTTPS listener. See doc/AGENT_CREDENTIALS.md.
-      parentRefs:
-        - name: giantswarm-default
-          namespace: envoy-gateway-system
-          sectionName: https
-      # Push paths only. Giant Swarm installations also route rules and queries here;
-      # reads go through the Observability Platform API instead.
+      parentRefs: *gatewayRef
+      # Push paths only. Reads go through the Observability Platform API.
       additionalRules:
         - matches:
-            - path:
+            - path: &mimirPushPath
                 type: PathPrefix
                 value: /api/v1/push
-              headers:
-                - name: X-Scope-OrgID
-                  type: RegularExpression
-                  value: "^.+$"
-            - path:
+              headers: *scopeOrgIDHeader
+            - path: &mimirOTLPPath
                 type: PathPrefix
                 value: /otlp/v1/metrics
-              headers:
-                - name: X-Scope-OrgID
-                  type: RegularExpression
-                  value: "^.+$"
+              headers: *scopeOrgIDHeader
           backendRefs:
             - name: mimir-gateway
               port: 80
-      # Requests without `X-Scope-OrgID` fall through to this rule and get a 400.
+      # Requests without `X-Scope-OrgID` fall through to this rule and get a 400. Same paths
+      # as above, through the anchors.
       matches:
-        - path:
-            type: PathPrefix
-            value: /api/v1/push
-        - path:
-            type: PathPrefix
-            value: /otlp/v1/metrics
+        - path: *mimirPushPath
+        - path: *mimirOTLPPath
       filters:
         - type: ExtensionRef
           extensionRef:
@@ -435,45 +424,31 @@ loki:
   # Names the route `loki-gateway`, whatever the release name. The filter reference
   # in `gatewayRoute.filters` names it literally.
   fullnameOverride: loki
-  # Agent writes for logs, as on Giant Swarm installations. See "Agent writes" below.
+  # Agent writes for logs. See "Agent writes" below.
   gatewayRoute:
     enabled: false
     hostnames:
       - "write.loki.{{ .Values.global.domain }}"
-    # Set to your Gateway: its name, namespace and HTTPS listener. See doc/AGENT_CREDENTIALS.md.
-    parentRefs:
-      - name: giantswarm-default
-        namespace: envoy-gateway-system
-        sectionName: https
-    # Push paths only. Giant Swarm installations also route rules here; reads go through
-    # the Observability Platform API instead.
+    parentRefs: *gatewayRef
+    # Push paths only. Reads go through the Observability Platform API.
     additionalRules:
       - matches:
-          - path:
+          - path: &lokiPushPath
               type: PathPrefix
               value: /loki/api/v1/push
-            headers:
-              - name: X-Scope-OrgID
-                type: RegularExpression
-                value: "^.+$"
-          - path:
+            headers: *scopeOrgIDHeader
+          - path: &lokiOTLPPath
               type: PathPrefix
               value: /otlp/v1/logs
-            headers:
-              - name: X-Scope-OrgID
-                type: RegularExpression
-                value: "^.+$"
+            headers: *scopeOrgIDHeader
         backendRefs:
           - name: loki-gateway
             port: 80
-    # Requests without `X-Scope-OrgID` fall through to this rule and get a 400.
+    # Requests without `X-Scope-OrgID` fall through to this rule and get a 400. Same paths
+    # as above, through the anchors.
     matches:
-      - path:
-          type: PathPrefix
-          value: /loki/api/v1/push
-      - path:
-          type: PathPrefix
-          value: /otlp/v1/logs
+      - path: *lokiPushPath
+      - path: *lokiOTLPPath
     filters:
       - type: ExtensionRef
         extensionRef:
