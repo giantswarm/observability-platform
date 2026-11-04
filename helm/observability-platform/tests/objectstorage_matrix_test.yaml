@@ -1,0 +1,74 @@
+# Full-map assertions: the whole OBS_* ConfigMap per profile. An exact map also proves
+# the ConfigMap holds no credentials.
+suite: object storage matrix
+templates:
+  - templates/objectstorage.yaml
+release:
+  name: obs
+  namespace: monitoring
+tests:
+
+  - it: sets all 10 OBS_* keys with backend azure
+    values:
+      - values/azure.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: observability-platform-object-storage
+      - equal:
+          path: data
+          value:
+            OBS_TENANT: default
+            OBS_BACKEND: azure
+            OBS_AZURE_ACCOUNT_NAME: obsplatform
+            OBS_AZURE_CONNECTION_STRING: ""
+            OBS_BUCKET_MIMIR_BLOCKS: mimir-blocks
+            OBS_BUCKET_MIMIR_ALERTMANAGER: mimir-alertmanager
+            OBS_BUCKET_MIMIR_RULER: mimir-ruler
+            OBS_BUCKET_LOKI: loki
+            OBS_BUCKET_TEMPO: tempo
+            OBS_AZURE_ENDPOINT_SUFFIX: blob.core.windows.net
+
+  - it: sets all 10 OBS_* keys with values-local.yaml
+    values:
+      - ../values-local.yaml
+    asserts:
+      # The connection string carries the Azurite dev key. Match its shape, not its literal.
+      - isSubset:
+          path: data
+          content:
+            OBS_TENANT: default
+            OBS_BACKEND: azure
+            OBS_AZURE_ACCOUNT_NAME: devstoreaccount1
+            OBS_BUCKET_MIMIR_BLOCKS: mimir-blocks
+            OBS_BUCKET_MIMIR_ALERTMANAGER: mimir-alertmanager
+            OBS_BUCKET_MIMIR_RULER: mimir-ruler
+            OBS_BUCKET_LOKI: loki
+            OBS_BUCKET_TEMPO: tempo
+            OBS_AZURE_ENDPOINT_SUFFIX: azurite.monitoring.svc.cluster.local:10000
+      - matchRegex:
+          path: data.OBS_AZURE_CONNECTION_STRING
+          pattern: ^DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=[A-Za-z0-9+/]+=*;BlobEndpoint=http://azurite\.monitoring\.svc\.cluster\.local:10000/devstoreaccount1;$
+
+  - it: passes overridden bucket names
+    values:
+      - values/azure.yaml
+    set:
+      global.objectStorage.buckets.mimirBlocks: acme-mimir-blocks
+      global.objectStorage.buckets.mimirAlertmanager: acme-mimir-alertmanager
+      global.objectStorage.buckets.mimirRuler: acme-mimir-ruler
+      global.objectStorage.buckets.loki: acme-loki
+      global.objectStorage.buckets.tempo: acme-tempo
+    asserts:
+      - isSubset:
+          path: data
+          content:
+            OBS_BUCKET_MIMIR_BLOCKS: acme-mimir-blocks
+            OBS_BUCKET_MIMIR_ALERTMANAGER: acme-mimir-alertmanager
+            OBS_BUCKET_MIMIR_RULER: acme-mimir-ruler
+            OBS_BUCKET_LOKI: acme-loki
+            OBS_BUCKET_TEMPO: acme-tempo

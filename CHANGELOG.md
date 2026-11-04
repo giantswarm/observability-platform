@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgrade Loki app from 0.48.0 to 0.50.0. Loki reads object storage from `loki.loki.loki.storage.object_store`. Remove `loki.loki.loki.storage.azure`.
 - Install observability-operator 0.86.0 in the local kind setup. Uninstalling the chart now deletes the default `GrafanaOrganization` instead of leaving it stuck.
 - Install the observability-operator as its own release, before this chart, with `values/observability-operator.yaml`.
+- Require `global.objectStorage.backend`, with no default. `azure` is the only accepted value.
+- Mimir and Tempo read the backend from the `OBS_BACKEND` key of the object storage ConfigMap.
 
 ### Added
 
@@ -45,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `doc/EKS_CLUSTER.md`, walking through creating the AWS EKS cluster the platform runs on with `eksctl` — node sizing, the `gp3` default StorageClass the CSI driver needs, metrics-server, measured resource usage and teardown.
 - Add Artifact Hub metadata (`artifacthub.io/license`, `artifacthub.io/links`) in the chart template ([roadmap#3940](https://github.com/giantswarm/roadmap/issues/3940)).
 - Add the `observability-platform` umbrella chart skeleton.
+- Add helm-unittest suites for the object storage guards and ConfigMap. `make helm-test` runs them.
 
 ### Changed
 
