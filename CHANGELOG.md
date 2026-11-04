@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Install the observability-operator as its own release, before this chart, with `values/observability-operator.yaml`.
 - Require `global.objectStorage.backend`, with no default. `azure` is the only accepted value.
 - Mimir and Tempo read the backend from the `OBS_BACKEND` key of the object storage ConfigMap.
+- Loki reads the backend from the `OBS_BACKEND` key of the object storage ConfigMap.
 
 ### Added
 
