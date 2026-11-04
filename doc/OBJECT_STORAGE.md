@@ -37,6 +37,13 @@ schema rejects any other name.
 
 The schema also rejects an endpoint with a scheme, such as `https://s3.example.com`.
 
+Two more limits apply to `s3.endpoint`:
+
+- The schema rejects IPv6 literals, such as `[fd00::1]:9000`. Use a DNS name.
+- The first DNS label must not equal a Mimir or Loki bucket name. With bucket `loki`,
+  the endpoint `loki.storage.internal` fails. Mimir and Loki exit with
+  `the endpoint must not prefixed with the bucket name`.
+
 ### Render guards
 
 The render fails when the values cannot reach a store. Each message names the value to fix.
