@@ -298,7 +298,8 @@ Static keys win over IRSA. Remove both keys from the Secret to use IRSA.
 
 When no source resolves:
 
-- Tempo fails at startup.
+- Tempo falls back to anonymous requests and fails at startup. Its startup bucket check
+  lists the bucket, and the store rejects the anonymous request.
 - Mimir and Loki fall back to anonymous requests. The store rejects them, and
   the components log access-denied errors.
 
