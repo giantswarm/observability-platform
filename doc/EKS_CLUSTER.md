@@ -6,6 +6,8 @@ on AWS EKS with `eksctl`.
 
 Object storage is provisioned separately. Use the `s3` backend — see
 [OBJECT_STORAGE.md](OBJECT_STORAGE.md#aws-s3-and-s3-compatible-stores).
+The IAM policy and the IRSA trust policy are in
+[S3 permissions](OBJECT_STORAGE.md#s3-permissions).
 
 ## What you get
 

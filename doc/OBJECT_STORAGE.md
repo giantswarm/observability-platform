@@ -37,6 +37,13 @@ schema rejects any other name.
 
 The schema also rejects an endpoint with a scheme, such as `https://s3.example.com`.
 
+Two more limits apply to `s3.endpoint`:
+
+- The schema rejects IPv6 literals, such as `[fd00::1]:9000`. Use a DNS name.
+- The first DNS label must not equal a Mimir or Loki bucket name. With bucket `loki`,
+  the endpoint `loki.storage.internal` fails. Mimir and Loki exit with
+  `the endpoint must not prefixed with the bucket name`.
+
 ### Render guards
 
 The render fails when the values cannot reach a store. Each message names the value to fix.
@@ -99,8 +106,12 @@ Loki runs thanos mode on both backends: `storage_config.use_thanos_objstore` is 
 Loki reads `storage_config.object_store` for chunks and index, and `ruler_storage` for
 rules.
 
-The upstream Loki chart still renders `common.storage.object_store` and `ruler.storage`. Loki
-ignores both in thanos mode. The ruler logs a warning about `ruler.storage` at start.
+The upstream Loki chart still renders `common.storage.object_store` and `ruler.storage`:
+
+- `common.storage.object_store`: Loki copies it into `storage_config.object_store` as the
+  default. The chart's explicit `storage_config.object_store` then overrides it.
+- `ruler.storage`: Loki ignores it in thanos mode. The ruler logs a warning about it at
+  start.
 
 ### Credentials Secret
 
@@ -295,7 +306,8 @@ Static keys win over IRSA. Remove both keys from the Secret to use IRSA.
 
 When no source resolves:
 
-- Tempo fails at startup.
+- Tempo falls back to anonymous requests and fails at startup. Its startup bucket check
+  lists the bucket, and the store rejects the anonymous request.
 - Mimir and Loki fall back to anonymous requests. The store rejects them, and
   the components log access-denied errors.
 
@@ -353,6 +365,88 @@ tempo:
 Drop the `alertmanager` and `ruler` blocks to keep both on the shared `mimir`
 ServiceAccount. The role's trust policy must allow each ServiceAccount in the release
 namespace, for example `system:serviceaccount:monitoring:mimir`.
+See [S3 permissions](#s3-permissions).
+
+### S3 permissions
+
+The IAM user behind the static keys, or the IRSA role, needs these permissions:
+
+- `s3:ListBucket` on the five buckets.
+- `s3:GetObject`, `s3:PutObject` and `s3:DeleteObject` on the objects of the five buckets.
+- `s3:GetBucketLocation` on the five buckets when `s3.region` is empty. The client then
+  looks up the bucket region.
+
+Minimal policy, with the `acme-prod-*` names from [Buckets](#buckets):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:ListBucket", "s3:GetBucketLocation"],
+      "Resource": [
+        "arn:aws:s3:::acme-prod-mimir-blocks",
+        "arn:aws:s3:::acme-prod-mimir-alertmanager",
+        "arn:aws:s3:::acme-prod-mimir-ruler",
+        "arn:aws:s3:::acme-prod-loki",
+        "arn:aws:s3:::acme-prod-tempo"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+      "Resource": [
+        "arn:aws:s3:::acme-prod-mimir-blocks/*",
+        "arn:aws:s3:::acme-prod-mimir-alertmanager/*",
+        "arn:aws:s3:::acme-prod-mimir-ruler/*",
+        "arn:aws:s3:::acme-prod-loki/*",
+        "arn:aws:s3:::acme-prod-tempo/*"
+      ]
+    }
+  ]
+}
+```
+
+Trust policy for one IRSA role shared by all five ServiceAccounts in the `monitoring`
+namespace. Replace the account ID and the OIDC provider of your cluster:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::123456789012:oidc-provider/oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE:aud": "sts.amazonaws.com",
+          "oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE:sub": [
+            "system:serviceaccount:monitoring:mimir",
+            "system:serviceaccount:monitoring:mimir-alertmanager",
+            "system:serviceaccount:monitoring:mimir-ruler",
+            "system:serviceaccount:monitoring:loki",
+            "system:serviceaccount:monitoring:tempo"
+          ]
+        }
+      }
+    }
+  ]
+}
+```
+
+Print the OIDC provider of the cluster:
+
+```bash
+aws eks describe-cluster --name observability-platform \
+  --query 'cluster.identity.oidc.issuer' --output text
+```
+
+Drop `mimir-alertmanager` and `mimir-ruler` from the trust policy when they share the
+`mimir` ServiceAccount.
 
 ## Azure Blob Storage
 
