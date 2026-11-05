@@ -15,8 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Enable AgentCredential support in the observability-operator. Upgrade the observability-operator release with the new `values/observability-operator.yaml`: without it, no htpasswd Secret reaches `monitoring` and every push gets a 500.
 - Upgrade Loki app from 0.48.0 to 0.50.0. Loki reads object storage from `loki.loki.loki.storage.object_store`. Remove `loki.loki.loki.storage.azure`.
-- Install observability-operator 0.86.0 in the local kind setup. Uninstalling the chart now deletes the default `GrafanaOrganization` instead of leaving it stuck.
+- Install observability-operator 0.88.0 in the local kind setup. Uninstalling the chart now deletes the default `GrafanaOrganization` instead of leaving it stuck.
 - Install the observability-operator as its own release, before this chart, with `values/observability-operator.yaml`.
 - Require `global.objectStorage.backend`, with no default. It accepts `azure` and `s3`.
 - Mimir and Tempo read the backend from the `OBS_BACKEND` key of the object storage ConfigMap.
@@ -27,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add agent write routes for Mimir, Loki and Tempo.
+- Create one AgentCredential per backend in the local kind setup, in namespace `agents`.
 - Add the app-test-suite smoke test in CI: workloads ready, Grafana up, and one write/read round trip per signal.
 - Enable Mimir Alertmanager.
 - Load Alertmanager config Secrets into Mimir Alertmanager through the observability-operator. See `doc/ALERTING.md`.

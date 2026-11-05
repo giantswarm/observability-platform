@@ -66,6 +66,16 @@ def api(platform) -> Gateway:
 
 
 @pytest.fixture(scope="session")
+def loki_write(platform) -> Gateway:
+    return Gateway("write.loki.localhost")
+
+
+@pytest.fixture(scope="session")
+def mimir_write(platform) -> Gateway:
+    return Gateway("mimir.localhost")
+
+
+@pytest.fixture(scope="session")
 def token(platform) -> str:
     return kubectl("exec", "-n", "jwt-issuer", "deploy/jwks", "-c", "signer", "--", "/scripts/jwt.sh", "token").strip()
 
