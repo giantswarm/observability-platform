@@ -1,0 +1,5 @@
+global:
+  objectStorage:
+    backend: s3
+    s3:
+      endpoint: s3.example.internal:9000

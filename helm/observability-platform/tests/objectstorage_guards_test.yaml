@@ -11,7 +11,7 @@ tests:
       global.objectStorage.azure.accountName: obsplatform
     asserts:
       - failedTemplate:
-          errorPattern: 'global\.objectStorage\.backend is ""\. Set it to "azure"'
+          errorPattern: 'global\.objectStorage\.backend is ""\. Set it to "azure" or "s3"'
 
   - it: fails when backend is gcs
     set:
@@ -21,9 +21,48 @@ tests:
       - failedTemplate:
           errorPattern: backend
 
+  - it: fails when backend is s3 and endpoint is empty
+    set:
+      global.objectStorage.backend: s3
+    asserts:
+      - failedTemplate:
+          errorPattern: 'global\.objectStorage\.backend is "s3" and global\.objectStorage\.s3\.endpoint is empty'
+
+  - it: fails when backend is s3 and localBlobStorage is enabled
+    values:
+      - values/s3-compatible.yaml
+    set:
+      localBlobStorage.enabled: true
+    asserts:
+      - failedTemplate:
+          errorPattern: 'global\.objectStorage\.backend is "s3" and localBlobStorage\.enabled is true'
+
+  - it: rejects an endpoint with a scheme
+    values:
+      - values/s3-compatible.yaml
+    set:
+      global.objectStorage.s3.endpoint: https://s3.example.com
+    asserts:
+      - failedTemplate:
+          errorPattern: endpoint
+
   - it: renders with backend azure
     values:
       - values/azure.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: renders with backend s3 and no Azure account
+    values:
+      - values/s3-compatible.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: renders with backend s3 on AWS S3
+    values:
+      - values/s3-aws.yaml
     asserts:
       - hasDocuments:
           count: 1

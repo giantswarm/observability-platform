@@ -1,8 +1,9 @@
 # ---------------------------------------------------------------------------
 # Curated cross-cutting interface.
 #
-# Storage is Azure Blob only. The chart consumes an existing storage account, its
-# containers and its key. See doc/OBJECT_STORAGE.md.
+# Storage is Azure Blob or S3, picked by `global.objectStorage.backend`. The chart
+# consumes an existing store, its containers or buckets, and its credentials. See
+# doc/OBJECT_STORAGE.md.
 # ---------------------------------------------------------------------------
 global:
   # -- Base domain for the platform's HTTP endpoints. The API is served at
@@ -14,13 +15,15 @@ global:
   # -- Tenant that platform data is written under and read back from.
   tenant: default
   objectStorage:
-    # -- (string) Object storage backend for Mimir, Loki and Tempo: `azure`.
+    # -- (string) Object storage backend for Mimir, Loki and Tempo: `azure` or `s3`.
     # Required. No default.
     # backend:
-    # -- Name of the Secret holding the storage account key. The name is fixed:
-    # the subcharts reference it from static values. Create the Secret yourself,
-    # with this name and one key, `AZURE_STORAGE_KEY`. The key reaches the pods as
-    # an environment variable, so its name must be a valid variable name.
+    # -- Name of the Secret holding the object storage credentials. The name is
+    # fixed: the subcharts reference it from static values. Create the Secret
+    # yourself, with this name. It holds `AZURE_STORAGE_KEY` for backend `azure`,
+    # or `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` for backend `s3`. The keys
+    # reach the pods as environment variables, so each name must be a valid
+    # variable name.
     existingSecret: observability-platform-object-storage
     azure:
       # -- Storage account holding the containers below. Required, unless
@@ -31,7 +34,18 @@ global:
       # Set it if you use `localBlobStorage`
       # Leave it empty otherwise.
       connectionString: ""
-    # -- Existing containers, one per consumer.
+    # -- S3 settings. Used only with backend `s3`.
+    s3:
+      # -- Store endpoint, host[:port], no scheme. Required with backend `s3`.
+      # Examples: `s3.eu-west-1.amazonaws.com`, `minio.storage.internal:9000`.
+      endpoint: ""
+      # -- Signing region. Set it for AWS S3, or when the store checks the signing region.
+      region: ""
+      # -- Plain HTTP.
+      insecure: false
+    # -- Existing containers (azure) or buckets (s3), one per consumer. Same names on both backends.
+    # Create them before install. The chart creates none, except under `localBlobStorage.enabled`.
+    # AWS S3 names are global: override them.
     buckets:
       mimirBlocks: mimir-blocks
       mimirAlertmanager: mimir-alertmanager
@@ -98,6 +112,11 @@ tempo:
               container_name: ${OBS_BUCKET_TEMPO}
               # A suffix not starting with `blob.` switches Tempo to Azurite path style.
               endpoint_suffix: ${OBS_AZURE_ENDPOINT_SUFFIX}
+            s3:
+              bucket: ${OBS_BUCKET_TEMPO}
+              endpoint: ${OBS_S3_ENDPOINT}
+              region: ${OBS_S3_REGION}
+              insecure: ${OBS_S3_INSECURE}
     metricsGenerator:
       enabled: false
     # The API reaches the query-frontend and the distributor directly.
@@ -310,6 +329,8 @@ observability-platform-api:
 #   2. That ConfigMap and the credentials Secret are injected as environment
 #      variables into the Mimir, Loki and Tempo pods. Injection is scoped per
 #      component family, so the credentials reach Mimir, Loki and Tempo only.
+#      The Secret variables are `AZURE_STORAGE_KEY` for backend `azure`, and
+#      `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` for backend `s3`.
 #   3. The values below reference those variables as `${...}`. mimir-distributed and
 #      the upstream Loki chart pass `-config.expand-env=true` to every component.
 #      Tempo gets it from `tempo.tempo.defaults.extraArgs`. The references expand
@@ -409,18 +430,28 @@ mimir:
               # Mutually exclusive with `AZURE_STORAGE_KEY`.
               # See `global.objectStorage.azure.connectionString`.
               connection_string: ${OBS_AZURE_CONNECTION_STRING}
+            s3:
+              endpoint: ${OBS_S3_ENDPOINT}
+              region: ${OBS_S3_REGION}
+              insecure: ${OBS_S3_INSECURE}
         blocks_storage:
           backend: ${OBS_BACKEND}
           azure:
             container_name: ${OBS_BUCKET_MIMIR_BLOCKS}
+          s3:
+            bucket_name: ${OBS_BUCKET_MIMIR_BLOCKS}
         alertmanager_storage:
           backend: ${OBS_BACKEND}
           azure:
             container_name: ${OBS_BUCKET_MIMIR_ALERTMANAGER}
+          s3:
+            bucket_name: ${OBS_BUCKET_MIMIR_ALERTMANAGER}
         ruler_storage:
           backend: ${OBS_BACKEND}
           azure:
             container_name: ${OBS_BUCKET_MIMIR_RULER}
+          s3:
+            bucket_name: ${OBS_BUCKET_MIMIR_RULER}
 
 loki:
   enabled: true
@@ -524,6 +555,11 @@ loki:
         storage_config:
           use_thanos_objstore: true
           object_store:
+            s3:
+              bucket_name: ${OBS_BUCKET_LOKI}
+              endpoint: ${OBS_S3_ENDPOINT}
+              region: ${OBS_S3_REGION}
+              insecure: ${OBS_S3_INSECURE}
             azure:
               account_name: ${OBS_AZURE_ACCOUNT_NAME}
               account_key: ${AZURE_STORAGE_KEY}
@@ -534,6 +570,11 @@ loki:
         # prefix.
         ruler_storage:
           backend: ${OBS_BACKEND}
+          s3:
+            bucket_name: ${OBS_BUCKET_LOKI}
+            endpoint: ${OBS_S3_ENDPOINT}
+            region: ${OBS_S3_REGION}
+            insecure: ${OBS_S3_INSECURE}
           azure:
             account_name: ${OBS_AZURE_ACCOUNT_NAME}
             account_key: ${AZURE_STORAGE_KEY}
