@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Mimir and Tempo read the backend from the `OBS_BACKEND` key of the object storage ConfigMap.
 - Loki reads the backend from the `OBS_BACKEND` key of the object storage ConfigMap.
 - **Breaking:** `localBlobStorage` is renamed `localObjectStorage`. `localBlobStorage.init.image` moves to `localObjectStorage.azurite.initImage`.
+- The local kind setup runs the `s3` backend with Garage by default.
+- `doc/LOCAL_DEV.md` covers both local stores.
 
 ### Added
 
@@ -58,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add the `global.objectStorage.s3.endpoint`, `global.objectStorage.s3.region` and `global.objectStorage.s3.insecure` values. Backend `s3` requires `endpoint`.
 - Add the optional `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` keys to the credentials Secret. Without them, Mimir, Loki and Tempo use IRSA or the instance role.
 - Run a dev Garage with `localObjectStorage.enabled` and `backend: s3`. A Job creates the five buckets.
+- Add `LOCAL_BACKEND` to `make local-up`. `LOCAL_BACKEND=azure` runs Azurite.
 - Add a helm-unittest suite for the local object stores.
 
 ### Removed

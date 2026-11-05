@@ -5,6 +5,8 @@
 #   install.sh <chart>   <chart> is the chart directory or a packaged .tgz
 #
 # KUBE_CONTEXT selects the kubeconfig context. Unset, the current context applies.
+# LOCAL_BACKEND selects the object storage backend: `s3` (default) runs Garage, `azure`
+# runs Azurite.
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -46,7 +48,11 @@ trap 'rm -f "$KEY"' EXIT
   --values "$ROOT/values/observability-operator.yaml" --wait --timeout 5m
 # One AgentCredential per backend, for the agent write routes.
 "${KUBECTL[@]}" apply -f "$DIR/agentcredentials.yaml"
+BACKEND_VALUES=()
+if [ "${LOCAL_BACKEND:-s3}" = azure ]; then
+  BACKEND_VALUES=(--values "$DIR/values-azure.yaml")
+fi
 "${HELM[@]}" upgrade --install observability-platform "$CHART" \
   --namespace monitoring --create-namespace --force-conflicts \
   --values "$ROOT/helm/observability-platform/values-local.yaml" \
-  --values "$DIR/values.yaml"
+  --values "$DIR/values.yaml" "${BACKEND_VALUES[@]}"

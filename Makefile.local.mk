@@ -5,13 +5,15 @@ KUBECTL := kubectl --context kind-kind
 HELM := helm --kube-context kind-kind
 # app-test-suite image `make local-ats` runs. Keep in step with .circleci/custom.yml.
 ATS_VERSION := 1.1.0
+# Object storage backend of the local setup: `s3` runs Garage, `azure` runs Azurite.
+LOCAL_BACKEND ?= s3
 
 .PHONY: local-up local-ats local-token local-down
 
-local-up: ## Create a kind cluster running the chart and the external API.
+local-up: ## Create a kind cluster running the chart and the external API. LOCAL_BACKEND=azure runs Azurite.
 	kind create cluster --config .ats/kind-config.yaml
 	$(HELM) dependency update helm/observability-platform
-	KUBE_CONTEXT=kind-kind $(LOCAL)/install.sh helm/observability-platform
+	KUBE_CONTEXT=kind-kind LOCAL_BACKEND=$(LOCAL_BACKEND) $(LOCAL)/install.sh helm/observability-platform
 
 local-ats: ## Run the app-test-suite smoke test on a new kind cluster `ats`, as CI does. Needs port 8443 free.
 	rm -rf build

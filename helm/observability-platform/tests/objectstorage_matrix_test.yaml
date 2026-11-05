@@ -36,9 +36,10 @@ tests:
             OBS_S3_REGION: ""
             OBS_S3_INSECURE: "false"
 
-  - it: sets all 13 OBS_* keys with values-local.yaml
+  - it: sets all 13 OBS_* keys with values-local.yaml and the azure override
     values:
       - ../values-local.yaml
+      - ../../../hack/local/values-azure.yaml
     asserts:
       # The connection string carries the Azurite dev key. Match its shape, not its literal.
       - isSubset:
@@ -101,6 +102,27 @@ tests:
             OBS_S3_ENDPOINT: s3.example.internal:9000
             OBS_S3_REGION: ""
             OBS_S3_INSECURE: "false"
+
+  - it: sets all 13 OBS_* keys with values-local.yaml
+    values:
+      - ../values-local.yaml
+    asserts:
+      - equal:
+          path: data
+          value:
+            OBS_TENANT: default
+            OBS_BACKEND: s3
+            OBS_AZURE_ACCOUNT_NAME: ""
+            OBS_AZURE_CONNECTION_STRING: ""
+            OBS_BUCKET_MIMIR_BLOCKS: mimir-blocks
+            OBS_BUCKET_MIMIR_ALERTMANAGER: mimir-alertmanager
+            OBS_BUCKET_MIMIR_RULER: mimir-ruler
+            OBS_BUCKET_LOKI: loki
+            OBS_BUCKET_TEMPO: tempo
+            OBS_AZURE_ENDPOINT_SUFFIX: blob.core.windows.net
+            OBS_S3_ENDPOINT: garage.monitoring.svc.cluster.local:3900
+            OBS_S3_REGION: garage
+            OBS_S3_INSECURE: "true"
 
   - it: leaves the Azure keys empty with backend s3
     values:
