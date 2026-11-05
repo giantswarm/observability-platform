@@ -1,10 +1,12 @@
 """Smoke test: workloads ready, Grafana up, one write/read round trip per signal
-through the external API, and a 401 without a token.
+through the external API, one log pushed with an AgentCredential, and 401s without
+a token or with another backend's credential.
 
 The tests run in file order and build on each other.
 """
 
 import base64
+import json
 import secrets
 import time
 
@@ -124,3 +126,32 @@ def test_read_trace(api, token):
 def test_auth_read_no_token(api):
     response = api.request("GET", "/prometheus/api/v1/query", headers={"X-Scope-OrgID": TENANT}, params={"query": "up"})
     assert response.status_code == 401, response.text
+
+
+# == AgentCredentials, through the backends' own routes
+
+
+def agent_credential(name: str) -> tuple[str, str]:
+    """Username and password of an AgentCredential from hack/local/agentcredentials.yaml."""
+
+    def read_secret():
+        data = json.loads(kubectl("get", "secret", name, "-n", "agents", "-o", "jsonpath={.data}"))
+        return tuple(base64.b64decode(data[key]).decode() for key in ("username", "password"))
+
+    return retry(120, read_secret)
+
+
+def test_agent_credential_write_log(loki_write, mimir_write, api, token):
+    credential = agent_credential("logs")
+    body = {"streams": [{"stream": {"job": f"{RUN}-basic"}, "values": [[now_ns(), f"basic auth from {RUN}"]]}]}
+    headers = {"X-Scope-OrgID": TENANT}
+    retry(120, lambda: loki_write.request("POST", "/loki/api/v1/push", headers=headers, auth=credential, json=body).raise_for_status())
+    read(api, token, "/loki/api/v1/query_range", f"basic auth from {RUN}", params={"query": f'{{job="{RUN}-basic"}}'})
+
+    # Mimir has a credential of its own, so a foreign one gets 401, not 500. Retry until the
+    # gateway has loaded Mimir's Secret.
+    def foreign_credential_rejected():
+        response = mimir_write.request("POST", "/otlp/v1/metrics", headers=headers, auth=credential, json={})
+        assert response.status_code == 401, response.text
+
+    retry(120, foreign_credential_rejected)

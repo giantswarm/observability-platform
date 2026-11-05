@@ -1,0 +1,46 @@
+{{/*
+Guards for the agent write routes of Mimir, Loki and Tempo. No resource or config
+is created from this template.
+
+The routes require:
+- `global.domain` to be set: they are served at mimir., write.loki. and tempo.<global.domain>.
+- an observability-operator managing this release, so the release is in `monitoring`, where the
+  operator profile writes the htpasswd Secrets the routes' SecurityPolicies read.
+- the Gateway API and its implementation's resources they render.
+Any of these conditions missing will fail the render.
+*/}}
+{{- $routes := list }}
+{{- if and .Values.mimir.enabled .Values.mimir.routes.gateway.enabled }}
+{{- $routes = append $routes "mimir.routes.gateway" }}
+{{- end }}
+{{- if and .Values.loki.enabled .Values.loki.gatewayRoute.enabled }}
+{{- $routes = append $routes "loki.gatewayRoute" }}
+{{- end }}
+{{- if and .Values.tempo.enabled .Values.tempo.routes.https.enabled }}
+{{- $routes = append $routes "tempo.routes.https" }}
+{{- end }}
+{{- if and .Values.tempo.enabled .Values.tempo.routes.grpc.enabled }}
+{{- $routes = append $routes "tempo.routes.grpc" }}
+{{- end }}
+
+{{- if $routes }}
+{{- $first := first $routes }}
+
+{{- if not .Values.observabilityOperator.enabled }}
+{{- fail (printf "%s.enabled is true but observabilityOperator.enabled is false. The routes check the htpasswd Secrets that the observability-operator writes into the monitoring namespace (values/observability-operator.yaml); without them every push gets a 500 - see doc/AGENT_CREDENTIALS.md." $first) }}
+{{- end }}
+
+{{- if not .Values.global.domain }}
+{{- fail (printf "%s.enabled is true but global.domain is empty. The agent write routes are served at mimir., write.loki. and tempo.<global.domain> - see doc/AGENT_CREDENTIALS.md." $first) }}
+{{- end }}
+
+{{- $apiVersions := list "gateway.networking.k8s.io/v1/HTTPRoute" "gateway.envoyproxy.io/v1alpha1/SecurityPolicy" "gateway.envoyproxy.io/v1alpha1/HTTPRouteFilter" "gateway.envoyproxy.io/v1alpha1/BackendTrafficPolicy" }}
+{{- if has "tempo.routes.grpc" $routes }}
+{{- $apiVersions = append $apiVersions "gateway.networking.k8s.io/v1/GRPCRoute" }}
+{{- end }}
+{{- range $apiVersion := $apiVersions }}
+{{- if not ($.Capabilities.APIVersions.Has $apiVersion) }}
+{{- fail (printf "%s.enabled is true but the cluster serves no %s. Install a Gateway API implementation first - see doc/AGENT_CREDENTIALS.md." $first $apiVersion) }}
+{{- end }}
+{{- end }}
+{{- end }}
