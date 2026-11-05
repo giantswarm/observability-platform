@@ -158,7 +158,6 @@ global:
   objectStorage:
     backend: azure
 
-# Azurite as the Azure Blob store. Computes `accountName` and `connectionString`. Setting
-# either by hand on top of this profile fails the render.
+# Azurite as the Azure Blob store. Computes `accountName` and `connectionString`.
 localObjectStorage:
   enabled: true
