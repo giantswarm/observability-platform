@@ -52,17 +52,11 @@ Object storage validation.
 {{- end -}}
 {{- if eq $backend "azure" -}}
 {{- $azure := $os.azure -}}
-{{- if .Values.localObjectStorage.enabled -}}
-{{- if $azure.accountName -}}
-{{- fail (printf "localObjectStorage.enabled is true, so storage is the in-cluster Azurite emulator under account %q, but global.objectStorage.azure.accountName is set to %q - which nothing would read. Unset one of the two - see doc/LOCAL_DEV.md." (include "observability-platform.azurite.accountName" .) $azure.accountName) -}}
-{{- end -}}
-{{- if $azure.connectionString -}}
-{{- fail "localObjectStorage.enabled is true, which computes the connection string for the in-cluster emulator, but global.objectStorage.azure.connectionString is set as well and would be ignored. Unset one of the two - see doc/LOCAL_DEV.md." -}}
-{{- end -}}
-{{- else if not (or $azure.accountName $azure.connectionString) -}}
+{{- $local := .Values.localObjectStorage.enabled -}}
+{{- if and (not $local) (not (or $azure.accountName $azure.connectionString)) -}}
 {{- fail "global.objectStorage.azure.accountName is empty. Set it to the Azure storage account holding the containers, or set global.objectStorage.azure.connectionString to reach an endpoint of your own, or set localObjectStorage.enabled to run against a local Azurite emulator - see doc/OBJECT_STORAGE.md." -}}
 {{- end -}}
-{{- if and .Values.tempo.enabled $azure.connectionString (not .Values.localObjectStorage.enabled) -}}
+{{- if and .Values.tempo.enabled $azure.connectionString (not $local) -}}
 {{- fail "tempo.enabled is true and global.objectStorage.azure.connectionString is set. Tempo reads no connection string: it needs global.objectStorage.azure.accountName and the account key in the credentials Secret. Set accountName instead of connectionString, or set tempo.enabled to false - see doc/OBJECT_STORAGE.md." -}}
 {{- end -}}
 {{- end -}}
