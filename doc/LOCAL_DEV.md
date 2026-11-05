@@ -3,9 +3,19 @@
 By default `helm install` needs a real object store - see
 [doc/OBJECT_STORAGE.md](./OBJECT_STORAGE.md).
 
-`localObjectStorage.enabled` replaces it with [Azurite](https://github.com/Azure/Azurite),
-Microsoft's Azure Storage emulator, running in the cluster. Azurite serves the `azure`
-backend only. `values-local.yaml` sets `backend: azure`.
+`localObjectStorage.enabled` replaces it with a store running in the cluster. The store
+follows `global.objectStorage.backend`:
+
+- `s3`: [Garage](https://garagehq.deuxfleurs.fr/), a single-node S3-compatible store.
+- `azure`: [Azurite](https://github.com/Azure/Azurite), Microsoft's Azure Storage emulator.
+
+`values-local.yaml` sets `backend: azure` and `localObjectStorage.enabled: true`.
+
+The chart computes the Garage endpoint, the region `garage` and plain HTTP. It ignores
+`global.objectStorage.s3.endpoint` and `global.objectStorage.s3.region`.
+
+Garage creates a fixed, well-known dev key on every start. The `garage-credentials` Secret
+holds it. Mimir, Loki and Tempo read it from there. Do not use this key anywhere real.
 
 ## Prerequisites
 
@@ -149,4 +159,4 @@ the suites cover only the Platform chart's own templates.
 - Shared values files live in `helm/observability-platform/tests/values/`: `azure.yaml`,
   `s3-aws.yaml` and `s3-compatible.yaml`. A case lists them under `values:`.
 - Every suite renders with release `obs` in namespace `monitoring`.
-- Tests never contain the Azurite dev key literal. They match the key shape.
+- Tests never contain the Azurite or Garage dev key literals. They match the key shape.
