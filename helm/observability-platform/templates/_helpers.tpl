@@ -43,22 +43,39 @@ Object storage validation.
 {{- fail (printf "global.objectStorage.backend is %q. Set it to \"azure\" or \"s3\" - see doc/OBJECT_STORAGE.md." $backend) -}}
 {{- end -}}
 {{- if eq $backend "s3" -}}
-{{- if .Values.localObjectStorage.enabled -}}
-{{- fail "global.objectStorage.backend is \"s3\" and localObjectStorage.enabled is true. localObjectStorage runs Azurite, which serves backend \"azure\" only. Set the backend to \"azure\" or set localObjectStorage.enabled to false - see doc/LOCAL_DEV.md." -}}
-{{- end -}}
-{{- if not ($os.s3 | default dict).endpoint -}}
+{{- if and (not (include "observability-platform.localObjectStorage.garage.enabled" .)) (not ($os.s3 | default dict).endpoint) -}}
 {{- fail "global.objectStorage.backend is \"s3\" and global.objectStorage.s3.endpoint is empty. Set it to the store endpoint, host[:port] without a scheme - see doc/OBJECT_STORAGE.md." -}}
 {{- end -}}
 {{- end -}}
 {{- if eq $backend "azure" -}}
 {{- $azure := $os.azure -}}
-{{- $local := .Values.localObjectStorage.enabled -}}
-{{- if and (not $local) (not (or $azure.accountName $azure.connectionString)) -}}
+{{- $azurite := include "observability-platform.localObjectStorage.azurite.enabled" . -}}
+{{- if and (not $azurite) (not (or $azure.accountName $azure.connectionString)) -}}
 {{- fail "global.objectStorage.azure.accountName is empty. Set it to the Azure storage account holding the containers, or set global.objectStorage.azure.connectionString to reach an endpoint of your own, or set localObjectStorage.enabled to run against a local Azurite emulator - see doc/OBJECT_STORAGE.md." -}}
 {{- end -}}
-{{- if and .Values.tempo.enabled $azure.connectionString (not $local) -}}
+{{- if and .Values.tempo.enabled $azure.connectionString (not $azurite) -}}
 {{- fail "tempo.enabled is true and global.objectStorage.azure.connectionString is set. Tempo reads no connection string: it needs global.objectStorage.azure.accountName and the account key in the credentials Secret. Set accountName instead of connectionString, or set tempo.enabled to false - see doc/OBJECT_STORAGE.md." -}}
 {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Azurite switch. `true` when localObjectStorage.enabled is set, the backend is `azure`
+and Mimir, Loki or Tempo is enabled. Empty otherwise, so templates test it with `if`.
+*/}}
+{{- define "observability-platform.localObjectStorage.azurite.enabled" -}}
+{{- if and .Values.localObjectStorage.enabled (eq (.Values.global.objectStorage.backend | default "") "azure") (or .Values.mimir.enabled .Values.loki.enabled .Values.tempo.enabled) -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
+Garage switch. `true` when localObjectStorage.enabled is set, the backend is `s3`
+and Mimir, Loki or Tempo is enabled. Empty otherwise, so templates test it with `if`.
+*/}}
+{{- define "observability-platform.localObjectStorage.garage.enabled" -}}
+{{- if and .Values.localObjectStorage.enabled (eq (.Values.global.objectStorage.backend | default "") "s3") (or .Values.mimir.enabled .Values.loki.enabled .Values.tempo.enabled) -}}
+true
 {{- end -}}
 {{- end -}}
 
@@ -66,7 +83,7 @@ Object storage validation.
 Storage account name delivered to Mimir, Loki and Tempo. Empty with backend `s3`.
 */}}
 {{- define "observability-platform.objectStorage.accountName" -}}
-{{- if .Values.localObjectStorage.enabled -}}
+{{- if include "observability-platform.localObjectStorage.azurite.enabled" . -}}
 {{- include "observability-platform.azurite.accountName" . -}}
 {{- else if eq .Values.global.objectStorage.backend "azure" -}}
 {{- .Values.global.objectStorage.azure.accountName -}}
@@ -77,7 +94,7 @@ Storage account name delivered to Mimir, Loki and Tempo. Empty with backend `s3`
 Connection string delivered to Mimir and Loki. Empty with backend `s3`.
 */}}
 {{- define "observability-platform.objectStorage.connectionString" -}}
-{{- if .Values.localObjectStorage.enabled -}}
+{{- if include "observability-platform.localObjectStorage.azurite.enabled" . -}}
 {{- $account := include "observability-platform.azurite.accountName" . -}}
 {{- printf "DefaultEndpointsProtocol=http;AccountName=%s;AccountKey=%s;BlobEndpoint=http://%s/%s;" $account (include "observability-platform.azurite.accountKey" .) (include "observability-platform.azurite.host" .) $account -}}
 {{- else if eq .Values.global.objectStorage.backend "azure" -}}
@@ -90,7 +107,7 @@ Azure Blob endpoint suffix delivered to Tempo. Tempo switches to Azurite path st
 when the suffix does not start with `blob.`.
 */}}
 {{- define "observability-platform.objectStorage.endpointSuffix" -}}
-{{- if .Values.localObjectStorage.enabled -}}
+{{- if include "observability-platform.localObjectStorage.azurite.enabled" . -}}
 {{- include "observability-platform.azurite.host" . -}}
 {{- else -}}
 blob.core.windows.net
@@ -98,29 +115,37 @@ blob.core.windows.net
 {{- end -}}
 
 {{/*
-S3 endpoint delivered to Mimir, Loki and Tempo. Empty with backend `azure`.
+S3 endpoint delivered to Mimir and Tempo. The Garage host under Garage. Empty with
+backend `azure`.
 */}}
 {{- define "observability-platform.objectStorage.s3.endpoint" -}}
-{{- if eq .Values.global.objectStorage.backend "s3" -}}
+{{- if include "observability-platform.localObjectStorage.garage.enabled" . -}}
+{{- include "observability-platform.garage.host" . -}}
+{{- else if eq .Values.global.objectStorage.backend "s3" -}}
 {{- .Values.global.objectStorage.s3.endpoint -}}
 {{- end -}}
 {{- end -}}
 
 {{/*
-S3 region delivered to Mimir, Loki and Tempo. Empty with backend `azure`.
+S3 region delivered to Mimir and Tempo. The Garage region under Garage. Empty with
+backend `azure`.
 */}}
 {{- define "observability-platform.objectStorage.s3.region" -}}
-{{- if eq .Values.global.objectStorage.backend "s3" -}}
+{{- if include "observability-platform.localObjectStorage.garage.enabled" . -}}
+{{- include "observability-platform.garage.region" . -}}
+{{- else if eq .Values.global.objectStorage.backend "s3" -}}
 {{- .Values.global.objectStorage.s3.region -}}
 {{- end -}}
 {{- end -}}
 
 {{/*
-S3 plain-HTTP switch delivered to Mimir, Loki and Tempo. Always `true` or `false`.
-`false` with backend `azure`.
+S3 plain-HTTP switch delivered to Mimir and Tempo. Always `true` or `false`.
+`true` under Garage. `false` with backend `azure`.
 */}}
 {{- define "observability-platform.objectStorage.s3.insecure" -}}
-{{- if and (eq .Values.global.objectStorage.backend "s3") .Values.global.objectStorage.s3.insecure -}}
+{{- if include "observability-platform.localObjectStorage.garage.enabled" . -}}
+true
+{{- else if and (eq .Values.global.objectStorage.backend "s3") .Values.global.objectStorage.s3.insecure -}}
 true
 {{- else -}}
 false

@@ -57,6 +57,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add the `s3` object storage backend for Mimir, Loki and Tempo. It works with AWS S3 and S3-compatible stores.
 - Add the `global.objectStorage.s3.endpoint`, `global.objectStorage.s3.region` and `global.objectStorage.s3.insecure` values. Backend `s3` requires `endpoint`.
 - Add the optional `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` keys to the credentials Secret. Without them, Mimir, Loki and Tempo use IRSA or the instance role.
+- Run a dev Garage with `localObjectStorage.enabled` and `backend: s3`. A Job creates the five buckets.
+- Add a helm-unittest suite for the local object stores.
 
 ### Removed
 

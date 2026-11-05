@@ -1,7 +1,7 @@
 {{/*
 The Service name is the host in the connection string - see azurite-deployment.yaml.
 */}}
-{{- if and .Values.localObjectStorage.enabled (or .Values.mimir.enabled .Values.loki.enabled .Values.tempo.enabled) }}
+{{- if include "observability-platform.localObjectStorage.azurite.enabled" . }}
 {{- $name := include "observability-platform.azurite.serviceName" . }}
 {{- $port := include "observability-platform.azurite.port" . | int }}
 apiVersion: v1

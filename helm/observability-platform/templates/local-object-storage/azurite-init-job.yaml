@@ -1,7 +1,7 @@
 {{/*
 Creates the storage containers, which Azurite does not create itself.
 */}}
-{{- if and .Values.localObjectStorage.enabled (or .Values.mimir.enabled .Values.loki.enabled .Values.tempo.enabled) }}
+{{- if include "observability-platform.localObjectStorage.azurite.enabled" . }}
 {{- $name := include "observability-platform.azurite.serviceName" . }}
 apiVersion: batch/v1
 kind: Job
