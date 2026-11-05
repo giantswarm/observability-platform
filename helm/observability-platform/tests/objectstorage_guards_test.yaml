@@ -97,3 +97,13 @@ tests:
     asserts:
       - hasDocuments:
           count: 1
+
+  - it: ignores azure.accountName and azure.connectionString under localObjectStorage
+    set:
+      global.objectStorage.backend: azure
+      global.objectStorage.azure.accountName: obsplatform
+      global.objectStorage.azure.connectionString: DefaultEndpointsProtocol=https;AccountName=obsplatform
+      localObjectStorage.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
