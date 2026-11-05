@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Require `global.objectStorage.backend`, with no default. It accepts `azure` and `s3`.
 - Mimir and Tempo read the backend from the `OBS_BACKEND` key of the object storage ConfigMap.
 - Loki reads the backend from the `OBS_BACKEND` key of the object storage ConfigMap.
+- **Breaking:** `localBlobStorage` is renamed `localObjectStorage`. `localBlobStorage.init.image` moves to `localObjectStorage.azurite.initImage`.
 
 ### Added
 
