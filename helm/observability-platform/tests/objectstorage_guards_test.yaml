@@ -1,0 +1,61 @@
+suite: object storage guards
+templates:
+  - templates/objectstorage.yaml
+release:
+  name: obs
+  namespace: monitoring
+tests:
+
+  - it: fails when backend is unset
+    set:
+      global.objectStorage.azure.accountName: obsplatform
+    asserts:
+      - failedTemplate:
+          errorPattern: 'global\.objectStorage\.backend is ""\. Set it to "azure"'
+
+  - it: fails when backend is gcs
+    set:
+      global.objectStorage.backend: gcs
+      global.objectStorage.azure.accountName: obsplatform
+    asserts:
+      - failedTemplate:
+          errorPattern: backend
+
+  - it: renders with backend azure
+    values:
+      - values/azure.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: keeps the Azure accountName guard with backend azure
+    set:
+      global.objectStorage.backend: azure
+    asserts:
+      - failedTemplate:
+          errorPattern: 'global\.objectStorage\.azure\.accountName is empty'
+
+  - it: renders with localBlobStorage enabled and backend azure
+    set:
+      global.objectStorage.backend: azure
+      localBlobStorage.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: fails when tempo is enabled and azure.connectionString is set
+    set:
+      global.objectStorage.backend: azure
+      global.objectStorage.azure.connectionString: DefaultEndpointsProtocol=https;AccountName=obsplatform
+    asserts:
+      - failedTemplate:
+          errorPattern: 'tempo\.enabled is true and global\.objectStorage\.azure\.connectionString is set'
+
+  - it: renders with azure.connectionString when tempo is disabled
+    set:
+      global.objectStorage.backend: azure
+      global.objectStorage.azure.connectionString: DefaultEndpointsProtocol=https;AccountName=obsplatform
+      tempo.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 1

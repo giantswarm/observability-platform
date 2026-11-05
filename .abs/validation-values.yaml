@@ -3,9 +3,10 @@
 #
 # These values are for app-build-suite tests. This is not an example configuration.
 
-# No default: the storage account has to be named. See doc/OBJECT_STORAGE.md.
+# No defaults: the backend and the storage account have to be named. See doc/OBJECT_STORAGE.md.
 global:
   objectStorage:
+    backend: azure
     azure:
       accountName: abs-validation
 
