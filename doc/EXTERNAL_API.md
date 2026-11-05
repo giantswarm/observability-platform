@@ -13,11 +13,8 @@ at its HTTPS listener. The routes attach only to that listener.
 All paths are served at `observability.<global.domain>`.
 
 > [!NOTE]
-> Agents push in one of two ways:
->
-> - **Through this API, with a JWT.** The API serves both writes and reads.
-> - **Through each backend's own route, with AgentCredentials.** These routes take writes only,
->   so an agent that also reads uses this API for that. See [AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md).
+> Agents push with AgentCredentials, through each backend's own route, not through this API. An
+> agent that also reads uses this API for that. See [AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md).
 
 | Backend | Write | Read |
 | --- | --- | --- |
@@ -357,5 +354,5 @@ scheme.
 ## Limitations
 
 - A client can send any `X-Scope-OrgID`. Nothing binds the tenant to the token.
-- The API accepts writes with a JWT only. AgentCredentials push through the backends' own routes
-  instead: see [AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md).
+- The API authenticates with a JWT only. Agents push with AgentCredentials through the backends'
+  own routes instead: see [AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md).

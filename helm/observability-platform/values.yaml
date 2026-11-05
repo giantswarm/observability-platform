@@ -151,11 +151,11 @@ tempo:
       hostnames:
         - "tempo.{{ .Values.global.domain }}"
       parentRefs: *gatewayRef
-      # OTLP/gRPC only. Reads go through the Observability Platform API.
+      # The OTLP trace service only. Reads go through the Observability Platform API.
       matches:
         - method:
-            type: RegularExpression
-            service: "opentelemetry.*"
+            type: Exact
+            service: opentelemetry.proto.collector.trace.v1.TraceService
       securityPolicy:
         enabled: true
         basicAuth:
@@ -332,7 +332,7 @@ mimir:
       enabled: false
     querier:
       enabled: false
-  # Agent writes for metrics. See "Agent writes" below.
+  # Agent writes for metrics. See "Agent writes" above.
   routes:
     gateway:
       enabled: false
@@ -424,7 +424,7 @@ loki:
   # Names the route `loki-gateway`, whatever the release name. The filter reference
   # in `gatewayRoute.filters` names it literally.
   fullnameOverride: loki
-  # Agent writes for logs. See "Agent writes" below.
+  # Agent writes for logs. See "Agent writes" above.
   gatewayRoute:
     enabled: false
     hostnames:

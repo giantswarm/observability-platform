@@ -1,6 +1,6 @@
 # Push with AgentCredentials
 
-Agents that can't fetch a JWT push with basic auth instead. You create one AgentCredential per agent
+Agents push with basic auth, using AgentCredentials. You create one AgentCredential per agent
 and per backend. The observability-operator generates its password and adds it to that backend's
 htpasswd Secret. The Mimir, Loki and Tempo charts each serve their push paths on a hostname of their
 own, through their own gateway route, behind a SecurityPolicy that checks their backend's Secret.
@@ -77,8 +77,11 @@ tempo:
 ```
 
 The listener's hostname must cover `mimir.<global.domain>`, `write.loki.<global.domain>` and
-`tempo.<global.domain>`, for example with `*.<global.domain>`, or it has none. It must accept
-routes from the release namespace. Keep `sectionName` on an HTTPS listener: without it, a route
+`tempo.<global.domain>`, for example with `*.<global.domain>`, or it has none. Its certificate
+must cover all three hostnames too. A wildcard certificate covers one label only, so
+`*.<global.domain>` doesn't cover `write.loki.<global.domain>`: add `write.loki.<global.domain>`
+(or `*.loki.<global.domain>`) to the certificate. The listener must accept routes from the release
+namespace. Keep `sectionName` on an HTTPS listener: without it, a route
 attaches to every listener of the Gateway, including a plain HTTP one, and credentials and
 telemetry travel unencrypted. The [API docs](./EXTERNAL_API.md#serve-https) show a minimal
 Gateway and how to get its certificate.
@@ -224,20 +227,6 @@ AgentCredential for that backend.
 A credential doesn't bind a tenant. The client chooses it with `X-Scope-OrgID`, as with a JWT.
 Without the header, the HTTP paths answer `400` and Tempo rejects gRPC calls with `no org id`, as
 on Giant Swarm installations.
-
-## AgentCredentials or OAuth2
-
-Alloy can also fetch a JWT itself, through the OAuth2 client credentials flow, and push through
-the API. Use the `oauth2` block of `prometheus.remote_write` or `loki.write`, or
-`otelcol.auth.oauth2`. Choose:
-
-- **AgentCredentials** for per-agent, per-backend credentials that you create, rotate and revoke
-  through Kubernetes or GitOps, with no change in your identity provider. They can only push.
-- **OAuth2 client credentials** when you manage agents as clients in your identity provider, or
-  when an agent also needs to read.
-
-To enable the API you still need an OIDC issuer: AgentCredentials are an addition for agents,
-not a replacement for JWT.
 
 ## Limitations
 

@@ -148,6 +148,10 @@ def test_agent_credential_write_log(loki_write, mimir_write, api, token):
     retry(120, lambda: loki_write.request("POST", "/loki/api/v1/push", headers=headers, auth=credential, json=body).raise_for_status())
     read(api, token, "/loki/api/v1/query_range", f"basic auth from {RUN}", params={"query": f'{{job="{RUN}-basic"}}'})
 
-    # Mimir has a credential of its own, so a foreign one gets 401, not 500.
-    response = mimir_write.request("POST", "/otlp/v1/metrics", headers=headers, auth=credential, json={})
-    assert response.status_code == 401, response.text
+    # Mimir has a credential of its own, so a foreign one gets 401, not 500. Retry until the
+    # gateway has loaded Mimir's Secret.
+    def foreign_credential_rejected():
+        response = mimir_write.request("POST", "/otlp/v1/metrics", headers=headers, auth=credential, json={})
+        assert response.status_code == 401, response.text
+
+    retry(120, foreign_credential_rejected)

@@ -68,6 +68,11 @@ A signer pod in the `jwt-issuer` namespace generates it, and `make local-up` cop
 curl --cacert hack/local/.keys/tls.crt https://grafana.localhost:8443/api/health
 ```
 
+The signer creates the certificate once, when its pod starts, and keeps it. A cluster created
+before the agent write hostnames were added keeps a certificate without `mimir.localhost`,
+`write.loki.localhost` and `tempo.localhost`, so pushes to them fail TLS verification. Run
+`make local-down` and `make local-up` to get a new one.
+
 Storage lives in an `emptyDir`: restarting the emulator discards the data.
 
 ## Send data through the external API
