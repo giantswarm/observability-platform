@@ -25,6 +25,9 @@ make local-up
 - the observability-operator, as its own release, with `values/observability-operator.yaml`
 - the chart in namespace `monitoring`, with `values-local.yaml`
 - the external API, with Envoy Gateway and a JWKS server. See [EXTERNAL_API.md](./EXTERNAL_API.md).
+- the agent write routes, at `mimir.localhost`, `write.loki.localhost` and `tempo.localhost`,
+  with one AgentCredential per backend in namespace `agents` (`hack/local/agentcredentials.yaml`).
+  See [AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md).
 
 ## Verify
 
@@ -65,6 +68,11 @@ A signer pod in the `jwt-issuer` namespace generates it, and `make local-up` cop
 curl --cacert hack/local/.keys/tls.crt https://grafana.localhost:8443/api/health
 ```
 
+The signer creates the certificate once, when its pod starts, and keeps it. A cluster created
+before the agent write hostnames were added keeps a certificate without `mimir.localhost`,
+`write.loki.localhost` and `tempo.localhost`, so pushes to them fail TLS verification. Run
+`make local-down` and `make local-up` to get a new one.
+
 Storage lives in an `emptyDir`: restarting the emulator discards the data.
 
 ## Send data through the external API
@@ -83,6 +91,31 @@ AUTH=(--cacert hack/local/.keys/tls.crt -H "Authorization: Bearer $(make -s loca
 The requests in [EXTERNAL_API.md](./EXTERNAL_API.md#send-data) then run as written.
 
 The token expires after one hour. Run the `AUTH=` line again for a new one.
+
+## Push with an AgentCredential
+
+`make local-up` creates the AgentCredentials `metrics`, `logs` and `traces` in namespace `agents`.
+The operator writes a Secret of the same name next to each. Read the username and password of the
+`logs` credential from its Secret:
+
+```bash
+CRED="$(kubectl get secret logs -n agents -o jsonpath='{.data.username}' | base64 -d):$(kubectl get secret logs -n agents -o jsonpath='{.data.password}' | base64 -d)"
+```
+
+Push a log line with it:
+
+```bash
+curl -sS -o /dev/null -w '%{http_code}\n' --cacert hack/local/.keys/tls.crt -u "$CRED" \
+  -H "X-Scope-OrgID: default" -H "Content-Type: application/json" https://write.loki.localhost:8443/loki/api/v1/push \
+  -d '{"streams":[{"stream":{"job":"basic-auth-test"},"values":[["'"$(date +%s)"'000000000","hello"]]}]}'
+```
+
+```
+204
+```
+
+The same credential gets a `401` on `https://mimir.localhost:8443/otlp/v1/metrics`. See
+[AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md) for the other backends.
 
 ## Test
 

@@ -12,6 +12,10 @@ at its HTTPS listener. The routes attach only to that listener.
 
 All paths are served at `observability.<global.domain>`.
 
+> [!NOTE]
+> Agents push with AgentCredentials, through each backend's own route, not through this API. An
+> agent that also reads uses this API for that. See [AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md).
+
 | Backend | Write | Read |
 | --- | --- | --- |
 | Mimir | `/prometheus/api/v1/push`, `/otlp/v1/metrics` | `/prometheus/api/v1/{query,query_range,series,labels,...}` |
@@ -350,4 +354,5 @@ scheme.
 ## Limitations
 
 - A client can send any `X-Scope-OrgID`. Nothing binds the tenant to the token.
-- Ingest authentication is JWT only.
+- The API authenticates with a JWT only. Agents push with AgentCredentials through the backends'
+  own routes instead: see [AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md).

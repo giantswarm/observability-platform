@@ -105,6 +105,72 @@ tempo:
       enabled: false
   vulture:
     enabled: false
+  # Names the routes `tempo-https` and `tempo-grpc`, whatever the release name. The
+  # filter reference in `routes.https.filters` names it literally.
+  fullnameOverride: tempo
+  # Agent writes for traces. See "Agent writes" below.
+  routes:
+    https:
+      enabled: false
+      hostnames:
+        - "tempo.{{ .Values.global.domain }}"
+      # Set to your Gateway: its name, namespace and HTTPS listener. See doc/AGENT_CREDENTIALS.md.
+      # The other agent write routes reuse this list through the `gatewayRef` anchor.
+      parentRefs: &gatewayRef
+        - name: giantswarm-default
+          namespace: envoy-gateway-system
+          sectionName: https
+      # OTLP/HTTP under `/tempo`: `/tempo/v1/traces` reaches the distributor as `/v1/traces`.
+      additionalRules:
+        - matches:
+            - path: &tempoPath
+                type: PathPrefix
+                value: /tempo
+              headers: &scopeOrgIDHeader
+                - name: X-Scope-OrgID
+                  type: RegularExpression
+                  value: "^.+$"
+          filters:
+            - type: URLRewrite
+              urlRewrite:
+                path:
+                  type: ReplacePrefixMatch
+                  replacePrefixMatch: /
+          backendRefs:
+            - name: tempo-distributor
+              port: 4318
+      # Requests without `X-Scope-OrgID` fall through to this rule and get a 400. Same paths
+      # as above, through the anchors.
+      matches:
+        - path: *tempoPath
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: tempo-https
+      httpRouteFilter:
+        enabled: true
+      securityPolicy:
+        enabled: true
+        basicAuth:
+          users:
+            name: tempo-gateway-httproute-auth
+    grpc:
+      enabled: false
+      hostnames:
+        - "tempo.{{ .Values.global.domain }}"
+      parentRefs: *gatewayRef
+      # The OTLP trace service only. Reads go through the Observability Platform API.
+      matches:
+        - method:
+            type: Exact
+            service: opentelemetry.proto.collector.trace.v1.TraceService
+      securityPolicy:
+        enabled: true
+        basicAuth:
+          users:
+            name: tempo-gateway-httproute-auth
 observabilityPlatformApi:
   enabled: false
 # Use a local Azurite for data storage.
@@ -199,6 +265,42 @@ observability-platform-api:
         sectionName: https
 
 # ---------------------------------------------------------------------------
+# Agent writes: agents push with AgentCredentials, as on Giant Swarm installations.
+#
+# The Mimir, Loki and Tempo charts each render their own gateway route, plus a
+# GRPCRoute for Tempo, on the same hostnames and paths as on Giant Swarm
+# installations:
+#
+#   metrics  mimir.<domain>       /api/v1/push, /otlp/v1/metrics
+#   logs     write.loki.<domain>  /loki/api/v1/push, /otlp/v1/logs
+#   traces   tempo.<domain>       OTLP/gRPC, and OTLP/HTTP under /tempo
+#
+# They carry pushes only: agents read through the Observability Platform API.
+# Each backend's SecurityPolicy checks the htpasswd Secret that the
+# observability-operator aggregates from that backend's AgentCredentials, so a
+# credential pushes to one backend only. You create the AgentCredentials. See
+# doc/AGENT_CREDENTIALS.md.
+#
+# Off by default. Turn on all four together:
+#
+#   mimir.routes.gateway.enabled
+#   loki.gatewayRoute.enabled
+#   tempo.routes.https.enabled
+#   tempo.routes.grpc.enabled
+#
+# The operator release must run its AgentCredential controller and write its
+# Secrets into this release's namespace, as values/observability-operator.yaml does.
+# They need Envoy Gateway and a Gateway whose HTTPS listener covers the three
+# hostnames. The Secret names are the operator's defaults.
+#
+# IMPORTANT: the default `parentRefs` of the four routes name the Gateway
+# `giantswarm-default` in `envoy-gateway-system` and its listener `https`. Unless
+# your Gateway matches, set `parentRefs` under each of the four keys above to the
+# name and namespace of your Gateway, and to the name of its HTTPS listener in
+# `sectionName`. If they don't match, the routes are never attached and agents get
+# no answer. The defaults share one list through the `gatewayRef` anchor, but an
+# override in your own values file replaces each key separately.
+# ---------------------------------------------------------------------------
 # Object storage delivery.
 #
 # Helm cannot compute a subchart's values, at any depth. Delivery goes:
@@ -231,6 +333,57 @@ mimir:
       - secretRef:
           name: observability-platform-object-storage
           optional: true
+  # Names the route `mimir-gateway`, whatever the release name. The filter reference
+  # in `routes.gateway.filters` names it literally.
+  fullnameOverride: mimir
+  # The wrapper's HPAs scale the Deployments that `fullnameOverride` above now names.
+  # Off: they would fight the Deployments' `replicas` on every upgrade.
+  hpa:
+    distributor:
+      enabled: false
+    querier:
+      enabled: false
+  # Agent writes for metrics. See "Agent writes" above.
+  routes:
+    gateway:
+      enabled: false
+      hostnames:
+        - "mimir.{{ .Values.global.domain }}"
+      parentRefs: *gatewayRef
+      # Push paths only. Reads go through the Observability Platform API.
+      additionalRules:
+        - matches:
+            - path: &mimirPushPath
+                type: PathPrefix
+                value: /api/v1/push
+              headers: *scopeOrgIDHeader
+            - path: &mimirOTLPPath
+                type: PathPrefix
+                value: /otlp/v1/metrics
+              headers: *scopeOrgIDHeader
+          backendRefs:
+            - name: mimir-gateway
+              port: 80
+      # Requests without `X-Scope-OrgID` fall through to this rule and get a 400. Same paths
+      # as above, through the anchors.
+      matches:
+        - path: *mimirPushPath
+        - path: *mimirOTLPPath
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: mimir-gateway
+      httpRouteFilter:
+        enabled: true
+      securityPolicy:
+        enabled: true
+        basicAuth:
+          users:
+            name: mimir-gateway-httproute-auth
+      backendTrafficPolicy:
+        enabled: true
   mimir:
     # Pin the service name - see "Deterministic names" under grafana above.
     fullnameOverride: mimir
@@ -279,6 +432,49 @@ loki:
       - secretRef:
           name: observability-platform-object-storage
           optional: true
+  # Names the route `loki-gateway`, whatever the release name. The filter reference
+  # in `gatewayRoute.filters` names it literally.
+  fullnameOverride: loki
+  # Agent writes for logs. See "Agent writes" above.
+  gatewayRoute:
+    enabled: false
+    hostnames:
+      - "write.loki.{{ .Values.global.domain }}"
+    parentRefs: *gatewayRef
+    # Push paths only. Reads go through the Observability Platform API.
+    additionalRules:
+      - matches:
+          - path: &lokiPushPath
+              type: PathPrefix
+              value: /loki/api/v1/push
+            headers: *scopeOrgIDHeader
+          - path: &lokiOTLPPath
+              type: PathPrefix
+              value: /otlp/v1/logs
+            headers: *scopeOrgIDHeader
+        backendRefs:
+          - name: loki-gateway
+            port: 80
+    # Requests without `X-Scope-OrgID` fall through to this rule and get a 400. Same paths
+    # as above, through the anchors.
+    matches:
+      - path: *lokiPushPath
+      - path: *lokiOTLPPath
+    filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: loki-gateway
+    httpRouteFilter:
+      enabled: true
+    securityPolicy:
+      enabled: true
+      basicAuth:
+        users:
+          name: loki-gateway-httproute-auth
+    backendTrafficPolicy:
+      enabled: true
   loki:
     # Pin the service name - see "Deterministic names" under grafana above.
     fullnameOverride: loki

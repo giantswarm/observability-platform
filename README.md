@@ -54,8 +54,9 @@ this chart before the operator, which processes the deletion.
 - The release installs into the `monitoring` namespace while `observabilityOperator.enabled` is on.
 - The operator values must agree with this chart's: `tracing.enabled` with `tempo.enabled`,
   `operator.controllers.alertmanager.enabled` with `mimir.enabled` and `mimir.mimir.alertmanager.enabled`,
-  `defaultTenant` with `global.tenant`, and the Grafana and datasource URLs with the `monitoring`
-  namespace. Nothing checks this across the two releases.
+  `defaultTenant` with `global.tenant`, and the Grafana and datasource URLs and
+  `monitoring.gateway.namespace`, `logging.gateway.namespace` and `tracing.gateway.namespace` with
+  the `monitoring` namespace. Nothing checks this across the two releases.
 - The operator's admission webhooks are disabled, so mistakes in `GrafanaOrganization` resources or
   dashboard ConfigMaps show up only in the operator's logs and the resources' status.
 - Disabling Loki or Mimir leaves their datasources in Grafana, pointing at nothing.
@@ -147,5 +148,6 @@ Not following these limitations will most likely result in a broken deployment.
 - The chart creates no Gateway and no TLS certificate. The external API and Grafana are
   exposed over HTTPS on a Gateway you provide, and you must set the name and namespace of that
   Gateway in each component's `parentRefs`. The external API also needs Envoy Gateway and an
-  OIDC issuer installed beforehand — see [doc/EXTERNAL_API.md](doc/EXTERNAL_API.md).
+  OIDC issuer installed beforehand — see [doc/EXTERNAL_API.md](doc/EXTERNAL_API.md). The agent
+  write routes need Envoy Gateway too — see [doc/AGENT_CREDENTIALS.md](doc/AGENT_CREDENTIALS.md).
 - Turning Mimir or Loki off leaves Grafana with a datasource pointing at nothing.

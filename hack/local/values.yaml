@@ -1,5 +1,5 @@
-# Chart values for the local setup. They enable the external API. They expose Grafana
-# through Envoy Gateway.
+# Chart values for the local setup. They enable the external API and the agent write
+# routes. They expose Grafana through Envoy Gateway.
 global:
   domain: localhost
 observabilityPlatformApi:
@@ -27,3 +27,16 @@ grafana:
           - name: giantswarm-default
             namespace: envoy-gateway-system
             sectionName: https
+mimir:
+  routes:
+    gateway:
+      enabled: true
+loki:
+  gatewayRoute:
+    enabled: true
+tempo:
+  routes:
+    https:
+      enabled: true
+    grpc:
+      enabled: true

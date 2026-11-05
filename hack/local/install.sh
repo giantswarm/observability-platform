@@ -12,7 +12,7 @@ ROOT="$(cd "$DIR/../.." && pwd)"
 CHART=$1
 # observability-operator release installed before the chart. Keep in step with the
 # version the platform is tested against.
-OPERATOR_VERSION=0.86.0
+OPERATOR_VERSION=0.88.0
 KUBECTL=(kubectl ${KUBE_CONTEXT:+--context "$KUBE_CONTEXT"})
 HELM=(helm ${KUBE_CONTEXT:+--kube-context "$KUBE_CONTEXT"})
 
@@ -44,6 +44,8 @@ trap 'rm -f "$KEY"' EXIT
   --repo https://giantswarm.github.io/control-plane-catalog/ --version "$OPERATOR_VERSION" \
   --namespace monitoring --create-namespace \
   --values "$ROOT/values/observability-operator.yaml" --wait --timeout 5m
+# One AgentCredential per backend, for the agent write routes.
+"${KUBECTL[@]}" apply -f "$DIR/agentcredentials.yaml"
 "${HELM[@]}" upgrade --install observability-platform "$CHART" \
   --namespace monitoring --create-namespace --force-conflicts \
   --values "$ROOT/helm/observability-platform/values-local.yaml" \
