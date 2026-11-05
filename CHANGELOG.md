@@ -58,6 +58,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add the `global.objectStorage.s3.endpoint`, `global.objectStorage.s3.region` and `global.objectStorage.s3.insecure` values. Backend `s3` requires `endpoint`.
 - Add the optional `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` keys to the credentials Secret. Without them, Mimir, Loki and Tempo use IRSA or the instance role.
 
+### Removed
+
+- Remove the render guards that reject `azure.accountName` and `azure.connectionString` under `localObjectStorage.enabled`. The chart ignores both values there.
+
 ### Changed
 
 - Stop shipping Giant Swarm's Alertmanager routing with the observability-operator release (`values/observability-operator.yaml`).
