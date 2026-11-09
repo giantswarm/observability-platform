@@ -1,0 +1,23 @@
+{{/*
+The Service name is the host of the S3 endpoint - see garage-deployment.yaml.
+*/}}
+{{- if include "observability-platform.localObjectStorage.garage.enabled" . }}
+{{- $name := include "observability-platform.garage.serviceName" . }}
+{{- $port := include "observability-platform.garage.port" . | int }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "labels.common" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  ports:
+    - name: s3
+      port: {{ $port }}
+      targetPort: s3
+  selector:
+    {{- include "labels.selector" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+{{- end }}
