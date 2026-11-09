@@ -9,7 +9,8 @@ follows `global.objectStorage.backend`:
 - `s3`: [Garage](https://garagehq.deuxfleurs.fr/), a single-node S3-compatible store.
 - `azure`: [Azurite](https://github.com/Azure/Azurite), Microsoft's Azure Storage emulator.
 
-`values-local.yaml` sets `backend: azure` and `localObjectStorage.enabled: true`.
+The kind setup runs Garage by default. `values-local.yaml` sets `backend: s3` and
+`localObjectStorage.enabled: true`.
 
 The chart computes the Garage endpoint, the region `garage` and plain HTTP. It ignores
 `global.objectStorage.s3.endpoint` and `global.objectStorage.s3.region`.
@@ -33,7 +34,7 @@ make local-up
 `make local-up` creates a kind cluster and installs these components:
 
 - the observability-operator, as its own release, with `values/observability-operator.yaml`
-- the chart in namespace `monitoring`, with `values-local.yaml`
+- the chart in namespace `monitoring`, with `values-local.yaml`, on the `s3` backend with Garage
 - the external API, with Envoy Gateway and a JWKS server. See [EXTERNAL_API.md](./EXTERNAL_API.md).
 - the agent write routes, at `mimir.localhost`, `write.loki.localhost` and `tempo.localhost`,
   with one AgentCredential per backend in namespace `agents` (`hack/local/agentcredentials.yaml`).
@@ -41,16 +42,16 @@ make local-up
 
 ## Verify
 
-A `post-install` hook creates the storage containers, so `make local-up` returns once it
-has finished:
+A `post-install` hook creates the five buckets, so `make local-up` returns once it has
+finished:
 
 ```bash
-kubectl get job azurite-init -n monitoring
+kubectl get job garage-init -n monitoring
 ```
 
 ```
-NAME           STATUS     COMPLETIONS   DURATION   AGE
-azurite-init   Complete   1/1           14s        30s
+NAME          STATUS     COMPLETIONS   DURATION   AGE
+garage-init   Complete   1/1           14s        30s
 ```
 
 Then check the pods:
@@ -59,9 +60,9 @@ Then check the pods:
 kubectl get pods -n monitoring
 ```
 
-Expect 23 Running. Mimir and Loki may restart once or twice while the emulator starts.
+Expect 24 Running. Mimir and Loki may restart once or twice while Garage starts.
 Tempo's ingester, querier, query-frontend and compactor restart until the hook creates the
-`tempo` container, two to four times each.
+`tempo` bucket, two to four times each.
 
 Log in at <https://grafana.localhost:8443> as `admin`. The chart generates a random password and
 stores it in the `grafana` secret:
@@ -83,7 +84,33 @@ before the agent write hostnames were added keeps a certificate without `mimir.l
 `write.loki.localhost` and `tempo.localhost`, so pushes to them fail TLS verification. Run
 `make local-down` and `make local-up` to get a new one.
 
-Storage lives in an `emptyDir`: restarting the emulator discards the data.
+Garage keeps its data and its buckets in an `emptyDir`: restarting the `garage` pod
+discards both. The dev key survives: Garage creates it again on every start.
+
+## Run on Azurite
+
+```bash
+make local-up LOCAL_BACKEND=azure
+```
+
+`LOCAL_BACKEND` defaults to `s3`. `LOCAL_BACKEND=azure` adds `hack/local/values-azure.yaml`
+after the other values files. It sets `backend: azure`. The rest of the setup is the same.
+
+These parts differ:
+
+- Azurite runs in place of Garage.
+- The chart computes the dev account name and the connection string. Mimir and Loki read the
+  connection string. Tempo reads the dev account key from the `azurite-credentials` Secret.
+- The `azurite-init` hook creates the five containers:
+
+```bash
+kubectl get job azurite-init -n monitoring
+```
+
+Azurite keeps its data in an `emptyDir`: restarting the `azurite` pod discards the data.
+
+`make local-down` deletes the cluster for both backends. Pass `LOCAL_BACKEND=azure` again on
+the next `make local-up` to stay on Azurite.
 
 ## Send data through the external API
 

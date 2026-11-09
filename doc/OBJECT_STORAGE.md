@@ -267,7 +267,7 @@ kubectl create secret generic observability-platform-object-storage \
 ```
 
 Under `localObjectStorage.enabled` the chart renders the dev Secret `garage-credentials`
-with the same two key names.
+with the same two key names. The local setup exercises the same path.
 
 Secret keys:
 

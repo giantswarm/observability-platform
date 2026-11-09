@@ -355,3 +355,68 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].image
           value: example.com/aws-cli:1
+
+  - it: deploys Garage and no Azurite with values-local.yaml
+    values:
+      - ../values-local.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: templates/local-object-storage/garage-configmap.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/local-object-storage/garage-deployment.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/local-object-storage/garage-service.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/local-object-storage/garage-secret.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/local-object-storage/garage-init-job.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/azurite-deployment.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/azurite-service.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/azurite-init-job.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/azurite-secret.yaml
+
+  - it: deploys Azurite and no Garage with values-local.yaml and the azure override
+    values:
+      - ../values-local.yaml
+      - ../../../hack/local/values-azure.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: templates/local-object-storage/azurite-deployment.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/local-object-storage/azurite-service.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/local-object-storage/azurite-init-job.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/local-object-storage/azurite-secret.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/garage-configmap.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/garage-deployment.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/garage-service.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/garage-secret.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/local-object-storage/garage-init-job.yaml
