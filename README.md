@@ -143,7 +143,7 @@ Not following these limitations will most likely result in a broken deployment.
 
 - Object storage is Azure Blob Storage (`azure`) or S3 (`s3`), AWS S3 or an S3-compatible
   store. There is no default backend — see [doc/OBJECT_STORAGE.md](doc/OBJECT_STORAGE.md).
-  For development, `localBlobStorage.enabled` runs the Azurite emulator in the cluster for
+  For development, `localObjectStorage.enabled` runs the Azurite emulator in the cluster for
   `azure` — see [doc/LOCAL_DEV.md](doc/LOCAL_DEV.md).
 - One sizing profile, tuned for a small cluster. There is no answer yet for real ingest volume.
 - The chart creates no Gateway and no TLS certificate. The external API and Grafana are

@@ -28,14 +28,14 @@ tests:
       - failedTemplate:
           errorPattern: 'global\.objectStorage\.backend is "s3" and global\.objectStorage\.s3\.endpoint is empty'
 
-  - it: fails when backend is s3 and localBlobStorage is enabled
+  - it: fails when backend is s3 and localObjectStorage is enabled
     values:
       - values/s3-compatible.yaml
     set:
-      localBlobStorage.enabled: true
+      localObjectStorage.enabled: true
     asserts:
       - failedTemplate:
-          errorPattern: 'global\.objectStorage\.backend is "s3" and localBlobStorage\.enabled is true'
+          errorPattern: 'global\.objectStorage\.backend is "s3" and localObjectStorage\.enabled is true'
 
   - it: rejects an endpoint with a scheme
     values:
@@ -74,10 +74,10 @@ tests:
       - failedTemplate:
           errorPattern: 'global\.objectStorage\.azure\.accountName is empty'
 
-  - it: renders with localBlobStorage enabled and backend azure
+  - it: renders with localObjectStorage enabled and backend azure
     set:
       global.objectStorage.backend: azure
-      localBlobStorage.enabled: true
+      localObjectStorage.enabled: true
     asserts:
       - hasDocuments:
           count: 1

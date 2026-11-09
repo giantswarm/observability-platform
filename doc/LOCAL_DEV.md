@@ -3,7 +3,7 @@
 By default `helm install` needs a real object store - see
 [doc/OBJECT_STORAGE.md](./OBJECT_STORAGE.md).
 
-`localBlobStorage.enabled` replaces it with [Azurite](https://github.com/Azure/Azurite),
+`localObjectStorage.enabled` replaces it with [Azurite](https://github.com/Azure/Azurite),
 Microsoft's Azure Storage emulator, running in the cluster. Azurite serves the `azure`
 backend only. `values-local.yaml` sets `backend: azure`.
 
