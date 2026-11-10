@@ -204,7 +204,7 @@ localObjectStorage:
   garage:
     image: dxflrs/garage:v2.4.1
     # Job that creates the buckets, which Garage does not create itself.
-    initImage: amazon/aws-cli:2.31.0
+    initImage: amazon/aws-cli:2.39.7
 
 # ---------------------------------------------------------------------------
 # Default organization: a GrafanaOrganization that takes over Grafana's default
