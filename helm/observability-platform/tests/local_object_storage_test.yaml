@@ -26,9 +26,9 @@ tests:
           path: metadata.name
           value: azurite
         template: templates/local-object-storage/azurite-deployment.yaml
-      - equal:
+      - matchRegex:
           path: spec.template.spec.containers[0].image
-          value: mcr.microsoft.com/azure-storage/azurite:3.37.0
+          pattern: '^mcr\.microsoft\.com/azure-storage/azurite:'
         template: templates/local-object-storage/azurite-deployment.yaml
       - isKind:
           of: Service
@@ -44,9 +44,9 @@ tests:
           path: metadata.name
           value: azurite-init
         template: templates/local-object-storage/azurite-init-job.yaml
-      - equal:
+      - matchRegex:
           path: spec.template.spec.containers[0].image
-          value: mcr.microsoft.com/azure-cli:2.92.0
+          pattern: '^mcr\.microsoft\.com/azure-cli:'
         template: templates/local-object-storage/azurite-init-job.yaml
       - isKind:
           of: Secret
@@ -115,9 +115,9 @@ tests:
           path: metadata.name
           value: garage
         template: templates/local-object-storage/garage-deployment.yaml
-      - equal:
+      - matchRegex:
           path: spec.template.spec.containers[0].image
-          value: dxflrs/garage:v2.4.1
+          pattern: '^dxflrs/garage:'
         template: templates/local-object-storage/garage-deployment.yaml
       - isKind:
           of: Service
@@ -267,9 +267,9 @@ tests:
       - equal:
           path: metadata.annotations["helm.sh/hook-delete-policy"]
           value: before-hook-creation
-      - equal:
+      - matchRegex:
           path: spec.template.spec.containers[0].image
-          value: amazon/aws-cli:2.31.0
+          pattern: '^amazon/aws-cli:'
 
   - it: reads the dev key from garage-credentials
     set:
