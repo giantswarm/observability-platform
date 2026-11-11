@@ -202,7 +202,7 @@ localObjectStorage:
     # Job that creates the containers, which Azurite does not create itself.
     initImage: mcr.microsoft.com/azure-cli:2.92.0
   garage:
-    image: dxflrs/garage:v2.4.1
+    image: dxflrs/garage:v2.5.0
     # Job that creates the buckets, which Garage does not create itself.
     initImage: amazon/aws-cli:2.40.0
 
