@@ -291,7 +291,7 @@ Nothing in such a cluster serves `metrics.k8s.io`, and that is not only a missin
 convenience:
 
 - **The platform's HorizontalPodAutoscalers cannot work without it.** Loki's write, read,
-  backend and gateway components are autoscaled, as are Mimir's distributor and querier.
+  backend and gateway components are autoscaled, as are Mimir's gateway and Tempo's distributor.
   With no metrics API their targets read `<unknown>` and they never scale in either
   direction — they simply sit at `minReplicas` forever, silently.
 - **`kubectl top` fails**, so you cannot see what the platform actually consumes against
@@ -340,7 +340,7 @@ kubectl get hpa -n monitoring -o jsonpath='{range .items[*]}{.metadata.name}{": 
 
 `FailedGetScale` is a broken reference, not a metrics problem — the message names the
 workload it cannot find. Any other reason is healthy: `ReadyForNewScale` and
-`ScaleDownStabilized` both mean the target was read fine. All seven HPAs should report one
+`ScaleDownStabilized` both mean the target was read fine. All six HPAs should report one
 of those.
 
 ## What the platform actually uses

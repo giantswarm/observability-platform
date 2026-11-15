@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The local kind cluster inherits no DNS search domain from the host. A host search domain no longer slows in-cluster lookups.
 - The `helm.sh/chart` label is valid for long chart versions: the 63-character cut trims the whole trailing run of `-`, `.` and `_`.
 - `doc/OBJECT_STORAGE.md` covers Tempo. It no longer documents an empty credentials Secret.
+- The README install steps pin the observability-operator version, build the chart dependencies and pass a values file.
+- The README network access table lists the S3 and AWS STS hosts.
 - `doc/GATEWAY.md` creates a Gateway and a certificate that serve Grafana and the agent write hostnames, next to the external API.
 
 ### Changed

@@ -73,11 +73,16 @@ installs the CRDs this chart's resources need:
 
 ```bash
 helm install observability-operator observability-operator \
-  --repo https://giantswarm.github.io/control-plane-catalog/ \
+  --repo https://giantswarm.github.io/control-plane-catalog/ --version 0.88.0 \
   --namespace monitoring --create-namespace \
   --values values/observability-operator.yaml
-helm install observability-platform helm/observability-platform --namespace monitoring
+helm dependency build helm/observability-platform
+helm install observability-platform helm/observability-platform --namespace monitoring \
+  --values <your-values.yaml>
 ```
+
+Your values file sets at least `global.objectStorage`. See
+[doc/OBJECT_STORAGE.md](doc/OBJECT_STORAGE.md).
 
 Uninstall in the opposite order: the platform first, then the operator.
 
@@ -124,7 +129,9 @@ The cluster needs outbound HTTPS (port 443) to these endpoints:
 
 | Endpoint | Used for | Hosts |
 | --- | --- | --- |
-| Object storage | Mimir, Loki and Tempo data | `<account>.blob.core.windows.net` |
+| Object storage, `azure` | Mimir, Loki and Tempo data | `<account>.blob.core.windows.net` |
+| Object storage, `s3` | Mimir, Loki and Tempo data | The `s3.endpoint` host and `<bucket>.<s3.endpoint>`, for example `<bucket>.s3.eu-west-1.amazonaws.com` |
+| AWS STS | Credentials for Mimir, Loki and Tempo, with IRSA | `sts.<region>.amazonaws.com` |
 | `gsoci.azurecr.io` | Container images | `gsoci.azurecr.io`, `*.blob.core.windows.net` |
 | `docker.io` | Container images | `registry-1.docker.io`, `auth.docker.io`, `production.cloudflare.docker.com` |
 | OIDC issuer | JWKS fetch by the Envoy proxy pods, with the external API | The host of the JWKS URI |

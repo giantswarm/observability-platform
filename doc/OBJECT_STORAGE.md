@@ -115,7 +115,7 @@ The upstream Loki chart still renders `common.storage.object_store` and `ruler.s
 
 ### Credentials Secret
 
-The operator creates one Secret in the release namespace. The chart never renders it.
+You create one Secret in the release namespace. The chart never renders it.
 
 - Name: `observability-platform-object-storage`, the `existingSecret` value.
 - Keys for `azure`: `AZURE_STORAGE_KEY`.
@@ -239,7 +239,7 @@ Drop `--region` on a store that does not check the signing region.
 
 ## Credentials
 
-Static keys come from one Secret. The operator creates it in the release namespace. The
+Static keys come from one Secret. You create it in the release namespace. The
 chart never renders it, and chart values never hold a key.
 
 - Name: `observability-platform-object-storage`, fixed. `global.objectStorage.existingSecret`
@@ -329,7 +329,7 @@ These ServiceAccounts need no annotation. Their pods do not touch the bucket:
 
 - `loki-gateway`: the Loki gateway.
 - `loki-memcached`: the Loki chunks and results caches.
-- `obs-grafana-agent-operator`: the Grafana Agent operator from the Mimir chart.
+- `<release>-grafana-agent-operator`: the Grafana Agent operator from the Mimir chart.
 - `grafana`: Grafana.
 
 Values example with one role for all components:
