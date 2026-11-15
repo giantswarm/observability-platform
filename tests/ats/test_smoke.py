@@ -6,18 +6,15 @@ The tests run in file order and build on each other.
 """
 
 import base64
-import json
 import secrets
 import time
 
 import pytest
 
-from conftest import kubectl, namespace, retry
+from conftest import RUN, TENANT, kubectl, namespace, retry
 
 pytestmark = pytest.mark.smoke
 
-TENANT = "default"
-RUN = f"e2e-{int(time.time())}"
 TRACE_ID = secrets.token_hex(16)
 
 
@@ -127,18 +124,8 @@ def test_auth_read_no_token(api):
 # == AgentCredentials, through the backends' own routes
 
 
-def agent_credential(name: str) -> tuple[str, str]:
-    """Username and password of an AgentCredential in the namespace `agents`."""
-
-    def read_secret():
-        data = json.loads(kubectl("get", "secret", name, "-n", "agents", "-o", "jsonpath={.data}"))
-        return tuple(base64.b64decode(data[key]).decode() for key in ("username", "password"))
-
-    return retry(120, read_secret)
-
-
-def test_agent_credential_write_log(loki_write, mimir_write, api, token):
-    credential = agent_credential("logs")
+def test_agent_credential_write_log(loki_write, mimir_write, api, token, agent_credentials):
+    credential = agent_credentials["logs"]
     body = {"streams": [{"stream": {"job": f"{RUN}-basic"}, "values": [[now_ns(), f"basic auth from {RUN}"]]}]}
     headers = {"X-Scope-OrgID": TENANT}
     retry(120, lambda: loki_write.request("POST", "/loki/api/v1/push", headers=headers, auth=credential, json=body).raise_for_status())
