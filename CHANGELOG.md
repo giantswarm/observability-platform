@@ -17,13 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `helm.sh/chart` label is valid for long chart versions: the 63-character cut trims the whole trailing run of `-`, `.` and `_`.
 - `doc/OBJECT_STORAGE.md` covers Tempo. It no longer documents an empty credentials Secret.
 - The README install steps pin the observability-operator version, build the chart dependencies and pass a values file.
-- The README network access table lists the S3 and AWS STS hosts.
-- `doc/OBJECT_STORAGE.md` verifies S3 with your own bucket name and adds a check for IRSA.
+- The README network access table lists the S3 hosts.
+- `doc/OBJECT_STORAGE.md` verifies S3 with your own bucket name.
 - `doc/GATEWAY.md` creates a Gateway and a certificate that serve Grafana and the agent write hostnames, next to the external API.
 
 ### Changed
 
-- **Breaking:** Mimir ingesters and store-gateways run without zones: one StatefulSet each, with a rolling update. They restart with the new config after an upgrade. The StatefulSets, pods and volumes have new names.
+- Mimir ingesters and store-gateways run without zones: one StatefulSet each, with a rolling update. They restart with the new config after an upgrade.
 - Enable AgentCredential support in the observability-operator. Upgrade the observability-operator release with the new `values/observability-operator.yaml`: without it, no htpasswd Secret reaches `monitoring` and every push gets a 500.
 - Upgrade Loki app from 0.48.0 to 0.50.1. Loki reads object storage from `loki.loki.loki.storage.object_store`. Remove `loki.loki.loki.storage.azure`.
 - Upgrade Mimir app from 0.30.1 to 0.31.0, with Mimir 3.2.4. It adds the cluster-scoped `mimir-ruler` PriorityClass.
@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Require `global.objectStorage.backend`, with no default. It accepts `azure` and `s3`.
 - Mimir and Tempo read the backend from the `OBS_BACKEND` key of the object storage ConfigMap.
 - Loki reads the backend from the `OBS_BACKEND` key of the object storage ConfigMap.
-- **Breaking:** `localBlobStorage` is renamed `localObjectStorage`. `localBlobStorage.init.image` moves to `localObjectStorage.azurite.initImage`.
+- `localBlobStorage` is renamed `localObjectStorage`. `localBlobStorage.init.image` moves to `localObjectStorage.azurite.initImage`.
 - The local kind setup runs the `s3` backend with Garage by default.
 - `doc/LOCAL_DEV.md` covers both local stores.
 - Update architect to v10.18.0 (giantswarm/observability-platform#176)

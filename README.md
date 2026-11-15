@@ -122,7 +122,7 @@ This app has been tested to work with the following workload cluster release ver
 - _add release version_
 
 Standalone, it has been installed and verified on a vanilla EKS cluster, with Azure Blob Storage
-and with AWS S3 through IRSA.
+and with AWS S3.
 
 ## Network access
 
@@ -132,7 +132,6 @@ The cluster needs outbound HTTPS (port 443) to these endpoints:
 | --- | --- | --- |
 | Object storage, `azure` | Mimir, Loki and Tempo data | `<account>.blob.core.windows.net` |
 | Object storage, `s3` | Mimir, Loki and Tempo data | The `s3.endpoint` host and `<bucket>.<s3.endpoint>`, for example `<bucket>.s3.eu-west-1.amazonaws.com` |
-| AWS STS | Credentials for Mimir, Loki and Tempo, with IRSA | `sts.<region>.amazonaws.com` |
 | `gsoci.azurecr.io` | Container images | `gsoci.azurecr.io`, `*.blob.core.windows.net` |
 | `docker.io` | Container images | `registry-1.docker.io`, `auth.docker.io`, `production.cloudflare.docker.com` |
 | OIDC issuer | JWKS fetch by the Envoy proxy pods, with the external API | The host of the JWKS URI |

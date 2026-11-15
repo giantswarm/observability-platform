@@ -367,6 +367,18 @@ ServiceAccount. The role's trust policy must allow each ServiceAccount in the re
 namespace, for example `system:serviceaccount:monitoring:mimir`.
 See [S3 permissions](#s3-permissions).
 
+The pods need outbound HTTPS to `sts.<region>.amazonaws.com` to exchange their token.
+
+Check the role reached the pods:
+
+```bash
+kubectl get pod mimir-ingester-0 loki-write-0 tempo-ingester-0 -n monitoring \
+  -o jsonpath='{range .items[*]}{.metadata.name}{": "}{.spec.containers[0].env[?(@.name=="AWS_ROLE_ARN")].value}{"\n"}{end}'
+```
+
+Each line ends with the role ARN. An empty value means the ServiceAccount has no
+`eks.amazonaws.com/role-arn` annotation, or the pod started before the annotation was set.
+
 ### S3 permissions
 
 The IAM user behind the static keys, or the IRSA role, needs these permissions:
@@ -896,19 +908,3 @@ aws s3 rm "s3://$BUCKET/.connectivity-check" \
 ```
 
 The second command prints `ok`. Use `http://` with `s3.insecure: true`.
-
-With IRSA there are no keys to test with. Check the role reached the pods:
-
-```bash
-kubectl get pod mimir-ingester-zone-a-0 loki-write-0 tempo-ingester-0 -n monitoring \
-  -o jsonpath='{range .items[*]}{.metadata.name}{": "}{.spec.containers[0].env[?(@.name=="AWS_ROLE_ARN")].value}{"\n"}{end}'
-```
-
-Each line ends with the role ARN. An empty value means the ServiceAccount has no
-`eks.amazonaws.com/role-arn` annotation, or the pod started before the annotation was set.
-Then list a bucket after the platform has ingested data. Objects appear once the ingesters
-flush:
-
-```bash
-aws s3 ls "s3://$BUCKET" --recursive --summarize | tail -2
-```
