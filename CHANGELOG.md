@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Loki runs at least three write pods. Log writes no longer fail while one write pod restarts.
+- The Loki ruler sends alerts to Mimir Alertmanager. Loki alerting rules reached no Alertmanager before.
+- The Loki ruler writes recording rule results to Mimir. Loki dropped them before.
+- Each Loki rule group runs on one `loki-backend` replica. Every replica evaluated every group before.
 - The local kind cluster inherits no DNS search domain from the host. A host search domain no longer slows in-cluster lookups.
 - The `helm.sh/chart` label is valid for long chart versions: the 63-character cut trims the whole trailing run of `-`, `.` and `_`.
 - `doc/OBJECT_STORAGE.md` covers Tempo. It no longer documents an empty credentials Secret.
