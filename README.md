@@ -86,6 +86,42 @@ Your values file sets at least `global.objectStorage`. See
 
 Uninstall in the opposite order: the platform first, then the operator.
 
+### Upgrading from zone-aware Mimir
+
+Earlier chart versions ran one Mimir ingester and one store-gateway StatefulSet per zone. This
+version runs one StatefulSet each, with new pods and new volumes. Follow these steps:
+
+1. Flush the ingesters to object storage, before the upgrade:
+
+   ```bash
+   for z in a b c; do
+     kubectl exec -n monitoring deploy/mimir-gateway -- \
+       wget -q -O- --post-data= "http://mimir-ingester-zone-$z-0.mimir-ingester-headless:8080/ingester/flush?wait=true"
+   done
+   ```
+
+2. Run `helm upgrade`.
+3. Remove the old ingesters from the ring. Until then, queries fail with
+   `too many unhealthy instances in the ring`:
+
+   ```bash
+   kubectl port-forward -n monitoring deploy/mimir-distributor 8080:8080 &
+   for z in a b c; do
+     curl -X POST -d "forget=mimir-ingester-zone-$z-0" localhost:8080/ingester/ring
+   done
+   ```
+
+4. Delete the old volumes:
+
+   ```bash
+   for z in a b c; do
+     kubectl delete pvc -n monitoring storage-mimir-ingester-zone-$z-0 storage-mimir-store-gateway-zone-$z-0
+   done
+   ```
+
+Samples from the hours before the upgrade are in object storage. Queries return them again once
+the store-gateways load their blocks, about 12 hours after the samples were written.
+
 ## Configuring
 
 ### values.yaml

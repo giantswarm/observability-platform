@@ -414,13 +414,21 @@ mimir:
     fullnameOverride: mimir
     alertmanager:
       enabled: true
+    # No zones: one ingester and one store-gateway StatefulSet, each with a rolling update.
+    # Zone-aware StatefulSets use `OnDelete` and keep the old config after an upgrade.
     ingester:
+      zoneAwareReplication:
+        enabled: false
       verticalAutoscaling:
         enabled: false
     ruler:
       verticalAutoscaling:
         enabled: false
     store_gateway:
+      zoneAwareReplication:
+        enabled: false
+      # Three replicas, as with one per zone before.
+      replicas: 3
       verticalAutoscaling:
         enabled: false
     mimir:
