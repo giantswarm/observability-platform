@@ -423,6 +423,12 @@ mimir:
     store_gateway:
       verticalAutoscaling:
         enabled: false
+    # Rolls the zone-aware ingester and store-gateway StatefulSets, which use `OnDelete`.
+    # No webhooks: nothing fails closed on StatefulSet updates or pod evictions.
+    rollout_operator:
+      enabled: true
+      webhooks:
+        enabled: false
     mimir:
       structuredConfig:
         common:
