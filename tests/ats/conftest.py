@@ -14,12 +14,14 @@ runs lazily in a fixture: the tests collect without a cluster or a target file.
                        Default `target.env` next to this file.
 """
 
+import base64
 import functools
 import json
 import os
 import shlex
 import subprocess
 import time
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -29,6 +31,16 @@ INPUTS = ("KUBE_CONTEXT", "OBS_NAMESPACE", "OBS_TOKEN_COMMAND", "OBS_GATEWAY_ADD
 TARGET_FILE = Path(os.environ.get("OBS_TARGET_FILE") or Path(__file__).resolve().parent / "target.env").absolute()
 # The token command re-runs when its token is older than this.
 TOKEN_MAX_AGE = 50 * 60
+# The tenant of the run's test data.
+TENANT = "default"
+# The run id: the label of the run's test data and the namespace of its AgentCredentials.
+RUN = f"verify-{int(time.time())}"
+# The agent host and a write path of each AgentCredential backend.
+AGENT_HOSTS = {
+    "metrics": ("mimir", "/otlp/v1/metrics"),
+    "logs": ("loki", "/loki/api/v1/push"),
+    "traces": ("tempo", "/tempo/v1/traces"),
+}
 
 
 @functools.cache
@@ -58,8 +70,10 @@ def namespace() -> str:
     return inputs().get("OBS_NAMESPACE", "monitoring")
 
 
-def kubectl(*args: str) -> str:
-    return subprocess.run(["kubectl", "--context", context(), *args], check=True, capture_output=True, text=True).stdout
+def kubectl(*args: str, input: str | None = None) -> str:
+    return subprocess.run(
+        ["kubectl", "--context", context(), *args], input=input, check=True, capture_output=True, text=True
+    ).stdout
 
 
 def retry(seconds: int, check):
@@ -173,6 +187,51 @@ _token = Token()
 @pytest.fixture
 def token() -> str:
     return _token.get()
+
+
+@pytest.fixture(scope="session")
+def agent_credentials() -> Iterator[dict[str, tuple[str, str]]]:
+    """Username and password of the run's AgentCredential per backend.
+
+    Creates the namespace RUN with one AgentCredential per backend. Waits for the
+    operator to write each Secret and for each agent host to accept its credential:
+    a write with the credential gets an answer other than 401. Teardown deletes the
+    namespace.
+    """
+    items = [{"apiVersion": "v1", "kind": "Namespace", "metadata": {"name": RUN}}] + [
+        {
+            "apiVersion": "observability.giantswarm.io/v1alpha1",
+            "kind": "AgentCredential",
+            "metadata": {"name": backend, "namespace": RUN},
+            "spec": {"backend": backend},
+        }
+        for backend in AGENT_HOSTS
+    ]
+    try:
+        kubectl("create", "-f", "-", input=json.dumps({"apiVersion": "v1", "kind": "List", "items": items}))
+        credentials = {backend: retry(120, lambda: _agent_credential(backend)) for backend in AGENT_HOSTS}
+        for backend, credential in credentials.items():
+            role, path = AGENT_HOSTS[backend]
+            agent_host = Gateway(hostname(role))
+
+            def accepted():
+                response = agent_host.request("POST", path, headers={"X-Scope-OrgID": TENANT}, auth=credential, json={})
+                assert response.status_code != 401, f"The {role} agent host answers 401 to the run's {backend} credential."
+
+            retry(300, accepted)
+        yield credentials
+    finally:
+        kubectl("delete", "namespace", RUN, "--ignore-not-found", "--timeout=180s")
+
+
+def _agent_credential(backend: str) -> tuple[str, str]:
+    """Username and password from the Secret the operator writes for an AgentCredential."""
+    status = json.loads(kubectl("get", "agentcredential", backend, "-n", RUN, "-o", "json")).get("status", {})
+    secret = status.get("secretRef", {}).get("name")
+    if not secret:
+        raise LookupError(f"The {backend} AgentCredential in namespace {RUN} has no Secret yet.")
+    data = json.loads(kubectl("get", "secret", secret, "-n", RUN, "-o", "jsonpath={.data}"))
+    return tuple(base64.b64decode(data[key]).decode() for key in ("username", "password"))
 
 
 def pytest_report_header(config) -> list[str]:
