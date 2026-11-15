@@ -83,9 +83,6 @@ mimir:
     querier:
       enabled: false
   mimir:
-    # No zones below, so nothing uses `OnDelete`.
-    rollout_operator:
-      enabled: false
     # One zone and one replica each, with replication_factor below to match.
     ingester:
       zoneAwareReplication:

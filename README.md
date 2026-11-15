@@ -86,16 +86,6 @@ Your values file sets at least `global.objectStorage`. See
 
 Uninstall in the opposite order: the platform first, then the operator.
 
-Helm installs CRDs on `helm install` only. Before a `helm upgrade` from a release without the
-Mimir rollout-operator, apply its CRDs:
-
-```bash
-tar -xzf helm/observability-platform/charts/mimir-0.31.0.tgz -C /tmp \
-  mimir/charts/mimir-distributed/charts/rollout-operator/charts/crds/crds
-kubectl apply --server-side \
-  -f /tmp/mimir/charts/mimir-distributed/charts/rollout-operator/charts/crds/crds/
-```
-
 ## Configuring
 
 ### values.yaml

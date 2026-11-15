@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Mimir ingesters and store-gateways restart with the new config after an upgrade. The Mimir rollout-operator rolls them one zone at a time, with its webhooks off. It adds two CRDs: apply them before upgrading an existing release, as the README describes.
 - Loki runs at least three write pods. Log writes no longer fail while one write pod restarts.
 - The Loki ruler sends alerts to Mimir Alertmanager. Loki alerting rules reached no Alertmanager before.
 - The Loki ruler writes recording rule results to Mimir. Loki dropped them before.
