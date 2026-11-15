@@ -7,8 +7,10 @@ HELM := helm --kube-context kind-kind
 ATS_VERSION := 1.1.0
 # Object storage backend of the local setup: `s3` runs Garage, `azure` runs Azurite.
 LOCAL_BACKEND ?= s3
+# Markers `make verify` selects.
+VERIFY_MARKERS ?= smoke or verify
 
-.PHONY: local-up local-ats local-token local-down
+.PHONY: local-up local-ats local-token local-down verify
 
 local-up: ## Create a kind cluster running the chart and the external API. LOCAL_BACKEND=azure runs Azurite.
 	kind create cluster --config .ats/kind-config.yaml
@@ -24,11 +26,16 @@ local-ats: ## Run the app-test-suite smoke test on a new kind cluster `ats`, as 
 	  gsoci.azurecr.io/giantswarm/app-test-suite:$(ATS_VERSION) \
 	  --chart-file $$(ls build/observability-platform-*.tgz) --cluster-kubeconfig build/kube.config \
 	  --cluster-type kind; \
-	  status=$$?; kind delete cluster --name ats; exit $$status
+	  status=$$?; kind delete cluster --name ats; rm -f tests/ats/target.env; exit $$status
 
 local-token: ## Print a JWT for the external API, valid for one hour.
 	@$(KUBECTL) exec -n jwt-issuer deploy/jwks -c signer -- /scripts/jwt.sh token
 
-local-down: ## Delete the kind cluster and the local certificate.
+local-down: ## Delete the kind cluster, the local certificate and the target file.
 	kind delete cluster
-	rm -rf $(LOCAL)/.keys
+	rm -rf $(LOCAL)/.keys tests/ats/target.env
+
+##@ Verification
+
+verify: ## Verify the platform the inputs or tests/ats/target.env name. VERIFY_MARKERS selects the checks.
+	cd tests/ats && uv run pytest -m "$(VERIFY_MARKERS)" -v -rs --tb=short
