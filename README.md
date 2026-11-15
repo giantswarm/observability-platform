@@ -121,7 +121,8 @@ This app has been tested to work with the following workload cluster release ver
 
 - _add release version_
 
-Standalone, it has been installed and verified on a vanilla EKS cluster.
+Standalone, it has been installed and verified on a vanilla EKS cluster, with Azure Blob Storage
+and with AWS S3 through IRSA.
 
 ## Network access
 

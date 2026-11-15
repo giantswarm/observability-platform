@@ -883,15 +883,32 @@ export AWS_ACCESS_KEY_ID=<access-key-id>
 export AWS_SECRET_ACCESS_KEY=<secret-access-key>
 ENDPOINT=s3.eu-west-1.amazonaws.com   # s3.endpoint
 REGION=eu-west-1                      # s3.region
+BUCKET=<mimir-blocks-bucket>          # buckets.mimirBlocks
 
-echo ok | aws s3 cp - s3://mimir-blocks/.connectivity-check \
+echo ok | aws s3 cp - "s3://$BUCKET/.connectivity-check" \
   --endpoint-url "https://$ENDPOINT" --region "$REGION"
 
-aws s3 cp s3://mimir-blocks/.connectivity-check - \
+aws s3 cp "s3://$BUCKET/.connectivity-check" - \
   --endpoint-url "https://$ENDPOINT" --region "$REGION"
 
-aws s3 rm s3://mimir-blocks/.connectivity-check \
+aws s3 rm "s3://$BUCKET/.connectivity-check" \
   --endpoint-url "https://$ENDPOINT" --region "$REGION"
 ```
 
 The second command prints `ok`. Use `http://` with `s3.insecure: true`.
+
+With IRSA there are no keys to test with. Check the role reached the pods:
+
+```bash
+kubectl get pod mimir-ingester-zone-a-0 loki-write-0 tempo-ingester-0 -n monitoring \
+  -o jsonpath='{range .items[*]}{.metadata.name}{": "}{.spec.containers[0].env[?(@.name=="AWS_ROLE_ARN")].value}{"\n"}{end}'
+```
+
+Each line ends with the role ARN. An empty value means the ServiceAccount has no
+`eks.amazonaws.com/role-arn` annotation, or the pod started before the annotation was set.
+Then list a bucket after the platform has ingested data. Objects appear once the ingesters
+flush:
+
+```bash
+aws s3 ls "s3://$BUCKET" --recursive --summarize | tail -2
+```

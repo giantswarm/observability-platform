@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `doc/OBJECT_STORAGE.md` covers Tempo. It no longer documents an empty credentials Secret.
 - The README install steps pin the observability-operator version, build the chart dependencies and pass a values file.
 - The README network access table lists the S3 and AWS STS hosts.
+- `doc/OBJECT_STORAGE.md` verifies S3 with your own bucket name and adds a check for IRSA.
 - `doc/GATEWAY.md` creates a Gateway and a certificate that serve Grafana and the agent write hostnames, next to the external API.
 
 ### Changed
