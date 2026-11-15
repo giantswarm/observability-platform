@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Breaking:** Mimir ingesters and store-gateways run without zones: one StatefulSet each, with a rolling update. They restart with the new config after an upgrade. The StatefulSets, pods and volumes have new names. Follow "Upgrading from zone-aware Mimir" in the README.
+- **Breaking:** Mimir ingesters and store-gateways run without zones: one StatefulSet each, with a rolling update. They restart with the new config after an upgrade. The StatefulSets, pods and volumes have new names.
 - Enable AgentCredential support in the observability-operator. Upgrade the observability-operator release with the new `values/observability-operator.yaml`: without it, no htpasswd Secret reaches `monitoring` and every push gets a 500.
 - Upgrade Loki app from 0.48.0 to 0.50.1. Loki reads object storage from `loki.loki.loki.storage.object_store`. Remove `loki.loki.loki.storage.azure`.
 - Upgrade Mimir app from 0.30.1 to 0.31.0, with Mimir 3.2.4. It adds the cluster-scoped `mimir-ruler` PriorityClass.
