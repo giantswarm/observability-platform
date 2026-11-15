@@ -12,7 +12,7 @@ import time
 
 import pytest
 
-from conftest import NAMESPACE, kubectl, retry
+from conftest import kubectl, namespace, retry
 
 pytestmark = pytest.mark.smoke
 
@@ -35,8 +35,8 @@ def now_ns() -> str:
 def test_install_workloads_ready():
     def rollouts():
         for kind in ("deployment", "statefulset", "daemonset"):
-            for name in kubectl("get", kind, "-n", NAMESPACE, "-o", "name").split():
-                kubectl("rollout", "status", name, "-n", NAMESPACE, "--timeout=10s")
+            for name in kubectl("get", kind, "-n", namespace(), "-o", "name").split():
+                kubectl("rollout", "status", name, "-n", namespace(), "--timeout=10s")
 
     retry(900, rollouts)
 
@@ -49,7 +49,7 @@ def test_grafana_health(grafana):
 
 
 def test_grafana_login(grafana):
-    password = kubectl("get", "secret", "grafana", "-n", NAMESPACE, "-o", "jsonpath={.data.admin-password}")
+    password = kubectl("get", "secret", "grafana", "-n", namespace(), "-o", "jsonpath={.data.admin-password}")
     grafana.request("GET", "/api/org", auth=("admin", base64.b64decode(password).decode())).raise_for_status()
 
 
@@ -128,7 +128,7 @@ def test_auth_read_no_token(api):
 
 
 def agent_credential(name: str) -> tuple[str, str]:
-    """Username and password of an AgentCredential from hack/local/agentcredentials.yaml."""
+    """Username and password of an AgentCredential in the namespace `agents`."""
 
     def read_secret():
         data = json.loads(kubectl("get", "secret", name, "-n", "agents", "-o", "jsonpath={.data}"))
