@@ -524,6 +524,11 @@ loki:
       # on any CNI that enforces NetworkPolicies.
       egressKubeApiserver:
         enabled: false
+    # Loki's replication factor is 3: a write needs 2 live write pods. With 3 pods,
+    # writes continue while one restarts.
+    write:
+      autoscaling:
+        minReplicas: 3
     loki:
       # Repeated from loki-app's own values. Overriding a list replaces it.
       schemaConfig:
