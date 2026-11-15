@@ -590,6 +590,20 @@ loki:
             # See the note on Mimir's `connection_string` above.
             connection_string: ${OBS_AZURE_CONNECTION_STRING}
             container_name: ${OBS_BUCKET_LOKI}
+        # The ruler sends alerts to Mimir Alertmanager and writes recording rule results
+        # to Mimir. Both carry the rule's tenant in `X-Scope-OrgID`. The short Service
+        # names resolve because Loki and Mimir share the release namespace. With
+        # `mimir.enabled: false`, set `alertmanager_url: ""` and `remote_write.enabled: false`.
+        ruler:
+          alertmanager_url: http://mimir-alertmanager:8080/alertmanager
+          # Each rule group runs on one loki-backend replica. The ring joins the
+          # existing memberlist.
+          enable_sharding: true
+          remote_write:
+            enabled: true
+            clients:
+              mimir:
+                url: http://mimir-gateway/api/v1/push
         # The compactor needs no storage block. It follows `schemaConfig`. No
         # retention is enabled, so no delete request store is set. Enabling
         # retention requires `compactor.delete_request_store: ${OBS_BACKEND}`.
