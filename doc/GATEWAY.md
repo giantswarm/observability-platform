@@ -1,15 +1,25 @@
 # Gateway
 
-The external API is served through a Gateway you provide. This guide prepares
-one on the cluster from [EKS_CLUSTER.md](EKS_CLUSTER.md):
+The external API, Grafana and the agent write endpoints are served through a Gateway you
+provide. This guide prepares one on the cluster from [EKS_CLUSTER.md](EKS_CLUSTER.md):
 
 - Envoy Gateway
 - cert-manager, with Gateway API support
-- a Gateway with an HTTPS listener named `https` for `observability.<domain>`
-- a Let's Encrypt certificate for that listener
-- a DNS record for `observability.<domain>`
+- a Gateway with an HTTPS listener named `https`
+- a Let's Encrypt certificate for the platform's hostnames
+- a DNS record for each hostname
 
-The chart configures the API itself. See [EXTERNAL_API.md](EXTERNAL_API.md).
+The platform serves these hostnames:
+
+| Hostname | Serves | Guide |
+| --- | --- | --- |
+| `observability.<domain>` | External API | [EXTERNAL_API.md](EXTERNAL_API.md) |
+| `grafana.<domain>` | Grafana | [EXTERNAL_API.md](EXTERNAL_API.md) |
+| `mimir.<domain>` | Agent writes, metrics | [AGENT_CREDENTIALS.md](AGENT_CREDENTIALS.md) |
+| `write.loki.<domain>` | Agent writes, logs | [AGENT_CREDENTIALS.md](AGENT_CREDENTIALS.md) |
+| `tempo.<domain>` | Agent writes, traces | [AGENT_CREDENTIALS.md](AGENT_CREDENTIALS.md) |
+
+The chart configures the routes itself. Leave out the hostnames of the routes you keep disabled.
 
 This guide uses Envoy Gateway, the recommended implementation. Any other Gateway API
 implementation works too, such as Traefik, HAProxy or Kong.
@@ -22,8 +32,8 @@ implementation works too, such as Traefik, HAProxy or Kong.
 | cert-manager | v1.21.2, in `cert-manager`, started with `--enable-gateway-api` |
 | GatewayClass | `envoy-gateway` |
 | Gateway | `giantswarm-default` in `envoy-gateway-system` |
-| Listeners | `http` on port 80, `https` on port 443, both for `observability.<domain>` |
-| Certificate | Let's Encrypt, HTTP-01, Secret `observability-https-tls` |
+| Listeners | `http` on port 80, `https` on port 443, both without a hostname |
+| Certificate | Let's Encrypt, HTTP-01, one name per hostname, Secret `observability-https-tls` |
 | Load balancer | AWS Classic Load Balancer, created for the Envoy Service |
 
 The Gateway name, namespace and listener name match the chart's default `parentRefs`. The
@@ -37,8 +47,8 @@ The `http` listener serves the ACME HTTP-01 challenge. It accepts routes from th
 - A cluster from [EKS_CLUSTER.md](EKS_CLUSTER.md), with `kubectl` pointed at it
 - `helm` 3.8 or later
 - `aws` CLI, authenticated
-- A domain with a Route53 hosted zone. Another DNS provider works: create the record by hand
-  in [Step 6](#step-6--create-the-dns-record).
+- A domain with a Route53 hosted zone. Another DNS provider works: create the records by hand
+  in [Step 6](#step-6--create-the-dns-records).
 - An email address for the Let's Encrypt account
 
 ## Step 1 — Set variables
@@ -47,11 +57,12 @@ The `http` listener serves the ACME HTTP-01 challenge. It accepts routes from th
 REGION=eu-west-1
 DOMAIN=example.com
 OBS_HOST=observability.$DOMAIN
+HOSTS="observability.$DOMAIN grafana.$DOMAIN mimir.$DOMAIN write.loki.$DOMAIN tempo.$DOMAIN"
 HOSTED_ZONE_ID=<route53-hosted-zone-id>
 ACME_EMAIL=<you@example.com>
 ```
 
-`DOMAIN` is the chart's `global.domain`.
+`DOMAIN` is the chart's `global.domain`. `HOSTS` lists the hostnames the Gateway serves.
 
 ## Step 2 — Install Envoy Gateway
 
@@ -145,22 +156,18 @@ kind: Gateway
 metadata:
   name: giantswarm-default
   namespace: envoy-gateway-system
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt
 spec:
   gatewayClassName: envoy-gateway
   listeners:
     - name: http
       protocol: HTTP
       port: 80
-      hostname: $OBS_HOST
       allowedRoutes:
         namespaces:
           from: Same
     - name: https
       protocol: HTTPS
       port: 443
-      hostname: $OBS_HOST
       tls:
         mode: Terminate
         certificateRefs:
@@ -172,12 +179,25 @@ spec:
           selector:
             matchLabels:
               kubernetes.io/metadata.name: monitoring
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: observability-https-tls
+  namespace: envoy-gateway-system
+spec:
+  secretName: observability-https-tls
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt
+  dnsNames:
+$(for h in $HOSTS; do echo "    - $h"; done)
 EOF
 ```
 
-The `cert-manager.io/cluster-issuer` annotation makes cert-manager create the Certificate
-`observability-https-tls` in `envoy-gateway-system`. It reads `hostname` and `certificateRefs`
-from the `https` listener.
+The chart's routes all attach to the listener named `https`. A listener holds one hostname, so
+`https` has none and accepts every hostname. The Certificate lists each hostname. A wildcard
+`*.<domain>` certificate needs a DNS-01 solver and does not cover `write.loki.<domain>`.
 
 Wait for the load balancer:
 
@@ -191,27 +211,29 @@ echo "$LB"
 a1b2c3d4e5f6...eu-west-1.elb.amazonaws.com
 ```
 
-## Step 6 — Create the DNS record
+## Step 6 — Create the DNS records
 
-Point `observability.<domain>` at the load balancer with a CNAME record:
-
-```bash
-aws route53 change-resource-record-sets --hosted-zone-id "$HOSTED_ZONE_ID" \
-  --change-batch "{\"Changes\":[{\"Action\":\"UPSERT\",\"ResourceRecordSet\":{\"Name\":\"$OBS_HOST\",\"Type\":\"CNAME\",\"TTL\":60,\"ResourceRecords\":[{\"Value\":\"$LB\"}]}}]}"
-```
-
-Check the record resolves:
+Point each hostname at the load balancer with a CNAME record:
 
 ```bash
-dig +short "$OBS_HOST"
+for h in $HOSTS; do
+  aws route53 change-resource-record-sets --hosted-zone-id "$HOSTED_ZONE_ID" \
+    --change-batch "{\"Changes\":[{\"Action\":\"UPSERT\",\"ResourceRecordSet\":{\"Name\":\"$h\",\"Type\":\"CNAME\",\"TTL\":60,\"ResourceRecords\":[{\"Value\":\"$LB\"}]}}]}"
+done
 ```
 
-The first line is the load balancer name. The lines after it are its IP addresses.
+Check the records resolve:
+
+```bash
+for h in $HOSTS; do dig +short "$h" | head -1; done
+```
+
+Each line is the load balancer name.
 
 ## Step 7 — Check the certificate
 
-Let's Encrypt validates the challenge once the record resolves. Issuance takes one to three
-minutes.
+Let's Encrypt validates one challenge per hostname once the records resolve. Issuance takes
+one to ten minutes.
 
 ```bash
 kubectl -n envoy-gateway-system wait --for=condition=Ready certificate/observability-https-tls --timeout=600s
@@ -255,7 +277,8 @@ kubectl -n envoy-gateway-system get certificaterequest,order,challenge
 kubectl -n envoy-gateway-system describe challenge
 ```
 
-- `no such host` or a DNS error: the record from Step 6 does not resolve yet.
+- `no such host` or a DNS error: the record from Step 6 does not resolve yet. The cluster DNS
+  caches the missing record for a few minutes after you create it. cert-manager retries.
 - `connection refused` or a timeout on port 80: the `http` listener is missing or not
   programmed.
 - No `HTTPRoute` in `envoy-gateway-system` during the challenge: cert-manager runs without
@@ -283,8 +306,10 @@ Delete the Gateway before the cluster. The Gateway owns the load balancer. A loa
 left behind blocks the VPC deletion in `eksctl delete cluster`.
 
 ```bash
-aws route53 change-resource-record-sets --hosted-zone-id "$HOSTED_ZONE_ID" \
-  --change-batch "{\"Changes\":[{\"Action\":\"DELETE\",\"ResourceRecordSet\":{\"Name\":\"$OBS_HOST\",\"Type\":\"CNAME\",\"TTL\":60,\"ResourceRecords\":[{\"Value\":\"$LB\"}]}}]}"
+for h in $HOSTS; do
+  aws route53 change-resource-record-sets --hosted-zone-id "$HOSTED_ZONE_ID" \
+    --change-batch "{\"Changes\":[{\"Action\":\"DELETE\",\"ResourceRecordSet\":{\"Name\":\"$h\",\"Type\":\"CNAME\",\"TTL\":60,\"ResourceRecords\":[{\"Value\":\"$LB\"}]}}]}"
+done
 
 kubectl -n envoy-gateway-system delete gateway giantswarm-default
 kubectl -n envoy-gateway-system wait --for=delete svc -l gateway.envoyproxy.io/owning-gateway-name=giantswarm-default --timeout=300s
