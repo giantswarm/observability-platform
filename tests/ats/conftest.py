@@ -1,14 +1,18 @@
 """Fixtures for the app-test-suite tests.
 
 The tests read their target from inputs: environment variables, then the target
-file. The setup that installs the platform writes the target file. Every lookup
-runs lazily in a fixture: the tests collect without a cluster or a target file.
+file. An empty value counts as unset. The setup that installs the platform writes
+the target file. Every lookup runs lazily in a fixture: the tests collect without
+a cluster or a target file. A session fixture resolves the inputs and the context
+before the first test and ends the run when they do not resolve.
 
   KUBE_CONTEXT         kubectl context. Unset, the current context applies.
   OBS_NAMESPACE        Release namespace. Default `monitoring`.
-  OBS_TOKEN_COMMAND    Command that prints a JWT for the external API. Required.
+  OBS_TOKEN_COMMAND    Command that prints a JWT for the external API. Required. The
+                       tests split it with shell-style quoting and run it with no shell.
   OBS_GATEWAY_ADDRESS  `host:port` the HTTPS client connects to. Unset, it connects
-                       to the route hostname.
+                       to the route hostname. Set, SNI, the Host header and the
+                       certificate check still use the route hostname.
   OBS_CA_BUNDLE        CA file for the HTTPS client. Unset, the system CA bundle applies.
   OBS_TARGET_FILE      Path of the target file, from the environment only.
                        Default `target.env` next to this file.
@@ -18,14 +22,17 @@ import base64
 import functools
 import json
 import os
+import re
 import shlex
 import subprocess
 import time
-from collections.abc import Iterator
+import warnings
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
 import requests
+from requests.adapters import HTTPAdapter
 
 INPUTS = ("KUBE_CONTEXT", "OBS_NAMESPACE", "OBS_TOKEN_COMMAND", "OBS_GATEWAY_ADDRESS", "OBS_CA_BUNDLE")
 TARGET_FILE = Path(os.environ.get("OBS_TARGET_FILE") or Path(__file__).resolve().parent / "target.env").absolute()
@@ -50,9 +57,9 @@ def inputs() -> dict[str, str]:
     if TARGET_FILE.exists():
         for line in TARGET_FILE.read_text().splitlines():
             key, sep, value = line.partition("=")
-            if sep and key.strip() in INPUTS:
+            if sep and key.strip() in INPUTS and value.strip():
                 values[key.strip()] = value.strip()
-    elif "OBS_TARGET_FILE" in os.environ:
+    elif os.environ.get("OBS_TARGET_FILE"):
         raise FileNotFoundError(f"OBS_TARGET_FILE points at {TARGET_FILE}, which does not exist.")
     values.update({key: os.environ[key] for key in INPUTS if os.environ.get(key)})
     return values
@@ -89,43 +96,49 @@ def retry(seconds: int, check):
 
 
 @functools.cache
-def hostnames() -> dict[str, str]:
-    """The route hostnames in the release namespace, by role.
+def hostname(role: str) -> str:
+    """The route hostname of a role in the release namespace.
 
     `api` is the external API, `grafana` is Grafana, `loki`, `mimir` and `tempo` are
     the agent hosts. The charts label each HTTPRoute with the chart that owns it.
+    The role needs exactly one hostname. A failed lookup raises and stays uncached.
     """
-    found: dict[str, set[str]] = {}
-    for route in json.loads(kubectl("get", "httproute", "-n", namespace(), "-o", "json"))["items"]:
+    hosts: set[str] = set()
+    routes = kubectl("get", "httproutes.gateway.networking.k8s.io", "-n", namespace(), "-o", "json")
+    for route in json.loads(routes)["items"]:
         labels = route["metadata"].get("labels", {})
         name = labels.get("app.kubernetes.io/name")
         if name == "observability-platform-api":
-            role = "api"
+            owner = "api"
         elif name == "grafana":
-            role = "grafana"
+            owner = "grafana"
         elif name in ("loki", "mimir", "tempo") and labels.get("app.kubernetes.io/component") == "gateway":
-            role = name
+            owner = name
         else:
             continue
-        found.setdefault(role, set()).update(route["spec"].get("hostnames", []))
-    for role, hosts in found.items():
-        if len(hosts) != 1:
-            raise LookupError(f"The {role} HTTPRoutes in namespace {namespace()} have {len(hosts)} hostnames: {sorted(hosts)}")
-    return {role: hosts.pop() for role, hosts in found.items()}
+        if owner == role:
+            hosts.update(route["spec"].get("hostnames", []))
+    if len(hosts) != 1:
+        raise LookupError(f"The {role} HTTPRoutes in namespace {namespace()} have {len(hosts)} hostnames: {sorted(hosts)}")
+    return hosts.pop()
 
 
-def hostname(role: str) -> str:
-    try:
-        return hostnames()[role]
-    except KeyError:
-        raise LookupError(f"No {role} HTTPRoute in namespace {namespace()}") from None
+class HostnameAdapter(HTTPAdapter):
+    """Transport adapter that sends a hostname as SNI and checks the certificate against it."""
+
+    def __init__(self, hostname: str):
+        self.hostname = hostname
+        super().__init__()
+
+    def init_poolmanager(self, *args, **kwargs):
+        super().init_poolmanager(*args, server_hostname=self.hostname, assert_hostname=self.hostname, **kwargs)
 
 
 class Gateway:
     """HTTPS client for one route hostname.
 
-    With OBS_GATEWAY_ADDRESS, the client connects to that address and sends the
-    hostname in the Host header.
+    With OBS_GATEWAY_ADDRESS, the client connects to that address. It sends the
+    hostname as SNI and in the Host header, and checks the certificate against it.
     """
 
     def __init__(self, hostname: str):
@@ -134,6 +147,7 @@ class Gateway:
         address = inputs().get("OBS_GATEWAY_ADDRESS")
         if address:
             self.session.headers["Host"] = hostname
+            self.session.mount(f"https://{address}", HostnameAdapter(hostname))
         self.base = f"https://{address or hostname}"
 
     def request(self, method: str, path: str, **kwargs) -> requests.Response:
@@ -168,16 +182,20 @@ class Token:
         self.issued = 0.0
 
     def get(self) -> str:
-        if self.value and time.monotonic() - self.issued < TOKEN_MAX_AGE:
+        if self.value and time.time() - self.issued < TOKEN_MAX_AGE:
             return self.value
         command = inputs().get("OBS_TOKEN_COMMAND")
         if not command:
             pytest.fail(f"OBS_TOKEN_COMMAND is not set. Set it in the environment or in the target file {TARGET_FILE}.", pytrace=False)
+        # The messages quote neither stdout nor stderr: either can hold the token.
         result = subprocess.run(shlex.split(command), capture_output=True, text=True)
-        if result.returncode != 0 or not result.stdout.strip():
-            pytest.fail(f"OBS_TOKEN_COMMAND exited with {result.returncode} and printed no token: {result.stderr.strip()}", pytrace=False)
-        self.value = result.stdout.strip()
-        self.issued = time.monotonic()
+        if result.returncode != 0:
+            pytest.fail(f"OBS_TOKEN_COMMAND exited with {result.returncode}.", pytrace=False)
+        value = result.stdout.strip()
+        if not re.fullmatch(r"[\w.-]+", value):
+            pytest.fail("OBS_TOKEN_COMMAND printed no single token: its output is empty or holds whitespace or other characters.", pytrace=False)
+        self.value = value
+        self.issued = time.time()
         return self.value
 
 
@@ -185,8 +203,20 @@ _token = Token()
 
 
 @pytest.fixture
-def token() -> str:
-    return _token.get()
+def token() -> Callable[[], str]:
+    """The current token. Call it on each request: the token command re-runs as the token ages."""
+    return _token.get
+
+
+@pytest.fixture(scope="session", autouse=True)
+def target() -> None:
+    """Resolve the inputs and the context once. End the run when they do not resolve."""
+    try:
+        inputs()
+        context()
+    except Exception as error:
+        detail = error.stderr.strip() if isinstance(error, subprocess.CalledProcessError) else ""
+        pytest.exit(f"The target does not resolve: {error} {detail}".strip(), returncode=pytest.ExitCode.USAGE_ERROR)
 
 
 @pytest.fixture(scope="session")
@@ -195,10 +225,10 @@ def agent_credentials() -> Iterator[dict[str, tuple[str, str]]]:
 
     Creates the namespace RUN with one AgentCredential per backend. Waits for the
     operator to write each Secret and for each agent host to accept its credential:
-    a write with the credential gets an answer other than 401. Teardown deletes the
-    namespace.
+    a write with the credential gets an answer other than 401, 404 or 5xx. Teardown
+    deletes the namespace and warns when the deletion fails.
     """
-    items = [{"apiVersion": "v1", "kind": "Namespace", "metadata": {"name": RUN}}] + [
+    items = [
         {
             "apiVersion": "observability.giantswarm.io/v1alpha1",
             "kind": "AgentCredential",
@@ -207,6 +237,7 @@ def agent_credentials() -> Iterator[dict[str, tuple[str, str]]]:
         }
         for backend in AGENT_HOSTS
     ]
+    kubectl("create", "namespace", RUN)
     try:
         kubectl("create", "-f", "-", input=json.dumps({"apiVersion": "v1", "kind": "List", "items": items}))
         credentials = {backend: retry(120, lambda: _agent_credential(backend)) for backend in AGENT_HOSTS}
@@ -216,12 +247,16 @@ def agent_credentials() -> Iterator[dict[str, tuple[str, str]]]:
 
             def accepted():
                 response = agent_host.request("POST", path, headers={"X-Scope-OrgID": TENANT}, auth=credential, json={})
-                assert response.status_code != 401, f"The {role} agent host answers 401 to the run's {backend} credential."
+                status = response.status_code
+                assert status not in (401, 404) and status < 500, f"The {role} agent host answers {status} to the run's {backend} credential."
 
             retry(300, accepted)
         yield credentials
     finally:
-        kubectl("delete", "namespace", RUN, "--ignore-not-found", "--timeout=180s")
+        try:
+            kubectl("delete", "namespace", RUN, "--ignore-not-found", "--timeout=180s")
+        except subprocess.CalledProcessError as error:
+            warnings.warn(f"The deletion of namespace {RUN} failed: {error.stderr.strip()}", stacklevel=1)
 
 
 def _agent_credential(backend: str) -> tuple[str, str]:
@@ -265,20 +300,23 @@ def pytest_runtest_makereport(item, call):
         return
     _dumped = True
     out = []
-    for args in (
-        ["get", "pods", "-n", namespace(), "-o", "wide"],
-        ["get", "events", "-n", namespace(), "--sort-by=.lastTimestamp"],
-    ):
-        out.append(f"$ kubectl {' '.join(args)}\n{_run(args)}")
     try:
-        pods = json.loads(_run(["get", "pods", "-n", namespace(), "-o", "json"]))["items"]
-    except ValueError:
-        pods = []
-    for pod in pods:
-        if all(c.get("ready") for c in pod["status"].get("containerStatuses", [])):
-            continue
-        args = ["logs", "-n", namespace(), pod["metadata"]["name"], "--all-containers", "--tail=100"]
-        out.append(f"$ kubectl {' '.join(args)}\n{_run(args)}")
+        for args in (
+            ["get", "pods", "-n", namespace(), "-o", "wide"],
+            ["get", "events", "-n", namespace(), "--sort-by=.lastTimestamp"],
+        ):
+            out.append(f"$ kubectl {' '.join(args)}\n{_run(args)}")
+        try:
+            pods = json.loads(_run(["get", "pods", "-n", namespace(), "-o", "json"]))["items"]
+        except ValueError:
+            pods = []
+        for pod in pods:
+            if all(c.get("ready") for c in pod["status"].get("containerStatuses", [])):
+                continue
+            args = ["logs", "-n", namespace(), pod["metadata"]["name"], "--all-containers", "--tail=100"]
+            out.append(f"$ kubectl {' '.join(args)}\n{_run(args)}")
+    except Exception as error:
+        out.append(f"The cluster state dump failed: {type(error).__name__}: {error}")
     report.sections.append(("cluster state", "\n".join(out)))
 
 

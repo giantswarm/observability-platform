@@ -63,12 +63,12 @@ def test_write_metric_otlp(api, token):
             }]}],
         }]
     }
-    retry(120, lambda: api.request("POST", "/otlp/v1/metrics", headers=auth(token), json=body).raise_for_status())
+    retry(120, lambda: api.request("POST", "/otlp/v1/metrics", headers=auth(token()), json=body).raise_for_status())
 
 
 def test_write_log(api, token):
     body = {"streams": [{"stream": {"job": RUN}, "values": [[now_ns(), f"hello from {RUN}"]]}]}
-    retry(120, lambda: api.request("POST", "/loki/api/v1/push", headers=auth(token), json=body).raise_for_status())
+    retry(120, lambda: api.request("POST", "/loki/api/v1/push", headers=auth(token()), json=body).raise_for_status())
 
 
 def test_write_trace_otlp(api, token):
@@ -86,7 +86,7 @@ def test_write_trace_otlp(api, token):
             }]}],
         }]
     }
-    retry(120, lambda: api.request("POST", "/v1/traces", headers=auth(token), json=body).raise_for_status())
+    retry(120, lambda: api.request("POST", "/v1/traces", headers=auth(token()), json=body).raise_for_status())
 
 
 # == Read the data back
@@ -94,7 +94,7 @@ def test_write_trace_otlp(api, token):
 
 def read(api, token, path: str, expected: str, **kwargs):
     def check():
-        response = api.request("GET", path, headers=auth(token), **kwargs)
+        response = api.request("GET", path, headers=auth(token()), **kwargs)
         response.raise_for_status()
         assert expected in response.text, response.text
 
@@ -131,8 +131,8 @@ def test_agent_credential_write_log(loki_write, mimir_write, api, token, agent_c
     retry(120, lambda: loki_write.request("POST", "/loki/api/v1/push", headers=headers, auth=credential, json=body).raise_for_status())
     read(api, token, "/loki/api/v1/query_range", f"basic auth from {RUN}", params={"query": f'{{job="{RUN}-basic"}}'})
 
-    # Mimir has a credential of its own, so a foreign one gets 401, not 500. Retry until the
-    # gateway has loaded Mimir's Secret.
+    # The run has a metrics credential, so Mimir's agent host answers a foreign one with 401,
+    # not 500. Retry until the gateway has loaded the run's metrics credential.
     def foreign_credential_rejected():
         response = mimir_write.request("POST", "/otlp/v1/metrics", headers=headers, auth=credential, json={})
         assert response.status_code == 401, response.text
