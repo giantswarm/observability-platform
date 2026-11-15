@@ -1,10 +1,23 @@
 """Fixtures for the app-test-suite tests.
 
-The ATS pre-hook (.ats/main.yaml) installs the prerequisites and the chart under
-test with hack/local/install.sh, the same script `make local-up` runs.
+The tests read their target from inputs: environment variables, then the target
+file. The setup that installs the platform writes the target file. Every lookup
+runs lazily in a fixture: the tests collect without a cluster or a target file.
+
+  KUBE_CONTEXT         kubectl context. Unset, the current context applies.
+  OBS_NAMESPACE        Release namespace. Default `monitoring`.
+  OBS_TOKEN_COMMAND    Command that prints a JWT for the external API. Required.
+  OBS_GATEWAY_ADDRESS  `host:port` the HTTPS client connects to. Unset, it connects
+                       to the route hostname.
+  OBS_CA_BUNDLE        CA file for the HTTPS client. Unset, the system CA bundle applies.
+  OBS_TARGET_FILE      Path of the target file, from the environment only.
+                       Default `target.env` next to this file.
 """
 
+import functools
 import json
+import os
+import shlex
 import subprocess
 import time
 from pathlib import Path
@@ -12,15 +25,41 @@ from pathlib import Path
 import pytest
 import requests
 
-ROOT = Path(__file__).resolve().parents[2]
-NAMESPACE = "monitoring"
-CA = ROOT / "hack/local/.keys/tls.crt"
-# kind maps the Envoy Gateway `https` NodePort to this address (.ats/kind-config.yaml).
-GATEWAY = "https://127.0.0.1:8443"
+INPUTS = ("KUBE_CONTEXT", "OBS_NAMESPACE", "OBS_TOKEN_COMMAND", "OBS_GATEWAY_ADDRESS", "OBS_CA_BUNDLE")
+TARGET_FILE = Path(os.environ.get("OBS_TARGET_FILE") or Path(__file__).resolve().parent / "target.env").absolute()
+# The token command re-runs when its token is older than this.
+TOKEN_MAX_AGE = 50 * 60
+
+
+@functools.cache
+def inputs() -> dict[str, str]:
+    """The inputs from the target file, overridden by the environment."""
+    values = {}
+    if TARGET_FILE.exists():
+        for line in TARGET_FILE.read_text().splitlines():
+            key, sep, value = line.partition("=")
+            if sep and key.strip() in INPUTS:
+                values[key.strip()] = value.strip()
+    elif "OBS_TARGET_FILE" in os.environ:
+        raise FileNotFoundError(f"OBS_TARGET_FILE points at {TARGET_FILE}, which does not exist.")
+    values.update({key: os.environ[key] for key in INPUTS if os.environ.get(key)})
+    return values
+
+
+@functools.cache
+def context() -> str:
+    """The kube context, resolved once so that a later context switch does not move the run."""
+    return inputs().get("KUBE_CONTEXT") or subprocess.run(
+        ["kubectl", "config", "current-context"], check=True, capture_output=True, text=True
+    ).stdout.strip()
+
+
+def namespace() -> str:
+    return inputs().get("OBS_NAMESPACE", "monitoring")
 
 
 def kubectl(*args: str) -> str:
-    return subprocess.run(["kubectl", *args], check=True, capture_output=True, text=True).stdout
+    return subprocess.run(["kubectl", "--context", context(), *args], check=True, capture_output=True, text=True).stdout
 
 
 def retry(seconds: int, check):
@@ -35,41 +74,124 @@ def retry(seconds: int, check):
             time.sleep(5)
 
 
+@functools.cache
+def hostnames() -> dict[str, str]:
+    """The route hostnames in the release namespace, by role.
+
+    `api` is the external API, `grafana` is Grafana, `loki`, `mimir` and `tempo` are
+    the agent hosts. The charts label each HTTPRoute with the chart that owns it.
+    """
+    found: dict[str, set[str]] = {}
+    for route in json.loads(kubectl("get", "httproute", "-n", namespace(), "-o", "json"))["items"]:
+        labels = route["metadata"].get("labels", {})
+        name = labels.get("app.kubernetes.io/name")
+        if name == "observability-platform-api":
+            role = "api"
+        elif name == "grafana":
+            role = "grafana"
+        elif name in ("loki", "mimir", "tempo") and labels.get("app.kubernetes.io/component") == "gateway":
+            role = name
+        else:
+            continue
+        found.setdefault(role, set()).update(route["spec"].get("hostnames", []))
+    for role, hosts in found.items():
+        if len(hosts) != 1:
+            raise LookupError(f"The {role} HTTPRoutes in namespace {namespace()} have {len(hosts)} hostnames: {sorted(hosts)}")
+    return {role: hosts.pop() for role, hosts in found.items()}
+
+
+def hostname(role: str) -> str:
+    try:
+        return hostnames()[role]
+    except KeyError:
+        raise LookupError(f"No {role} HTTPRoute in namespace {namespace()}") from None
+
+
 class Gateway:
-    """HTTPS client for one hostname behind the Envoy Gateway."""
+    """HTTPS client for one route hostname.
+
+    With OBS_GATEWAY_ADDRESS, the client connects to that address and sends the
+    hostname in the Host header.
+    """
 
     def __init__(self, hostname: str):
         self.session = requests.Session()
-        self.session.verify = str(CA)
-        self.session.headers["Host"] = hostname
+        self.session.verify = inputs().get("OBS_CA_BUNDLE") or True
+        address = inputs().get("OBS_GATEWAY_ADDRESS")
+        if address:
+            self.session.headers["Host"] = hostname
+        self.base = f"https://{address or hostname}"
 
     def request(self, method: str, path: str, **kwargs) -> requests.Response:
-        return self.session.request(method, GATEWAY + path, timeout=10, **kwargs)
+        return self.session.request(method, self.base + path, timeout=10, **kwargs)
 
 
 @pytest.fixture(scope="session")
 def grafana() -> Gateway:
-    return Gateway("grafana.localhost")
+    return Gateway(hostname("grafana"))
 
 
 @pytest.fixture(scope="session")
 def api() -> Gateway:
-    return Gateway("observability.localhost")
+    return Gateway(hostname("api"))
 
 
 @pytest.fixture(scope="session")
 def loki_write() -> Gateway:
-    return Gateway("write.loki.localhost")
+    return Gateway(hostname("loki"))
 
 
 @pytest.fixture(scope="session")
 def mimir_write() -> Gateway:
-    return Gateway("mimir.localhost")
+    return Gateway(hostname("mimir"))
 
 
-@pytest.fixture(scope="session")
+class Token:
+    """JWT from OBS_TOKEN_COMMAND, re-run when older than TOKEN_MAX_AGE."""
+
+    def __init__(self):
+        self.value = ""
+        self.issued = 0.0
+
+    def get(self) -> str:
+        if self.value and time.monotonic() - self.issued < TOKEN_MAX_AGE:
+            return self.value
+        command = inputs().get("OBS_TOKEN_COMMAND")
+        if not command:
+            pytest.fail(f"OBS_TOKEN_COMMAND is not set. Set it in the environment or in the target file {TARGET_FILE}.", pytrace=False)
+        result = subprocess.run(shlex.split(command), capture_output=True, text=True)
+        if result.returncode != 0 or not result.stdout.strip():
+            pytest.fail(f"OBS_TOKEN_COMMAND exited with {result.returncode} and printed no token: {result.stderr.strip()}", pytrace=False)
+        self.value = result.stdout.strip()
+        self.issued = time.monotonic()
+        return self.value
+
+
+_token = Token()
+
+
+@pytest.fixture
 def token() -> str:
-    return kubectl("exec", "-n", "jwt-issuer", "deploy/jwks", "-c", "signer", "--", "/scripts/jwt.sh", "token").strip()
+    return _token.get()
+
+
+def pytest_report_header(config) -> list[str]:
+    """The target of the run. Each lookup that fails prints its error instead."""
+
+    def show(lookup) -> str:
+        try:
+            return lookup()
+        except Exception as error:
+            return f"unknown ({type(error).__name__})"
+
+    return [
+        f"target file: {TARGET_FILE} ({'exists' if TARGET_FILE.exists() else 'missing'})",
+        f"kube context: {show(context)}",
+        f"namespace: {show(namespace)}",
+        f"API hostname: {show(lambda: hostname('api'))}",
+        f"gateway address: {show(lambda: inputs().get('OBS_GATEWAY_ADDRESS', 'unset, connects to the hostname'))}",
+        f"CA bundle: {show(lambda: inputs().get('OBS_CA_BUNDLE', 'system'))}",
+    ]
 
 
 _dumped = False
@@ -85,22 +207,22 @@ def pytest_runtest_makereport(item, call):
     _dumped = True
     out = []
     for args in (
-        ["get", "pods", "-n", NAMESPACE, "-o", "wide"],
-        ["get", "events", "-n", NAMESPACE, "--sort-by=.lastTimestamp"],
+        ["get", "pods", "-n", namespace(), "-o", "wide"],
+        ["get", "events", "-n", namespace(), "--sort-by=.lastTimestamp"],
     ):
         out.append(f"$ kubectl {' '.join(args)}\n{_run(args)}")
     try:
-        pods = json.loads(_run(["get", "pods", "-n", NAMESPACE, "-o", "json"]))["items"]
+        pods = json.loads(_run(["get", "pods", "-n", namespace(), "-o", "json"]))["items"]
     except ValueError:
         pods = []
     for pod in pods:
         if all(c.get("ready") for c in pod["status"].get("containerStatuses", [])):
             continue
-        args = ["logs", "-n", NAMESPACE, pod["metadata"]["name"], "--all-containers", "--tail=100"]
+        args = ["logs", "-n", namespace(), pod["metadata"]["name"], "--all-containers", "--tail=100"]
         out.append(f"$ kubectl {' '.join(args)}\n{_run(args)}")
     report.sections.append(("cluster state", "\n".join(out)))
 
 
 def _run(args: list[str]) -> str:
-    result = subprocess.run(["kubectl", *args], capture_output=True, text=True)
+    result = subprocess.run(["kubectl", "--context", context(), *args], capture_output=True, text=True)
     return result.stdout + result.stderr
