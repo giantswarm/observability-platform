@@ -27,11 +27,11 @@ Any of these conditions missing will fail the render.
 {{- $first := first $routes }}
 
 {{- if not .Values.observabilityOperator.enabled }}
-{{- fail (printf "%s.enabled is true but observabilityOperator.enabled is false. The routes check the htpasswd Secrets that the observability-operator writes into the monitoring namespace (values/observability-operator.yaml); without them every push gets a 500 - see doc/AGENT_CREDENTIALS.md." $first) }}
+{{- fail (printf "%s.enabled is true but observabilityOperator.enabled is false. The routes check the htpasswd Secrets that the observability-operator writes into the monitoring namespace (values/observability-operator.yaml); without them every push gets a 500 - see docs/AGENT_CREDENTIALS.md." $first) }}
 {{- end }}
 
 {{- if not .Values.global.domain }}
-{{- fail (printf "%s.enabled is true but global.domain is empty. The agent write routes are served at mimir., write.loki. and tempo.<global.domain> - see doc/AGENT_CREDENTIALS.md." $first) }}
+{{- fail (printf "%s.enabled is true but global.domain is empty. The agent write routes are served at mimir., write.loki. and tempo.<global.domain> - see docs/AGENT_CREDENTIALS.md." $first) }}
 {{- end }}
 
 {{- $apiVersions := list "gateway.networking.k8s.io/v1/HTTPRoute" "gateway.envoyproxy.io/v1alpha1/SecurityPolicy" "gateway.envoyproxy.io/v1alpha1/HTTPRouteFilter" "gateway.envoyproxy.io/v1alpha1/BackendTrafficPolicy" }}
@@ -40,7 +40,7 @@ Any of these conditions missing will fail the render.
 {{- end }}
 {{- range $apiVersion := $apiVersions }}
 {{- if not ($.Capabilities.APIVersions.Has $apiVersion) }}
-{{- fail (printf "%s.enabled is true but the cluster serves no %s. Install a Gateway API implementation first - see doc/AGENT_CREDENTIALS.md." $first $apiVersion) }}
+{{- fail (printf "%s.enabled is true but the cluster serves no %s. Install a Gateway API implementation first - see docs/AGENT_CREDENTIALS.md." $first $apiVersion) }}
 {{- end }}
 {{- end }}
 {{- end }}

@@ -1,4 +1,4 @@
-# Default Alertmanager config for `global.tenant`. See doc/ALERTING.md.
+# Default Alertmanager config for `global.tenant`. See docs/ALERTING.md.
 # The `default` receiver has no integrations: alerts show in Grafana and notify no one.
 route:
   receiver: default

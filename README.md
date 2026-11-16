@@ -1,154 +1,107 @@
 <div align="center">
 
-  # Observability Platform
+# Observability Platform
+
+**Metrics, logs, traces and alerting on your own Kubernetes: Mimir, Loki, Tempo and Grafana in one Helm chart, multi-tenant, with all data in object storage you own.**
+
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/giantswarm/observability-platform/tree/main.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/giantswarm/observability-platform/tree/main)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/giantswarm/observability-platform/badge)](https://scorecard.dev/viewer/?uri=github.com/giantswarm/observability-platform)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 </div>
 
-<div align="center">
+---
 
-  [![CircleCI](https://dl.circleci.com/status-badge/img/gh/giantswarm/observability-platform/tree/main.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/giantswarm/observability-platform/tree/main)
-  [![GitHub Release](https://img.shields.io/github/v/release/giantswarm/observability-platform)](https://github.com/giantswarm/observability-platform/releases/latest)
-  [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/giantswarm/observability-platform/badge)](https://scorecard.dev/viewer/?uri=github.com/giantswarm/observability-platform)
+The Observability Platform takes proven open-source projects, [Mimir](https://github.com/grafana/mimir), [Loki](https://github.com/grafana/loki), [Tempo](https://github.com/grafana/tempo) and [Grafana](https://github.com/grafana/grafana), and packages them as one platform for metrics, logs, traces, dashboards and alerting. Organizations, datasources, dashboards, alert routing and agent credentials are Kubernetes resources, so the platform is configured the same way as everything else on the cluster.
 
-</div>
+It is built from the components behind the [observability platform](https://docs.giantswarm.io/overview/observability/) that [Giant Swarm](https://www.giantswarm.io) runs for its customers. This chart installs them on any conformant cluster, such as kind or EKS, without a Giant Swarm management cluster.
 
-Giant Swarm offers a observability-platform App which can be installed in workload clusters.
-Here, we define the observability-platform chart with its templates and default configuration.
+> [!NOTE]
+> The chart is in active development and has no tagged release yet. You install it from this repository, and its values may still change.
 
-**Work in progress.** This chart is under active development and its interface may still change.
-
-**What is this app?**
-
-A self-hosted observability stack packaged as an umbrella chart: Mimir for metrics and its
-Alertmanager for alerts, Loki for logs, Tempo for traces, and Grafana to look at them. The
-`observability-operator`, installed as its own release next to it, manages organizations, datasources
-and dashboards. The observability platform API ships with the chart but is disabled by default. See [doc/ALERTING.md](doc/ALERTING.md) for alerting.
-
-**Why did we add it?**
-
-To offer the Giant Swarm Observability Platform as a self-hosted observability stack: one
-`helm install` on any Kubernetes cluster, configured in a handful of lines rather than the ~300 a custom setup made from multiple independent charts would require.
-
-**Who can use it?**
-
-Anyone with a Kubernetes cluster and object storage. It does not require a Giant Swarm management
-cluster.
-
-**The Default organization**
-
-The chart creates a `GrafanaOrganization` named `main-org` whose display name is `Main Org.`, the
-name of Grafana's default organization. The operator therefore takes over Grafana's org 1 and gives
-it Mimir, Loki and Tempo datasources reading the platform's data, that is, the tenant set in
-`global.tenant` (`default` unless set). While Mimir's Alertmanager is enabled, the organization also
-gets alerting access to that tenant, with a Mimir Alertmanager datasource. Dashboard ConfigMaps reach
-it with the annotation `observability.giantswarm.io/organization: Main Org.`.
-
-`helm uninstall` deletes it. Grafana is removed in the same uninstall, so the operator releases the
-resource without contacting Grafana; this needs observability-operator 0.86.0 or later. Uninstall
-this chart before the operator, which processes the deletion.
-
-**Known limitations of the observability-operator with this chart**
-
-- The observability-operator is a separate release that must be installed before this chart, with
-  [`values/observability-operator.yaml`](values/observability-operator.yaml). See [Installing](#installing).
-- The release installs into the `monitoring` namespace while `observabilityOperator.enabled` is on.
-- The operator values must agree with this chart's: `tracing.enabled` with `tempo.enabled`,
-  `operator.controllers.alertmanager.enabled` with `mimir.enabled` and `mimir.mimir.alertmanager.enabled`,
-  `defaultTenant` with `global.tenant`, and the Grafana and datasource URLs and
-  `monitoring.gateway.namespace`, `logging.gateway.namespace` and `tracing.gateway.namespace` with
-  the `monitoring` namespace. Nothing checks this across the two releases.
-- The operator's admission webhooks are disabled, so mistakes in `GrafanaOrganization` resources or
-  dashboard ConfigMaps show up only in the operator's logs and the resources' status.
-- Disabling Loki or Mimir leaves their datasources in Grafana, pointing at nothing.
-
-## Installing
-
-There are several ways to install this app onto a workload cluster.
-
-- [Using GitOps to instantiate the App](https://docs.giantswarm.io/tutorials/continuous-deployment/apps/add-appcr/)
-- By creating an [App resource](https://docs.giantswarm.io/reference/platform-api/crd/apps.application.giantswarm.io) using the platform API as explained in [Getting started with App Platform](https://docs.giantswarm.io/tutorials/fleet-management/app-platform/).
-
-On a standalone cluster, install two releases with Helm, the observability-operator first. It
-installs the CRDs this chart's resources need:
-
-```bash
-helm install observability-operator observability-operator \
-  --repo https://giantswarm.github.io/control-plane-catalog/ \
-  --namespace monitoring --create-namespace \
-  --values values/observability-operator.yaml
-helm install observability-platform helm/observability-platform --namespace monitoring
+```mermaid
+flowchart LR
+  agents["Agents and collectors<br/>Alloy, OpenTelemetry, Prometheus"]
+  people["People"]
+  subgraph cluster["Your Kubernetes cluster"]
+    gateway["Your Gateway<br/>HTTPS"]
+    api["Observability Platform API"]
+    grafana["Grafana"]
+    operator["observability-operator"]
+    subgraph backends["Backends"]
+      mimir["Mimir<br/>metrics, rules, alerts"]
+      loki["Loki<br/>logs"]
+      tempo["Tempo<br/>traces"]
+    end
+  end
+  storage[("Your object storage<br/>S3 or Azure Blob")]
+  agents --> gateway
+  people --> gateway
+  gateway -->|agent writes| backends
+  gateway --> api
+  gateway --> grafana
+  api --> backends
+  grafana --> backends
+  operator -.->|organizations, datasources, dashboards| grafana
+  backends --> storage
 ```
 
-Uninstall in the opposite order: the platform first, then the operator.
+## Components
 
-## Configuring
+Each component can be switched on or off. A default install runs everything except the Observability Platform API.
 
-### values.yaml
+| Component | What it does |
+|---|---|
+| [Mimir](https://github.com/giantswarm/mimir-app) | Multi-tenant metrics storage, with the ruler for recording and alerting rules and the Alertmanager that routes alerts to your receivers. |
+| [Loki](https://github.com/giantswarm/loki-app) | Multi-tenant log storage, queried with LogQL. |
+| [Tempo](https://github.com/giantswarm/tempo-app) | Multi-tenant trace storage, queried with TraceQL. |
+| [Grafana](https://github.com/giantswarm/grafana-app) | Dashboards, data exploration and alert management across all three signals. |
+| [observability-operator](https://github.com/giantswarm/observability-operator) | Turns Kubernetes resources into platform configuration: Grafana organizations with their datasources, dashboards, Alertmanager configs and agent credentials. Installed as its own release, before the chart. |
+| [observability-platform-api](https://github.com/giantswarm/observability-platform-api) | One authenticated HTTPS endpoint for reading and writing all three signals from outside the cluster, with JWTs from your OIDC issuer. Opt-in. |
 
-**This is an example of a values file you could upload using our web interface.**
+Related projects, not part of the chart:
 
-```yaml
-# values.yaml
+- [Alloy](https://github.com/giantswarm/alloy-app) is the OpenTelemetry collector Giant Swarm uses to ship metrics, logs and traces to the platform.
+- [mcp-observability-platform](https://github.com/giantswarm/mcp-observability-platform) is an MCP server that exposes Grafana and its Mimir, Loki, Tempo and Alertmanager datasources to AI agents.
 
-```
+## Why Observability Platform
 
-### Sample App CR and ConfigMap for the management cluster
+- **One chart, one storage setting.** A single value picks the object storage backend for Mimir, Loki and Tempo together.
+- **Open source only.** Every component is open source and your data stays in buckets you own.
+- **Multi-tenant from the start.** Every write and read names its tenant, and a Grafana organization maps to the tenants its people may see.
+- **Configured through Kubernetes.** Organizations, dashboards, alert routing and agent credentials are resources you keep in Git.
+- **The same on a laptop and in production.** One chart runs on kind with a bundled object store, and against S3 or Azure Blob Storage.
 
-If you have access to the Kubernetes API on the management cluster, you could create the App CR and ConfigMap directly.
+## Getting started
 
-Here is an example that would install the app to workload cluster `abc12`:
+- **On your laptop:** `make local-up` runs the whole platform on kind. See [Local development](docs/LOCAL_DEV.md).
+- **On a cluster:** follow the [Installation guide](docs/INSTALL.md).
 
-```yaml
-# appCR.yaml
+## Documentation
 
-```
+| Page | What it covers |
+|---|---|
+| [Observability overview](https://docs.giantswarm.io/overview/observability/) | The concepts: multi-tenancy, Grafana organizations, dashboards, alerting, data ingestion. Written for Giant Swarm installations, the resources are the same here. |
+| [Prepare your environment](https://docs.giantswarm.io/overview/observability/standalone/prepare-your-environment/) | Cluster, capacity, network and object storage requirements |
+| [Installation guide](docs/INSTALL.md) | Prerequisites, network access, install and uninstall |
+| [Object storage](docs/OBJECT_STORAGE.md) | Buckets, credentials and values for S3 and Azure Blob Storage |
+| [EKS cluster](docs/EKS_CLUSTER.md) | Creating a cluster the platform runs on, with `eksctl` |
+| [Gateway](docs/GATEWAY.md) | Envoy Gateway, the Gateway, its certificate and its DNS record |
+| [External API](docs/EXTERNAL_API.md) | Authenticated ingest and read from outside the cluster |
+| [Agent credentials](docs/AGENT_CREDENTIALS.md) | Credentials for agents that push metrics, logs and traces |
+| [Alerting](docs/ALERTING.md) | The default Alertmanager config and how to provide your own |
+| [Local development](docs/LOCAL_DEV.md) | The kind setup, test data, smoke tests and chart unit tests |
 
-```yaml
-# user-values-configmap.yaml
+## Contributing
 
-```
+Each component is developed in its own repository, linked above. This repository holds the chart that turns them into one platform, in [`helm/observability-platform`](helm/observability-platform). [Local development](docs/LOCAL_DEV.md) covers the kind setup and the tests.
 
-See our [full reference on how to configure apps](https://docs.giantswarm.io/tutorials/fleet-management/app-platform/app-configuration/) for more details.
+Issues and pull requests are welcome. Please sign off your commits under the [DCO](DCO).
 
-## Compatibility
+## Security
 
-This app has been tested to work with the following workload cluster release versions:
+Please report vulnerabilities through [Giant Swarm's responsible disclosure](https://www.giantswarm.io/responsible-disclosure). See [SECURITY.md](SECURITY.md).
 
-- _add release version_
+## License
 
-Standalone, it has been installed and verified on a vanilla EKS cluster.
-
-## Network access
-
-The cluster needs outbound HTTPS (port 443) to these endpoints:
-
-| Endpoint | Used for | Hosts |
-| --- | --- | --- |
-| Object storage | Mimir, Loki and Tempo data | `<account>.blob.core.windows.net` |
-| `gsoci.azurecr.io` | Container images | `gsoci.azurecr.io`, `*.blob.core.windows.net` |
-| `docker.io` | Container images | `registry-1.docker.io`, `auth.docker.io`, `production.cloudflare.docker.com` |
-| OIDC issuer | JWKS fetch by the Envoy proxy pods, with the external API | The host of the JWKS URI |
-
-The machine that runs `helm install` needs outbound HTTPS to the Giant Swarm Helm catalogs:
-
-- `https://giantswarm.github.io/giantswarm-catalog/`
-- `https://giantswarm.github.io/control-plane-catalog/`
-
-`gsoci.azurecr.io` serves image layers from Azure Blob Storage hosts. The host names vary.
-
-## Limitations
-
-Some apps have restrictions on how they can be deployed.
-Not following these limitations will most likely result in a broken deployment.
-
-- Object storage is Azure Blob Storage (`azure`) or S3 (`s3`), AWS S3 or an S3-compatible
-  store. There is no default backend — see [doc/OBJECT_STORAGE.md](doc/OBJECT_STORAGE.md).
-  For development, `localObjectStorage.enabled` runs a store in the cluster: Garage for
-  `s3`, Azurite for `azure` — see [doc/LOCAL_DEV.md](doc/LOCAL_DEV.md).
-- One sizing profile, tuned for a small cluster. There is no answer yet for real ingest volume.
-- The chart creates no Gateway and no TLS certificate. The external API and Grafana are
-  exposed over HTTPS on a Gateway you provide, and you must set the name and namespace of that
-  Gateway in each component's `parentRefs`. The external API also needs Envoy Gateway and an
-  OIDC issuer installed beforehand — see [doc/EXTERNAL_API.md](doc/EXTERNAL_API.md). The agent
-  write routes need Envoy Gateway too — see [doc/AGENT_CREDENTIALS.md](doc/AGENT_CREDENTIALS.md).
-- Turning Mimir or Loki off leaves Grafana with a datasource pointing at nothing.
+[Apache 2.0](LICENSE).
