@@ -1,0 +1,41 @@
+# ---------------------------------------------------------------------------
+# Standalone profile for the CloudNativePG (CNPG) operator release.
+#
+# Only needed to run Grafana on PostgreSQL (values/grafana-postgresql.yaml). The
+# operator is installed as its own release, in the `monitoring` namespace, before
+# the Platform chart:
+#
+#   helm install cloudnative-pg cloudnative-pg \
+#     --repo https://giantswarm.github.io/control-plane-catalog/ \
+#     --namespace monitoring --create-namespace \
+#     --values values/cloudnative-pg.yaml
+#
+# It installs the CNPG CRDs, which the Grafana PostgreSQL cluster needs. Skip this
+# release when the cluster already runs a CNPG operator that watches `monitoring`:
+# the CRDs are cluster-scoped and two operators conflict. See doc/GRAFANA_DATABASE.md.
+# ---------------------------------------------------------------------------
+cloudnative-pg:
+  config:
+    # Namespaced: the operator watches its own namespace, `monitoring`, and reads
+    # Secrets through a Role there. Clusterwide, it would bind a ClusterRole that
+    # reads every Secret in the cluster.
+    clusterWide: false
+  # Drops the chart's management-cluster WATCH_NAMESPACE list. `clusterWide: false`
+  # sets WATCH_NAMESPACE to the release namespace.
+  additionalEnv: null
+  monitoring:
+    # Needs the Prometheus Operator CRDs.
+    podMonitorEnabled: false
+    # Giant Swarm management-cluster dashboard.
+    grafanaDashboard:
+      create: false
+
+# The Grafana PostgreSQL cluster names its image directly.
+clusterImageCatalog:
+  enabled: false
+
+# Need Cilium and the VPA CRDs.
+ciliumNetworkPolicy:
+  enabled: false
+vpa:
+  enabled: false

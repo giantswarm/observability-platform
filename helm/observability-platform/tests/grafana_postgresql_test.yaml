@@ -1,0 +1,107 @@
+# Grafana on PostgreSQL: the CNPG guard and what values/grafana-postgresql.yaml renders.
+suite: grafana postgresql
+values:
+  - values/s3-compatible.yaml
+release:
+  name: obs
+  namespace: monitoring
+tests:
+
+  - it: renders no guard failure without the overlay, even without CNPG
+    template: templates/check-grafana-postgresql.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: fails with the overlay when the cluster serves no CNPG Cluster
+    template: templates/check-grafana-postgresql.yaml
+    values:
+      - ../../../values/grafana-postgresql.yaml
+    asserts:
+      - failedTemplate:
+          errorPattern: 'grafana\.postgresqlCluster\.enabled is true but the cluster serves no postgresql\.cnpg\.io/v1 Cluster\. Install the CNPG operator release first'
+
+  - it: passes with the overlay when the cluster serves the CNPG Cluster
+    template: templates/check-grafana-postgresql.yaml
+    values:
+      - ../../../values/grafana-postgresql.yaml
+    capabilities:
+      apiVersions:
+        - postgresql.cnpg.io/v1/Cluster
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: skips the guard when Grafana is off
+    template: templates/check-grafana-postgresql.yaml
+    values:
+      - ../../../values/grafana-postgresql.yaml
+    set:
+      grafana.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the PostgreSQL cluster with two instances
+    template: charts/grafana/templates/cnpg/cluster.yaml
+    values:
+      - ../../../values/grafana-postgresql.yaml
+    capabilities:
+      apiVersions:
+        - postgresql.cnpg.io/v1/Cluster
+    asserts:
+      - isKind:
+          of: Cluster
+      - equal:
+          path: metadata.name
+          value: grafana-postgresql
+      - equal:
+          path: metadata.namespace
+          value: monitoring
+      - equal:
+          path: spec.instances
+          value: 2
+
+  - it: points Grafana at the PostgreSQL cluster over TLS
+    template: charts/grafana/charts/grafana/templates/configmap.yaml
+    values:
+      - ../../../values/grafana-postgresql.yaml
+    capabilities:
+      apiVersions:
+        - postgresql.cnpg.io/v1/Cluster
+    asserts:
+      - matchRegex:
+          path: data["grafana.ini"]
+          pattern: '(?s)\[database\]\nhost = grafana-postgresql-rw:5432\nname = app\nssl_mode = require\ntype = postgres\nuser = app\n'
+
+  - it: reads the database password and the secret key from Secrets
+    template: charts/grafana/charts/grafana/templates/deployment.yaml
+    values:
+      - ../../../values/grafana-postgresql.yaml
+    capabilities:
+      apiVersions:
+        - postgresql.cnpg.io/v1/Cluster
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[?(@.name == "grafana")].env
+          content:
+            name: GF_DATABASE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: grafana-postgresql-app
+                key: password
+      - contains:
+          path: spec.template.spec.containers[?(@.name == "grafana")].env
+          content:
+            name: GF_SECURITY_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: grafana-secret-key
+                key: secret-key
+
+  - it: keeps Grafana on SQLite without the overlay
+    template: charts/grafana/charts/grafana/templates/configmap.yaml
+    asserts:
+      - notMatchRegex:
+          path: data["grafana.ini"]
+          pattern: '\[database\]'

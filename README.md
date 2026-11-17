@@ -81,6 +81,10 @@ helm install observability-platform helm/observability-platform --namespace moni
 
 Uninstall in the opposite order: the platform first, then the operator.
 
+To keep Grafana's users, dashboards and alert rules across restarts, run Grafana on PostgreSQL
+with `values/grafana-postgresql.yaml`. It needs the CNPG operator as a third release - see
+[doc/GRAFANA_DATABASE.md](doc/GRAFANA_DATABASE.md).
+
 ## Configuring
 
 ### values.yaml
@@ -152,3 +156,6 @@ Not following these limitations will most likely result in a broken deployment.
   OIDC issuer installed beforehand — see [doc/EXTERNAL_API.md](doc/EXTERNAL_API.md). The agent
   write routes need Envoy Gateway too — see [doc/AGENT_CREDENTIALS.md](doc/AGENT_CREDENTIALS.md).
 - Turning Mimir or Loki off leaves Grafana with a datasource pointing at nothing.
+- By default Grafana keeps its data in SQLite inside its pod, and a restart loses what the
+  observability-operator doesn't re-create. On PostgreSQL there are no backups yet — see
+  [doc/GRAFANA_DATABASE.md](doc/GRAFANA_DATABASE.md).

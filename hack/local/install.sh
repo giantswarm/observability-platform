@@ -15,6 +15,9 @@ CHART=$1
 # observability-operator release installed before the chart. Keep in step with the
 # version the platform is tested against.
 OPERATOR_VERSION=0.88.0
+# CNPG operator release for the Grafana PostgreSQL cluster. Keep in step with the
+# tested range in doc/GRAFANA_DATABASE.md.
+CNPG_VERSION=0.1.0
 KUBECTL=(kubectl ${KUBE_CONTEXT:+--context "$KUBE_CONTEXT"})
 HELM=(helm ${KUBE_CONTEXT:+--kube-context "$KUBE_CONTEXT"})
 
@@ -46,6 +49,17 @@ trap 'rm -f "$KEY"' EXIT
   --repo https://giantswarm.github.io/control-plane-catalog/ --version "$OPERATOR_VERSION" \
   --namespace monitoring --create-namespace \
   --values "$ROOT/values/observability-operator.yaml" --wait --timeout 5m
+# Grafana runs on PostgreSQL (values/grafana-postgresql.yaml): the CNPG operator first,
+# then Grafana's secret key. The key is created once and never replaced: a new key makes
+# the secrets Grafana stored unreadable.
+"${HELM[@]}" upgrade --install cloudnative-pg cloudnative-pg \
+  --repo https://giantswarm.github.io/control-plane-catalog/ --version "$CNPG_VERSION" \
+  --namespace monitoring --create-namespace \
+  --values "$ROOT/values/cloudnative-pg.yaml" --wait --timeout 5m
+if ! "${KUBECTL[@]}" get secret grafana-secret-key -n monitoring >/dev/null 2>&1; then
+  "${KUBECTL[@]}" create secret generic grafana-secret-key -n monitoring \
+    --from-literal=secret-key="$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+fi
 # One AgentCredential per backend, for the agent write routes.
 "${KUBECTL[@]}" apply -f "$DIR/agentcredentials.yaml"
 BACKEND_VALUES=()
@@ -55,4 +69,4 @@ fi
 "${HELM[@]}" upgrade --install observability-platform "$CHART" \
   --namespace monitoring --create-namespace --force-conflicts \
   --values "$ROOT/helm/observability-platform/values-local.yaml" \
-  --values "$DIR/values.yaml" "${BACKEND_VALUES[@]}"
+  --values "$DIR/values.yaml" --values "$ROOT/values/grafana-postgresql.yaml" "${BACKEND_VALUES[@]}"

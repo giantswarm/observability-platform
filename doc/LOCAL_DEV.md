@@ -34,6 +34,9 @@ make local-up
 `make local-up` creates a kind cluster and installs these components:
 
 - the observability-operator, as its own release, with `values/observability-operator.yaml`
+- the CNPG operator, as its own release, with `values/cloudnative-pg.yaml`, and the Secret
+  `grafana-secret-key`. Grafana runs on PostgreSQL with `values/grafana-postgresql.yaml`. See
+  [GRAFANA_DATABASE.md](./GRAFANA_DATABASE.md).
 - the chart in namespace `monitoring`, with `values-local.yaml`, on the `s3` backend with Garage
 - the external API, with Envoy Gateway and a JWKS server. See [EXTERNAL_API.md](./EXTERNAL_API.md).
 - the agent write routes, at `mimir.localhost`, `write.loki.localhost` and `tempo.localhost`,
