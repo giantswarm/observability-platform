@@ -49,9 +49,7 @@ trap 'rm -f "$KEY"' EXIT
   --repo https://giantswarm.github.io/control-plane-catalog/ --version "$OPERATOR_VERSION" \
   --namespace monitoring --create-namespace \
   --values "$ROOT/values/observability-operator.yaml" --wait --timeout 5m
-# Grafana runs on PostgreSQL (values/grafana-postgresql.yaml): the CNPG operator first,
-# then Grafana's secret key. The key is created once and never replaced: a new key makes
-# the secrets Grafana stored unreadable.
+
 "${HELM[@]}" upgrade --install cloudnative-pg cloudnative-pg \
   --repo https://giantswarm.github.io/control-plane-catalog/ --version "$CNPG_VERSION" \
   --namespace monitoring --create-namespace \
