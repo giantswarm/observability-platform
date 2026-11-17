@@ -105,3 +105,27 @@ tests:
       - notMatchRegex:
           path: data["grafana.ini"]
           pattern: '\[database\]'
+
+  - it: renders no PodMonitor with the overlay, so it needs no Prometheus Operator CRDs
+    template: charts/grafana/templates/cnpg/podmonitor.yaml
+    values:
+      - ../../../values/grafana-postgresql.yaml
+    capabilities:
+      apiVersions:
+        - postgresql.cnpg.io/v1/Cluster
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the PodMonitor when the overlay's PodMonitor is turned back on
+    template: charts/grafana/templates/cnpg/podmonitor.yaml
+    values:
+      - ../../../values/grafana-postgresql.yaml
+    set:
+      grafana.postgresqlCluster.podMonitor.enabled: true
+    capabilities:
+      apiVersions:
+        - postgresql.cnpg.io/v1/Cluster
+    asserts:
+      - isKind:
+          of: PodMonitor
