@@ -1,7 +1,7 @@
 dependencies:
 - name: grafana
   repository: https://giantswarm.github.io/giantswarm-catalog/
-  version: 2.42.0
+  version: 2.43.0
 - name: loki
   repository: https://giantswarm.github.io/giantswarm-catalog/
   version: 0.50.1
@@ -14,5 +14,5 @@ dependencies:
 - name: tempo
   repository: https://giantswarm.github.io/control-plane-catalog/
   version: 0.18.0
-digest: sha256:9e0ad4eeb1f298857ae4411d093b7a256a8773575321c0b53b2ab27abca8ced4
-generated: "2026-11-13T18:24:57.133910345+01:00"
+digest: sha256:d7680c1a8e2a17695966c56f28147e210bd8f772ff5297714b00eb8422c04de5
+generated: "2026-11-17T19:45:00.092251192Z"
