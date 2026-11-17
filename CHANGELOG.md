@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Run Grafana on a CloudNativePG PostgreSQL cluster with the opt-in `values/grafana-postgresql.yaml`, so its users, dashboards and alert rules survive restarts. It needs the CNPG operator release, installed first with `values/cloudnative-pg.yaml`. See `doc/GRAFANA_DATABASE.md`.
+- Run Grafana on a CloudNativePG PostgreSQL cluster. It needs the CNPG operator release, installed first with `values/cloudnative-pg.yaml`.
 - The local kind setup runs Grafana on PostgreSQL.
 - Add agent write routes for Mimir, Loki and Tempo.
 - Create one AgentCredential per backend in the local kind setup, in namespace `agents`.
