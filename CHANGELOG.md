@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Breaking:** `localBlobStorage` is renamed `localObjectStorage`. `localBlobStorage.init.image` moves to `localObjectStorage.azurite.initImage`.
 - The local kind setup runs the `s3` backend with Garage by default.
 - `doc/LOCAL_DEV.md` covers both local stores.
+- Update architect to v10.18.0 (giantswarm/observability-platform#176)
 
 ### Added
 
