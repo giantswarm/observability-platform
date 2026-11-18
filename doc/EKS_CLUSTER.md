@@ -340,7 +340,7 @@ kubectl get hpa -n monitoring -o jsonpath='{range .items[*]}{.metadata.name}{": 
 
 `FailedGetScale` is a broken reference, not a metrics problem — the message names the
 workload it cannot find. Any other reason is healthy: `ReadyForNewScale` and
-`ScaleDownStabilized` both mean the target was read fine. All six HPAs should report one
+`ScaleDownStabilized` both mean the target was read fine. All HPAs should report one
 of those.
 
 ## What the platform actually uses
