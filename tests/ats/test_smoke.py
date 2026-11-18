@@ -5,31 +5,27 @@ a token or with another backend's credential.
 The tests run in file order and build on each other.
 """
 
-import base64
+import json
 import secrets
-import time
 
 import pytest
 
-from conftest import RUN, TENANT, kubectl, namespace, retry
+from conftest import RUN, TENANT, auth, kubectl, namespace, now_ns, otlp_gauge, otlp_span, read, retry
 
 pytestmark = pytest.mark.smoke
 
 TRACE_ID = secrets.token_hex(16)
 
 
-def auth(token: str) -> dict:
-    return {"Authorization": f"Bearer {token}", "X-Scope-OrgID": TENANT}
-
-
-def now_ns() -> str:
-    return str(time.time_ns())
-
-
 # == Install
 
 
 def test_install_workloads_ready():
+    # A workload scaled to 0 counts as rolled out and does not heal by waiting: fail at once.
+    workloads = json.loads(kubectl("get", "deployments,statefulsets", "-n", namespace(), "-o", "json"))["items"]
+    scaled_to_zero = [f"{w['kind'].lower()}/{w['metadata']['name']} has 0 replicas" for w in workloads if w["spec"].get("replicas") == 0]
+    assert not scaled_to_zero, "; ".join(scaled_to_zero)
+
     def rollouts():
         for kind in ("deployment", "statefulset", "daemonset"):
             for name in kubectl("get", kind, "-n", namespace(), "-o", "name").split():
@@ -45,24 +41,15 @@ def test_grafana_health(grafana):
     retry(300, lambda: grafana.request("GET", "/api/health").raise_for_status())
 
 
-def test_grafana_login(grafana):
-    password = kubectl("get", "secret", "grafana", "-n", namespace(), "-o", "jsonpath={.data.admin-password}")
-    grafana.request("GET", "/api/org", auth=("admin", base64.b64decode(password).decode())).raise_for_status()
+def test_grafana_login(grafana, grafana_admin):
+    grafana.request("GET", "/api/org", auth=grafana_admin).raise_for_status()
 
 
 # == Write, one request per signal, through the external API
 
 
 def test_write_metric_otlp(api, token):
-    body = {
-        "resourceMetrics": [{
-            "resource": {"attributes": [{"key": "service.name", "value": {"stringValue": RUN}}]},
-            "scopeMetrics": [{"metrics": [{
-                "name": "e2e_test",
-                "gauge": {"dataPoints": [{"asDouble": 42, "timeUnixNano": now_ns()}]},
-            }]}],
-        }]
-    }
+    body = otlp_gauge("e2e_test", 42, RUN)
     retry(120, lambda: api.request("POST", "/otlp/v1/metrics", headers=auth(token()), json=body).raise_for_status())
 
 
@@ -72,37 +59,15 @@ def test_write_log(api, token):
 
 
 def test_write_trace_otlp(api, token):
-    start = time.time_ns()
-    body = {
-        "resourceSpans": [{
-            "resource": {"attributes": [{"key": "service.name", "value": {"stringValue": RUN}}]},
-            "scopeSpans": [{"spans": [{
-                "traceId": TRACE_ID,
-                "spanId": "eee19b7ec3c1b174",
-                "name": "e2e-test",
-                "kind": 1,
-                "startTimeUnixNano": str(start),
-                "endTimeUnixNano": str(start + 100_000_000),
-            }]}],
-        }]
-    }
+    body = otlp_span(TRACE_ID, "e2e-test", RUN)
     retry(120, lambda: api.request("POST", "/v1/traces", headers=auth(token()), json=body).raise_for_status())
 
 
 # == Read the data back
 
 
-def read(api, token, path: str, expected: str, **kwargs):
-    def check():
-        response = api.request("GET", path, headers=auth(token()), **kwargs)
-        response.raise_for_status()
-        assert expected in response.text, response.text
-
-    retry(300, check)
-
-
 def test_read_metric(api, token):
-    read(api, token, "/prometheus/api/v1/query", '"__name__":"e2e_test"', params={"query": "e2e_test"})
+    read(api, token, "/prometheus/api/v1/query", f'"job":"{RUN}"', params={"query": f'e2e_test{{job="{RUN}"}}'})
 
 
 def test_read_log(api, token):

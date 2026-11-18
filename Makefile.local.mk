@@ -17,7 +17,7 @@ local-up: ## Create a kind cluster running the chart and the external API. LOCAL
 	$(HELM) dependency update helm/observability-platform
 	KUBE_CONTEXT=kind-kind LOCAL_BACKEND=$(LOCAL_BACKEND) $(LOCAL)/install.sh helm/observability-platform
 
-local-ats: ## Run the app-test-suite smoke test on a new kind cluster `ats`, as CI does. Needs port 8443 free.
+local-ats: ## Run the app-test-suite smoke test on a new kind cluster `ats`, as CI does. Needs ports 8080 and 8443 free.
 	rm -rf build
 	helm dependency update helm/observability-platform
 	helm package helm/observability-platform --destination build
