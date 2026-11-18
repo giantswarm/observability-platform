@@ -290,8 +290,8 @@ and any cluster not created by `eksctl`.
 Nothing in such a cluster serves `metrics.k8s.io`, and that is not only a missing
 convenience:
 
-- **The platform's HorizontalPodAutoscalers cannot work without it.** Loki's write, read,
-  backend and gateway components are autoscaled, as are Mimir's gateway and Tempo's distributor.
+- **The platform's HorizontalPodAutoscalers cannot work without it.** Most of the
+  platform's components are autoscaled.
   With no metrics API their targets read `<unknown>` and they never scale in either
   direction — they simply sit at `minReplicas` forever, silently.
 - **`kubectl top` fails**, so you cannot see what the platform actually consumes against
