@@ -43,6 +43,8 @@ make local-up
   with one AgentCredential per backend in namespace `agents` (`hack/local/agentcredentials.yaml`).
   See [AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md).
 
+`make local-up` then writes `tests/ats/target.env`, the target file of `make verify`. See [Test](#test).
+
 ## Verify
 
 A `post-install` hook creates the five buckets, so `make local-up` returns once it has
@@ -160,18 +162,29 @@ The same credential gets a `401` on `https://mimir.localhost:8443/otlp/v1/metric
 ## Test
 
 ```bash
+make verify
+```
+
+`make verify` runs the `smoke` and `verify` checks in `tests/ats` against the kind cluster that
+`make local-up` set up. `make verify VERIFY_MARKERS="smoke or verify or slow"` adds the reads
+from the object store, which take 20 to 35 min.
+
+```bash
 make local-ats
 ```
 
-`make local-ats` runs the app-test-suite smoke test in `tests/ats` on a new kind cluster
-named `ats`, then deletes the cluster. The `execute-chart-tests` CI job runs the same test. It needs
-Docker and port 8443 free: run `make local-down` first.
+`make local-ats` runs the app-test-suite smoke checks in `tests/ats` on a new kind cluster
+named `ats`, then deletes the cluster and `tests/ats/target.env`. The app-test-suite pre-hook
+installs the platform with `hack/local/install.sh`. The `execute-chart-tests` CI job runs the
+same checks. It needs Docker and ports 8080 and 8443 free: run `make local-down` first.
 
 ## Teardown
 
 ```bash
 make local-down
 ```
+
+`make local-down` deletes the kind cluster, the local certificate and `tests/ats/target.env`.
 
 ## Chart unit tests
 

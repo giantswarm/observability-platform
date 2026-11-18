@@ -4,7 +4,8 @@ The tests read their target from inputs: environment variables, then the target
 file. An empty value counts as unset. The setup that installs the platform writes
 the target file. Every lookup runs lazily in a fixture: the tests collect without
 a cluster or a target file. A session fixture resolves the inputs and the context
-before the first test and ends the run when they do not resolve.
+before the first test. It ends the run when they do not resolve or when the cluster
+does not answer within 30 s.
 
 Under app-test-suite, the tests read the default target file only. Its container
 entrypoint keeps PYTHONPATH, PATH and GOPATH and drops every other environment
@@ -23,14 +24,18 @@ variable.
 """
 
 import base64
+import contextlib
 import functools
 import json
 import os
+import queue
 import re
+import secrets
 import shlex
 import subprocess
+import tempfile
+import threading
 import time
-import warnings
 from collections.abc import Callable, Iterator
 from pathlib import Path
 
@@ -45,7 +50,8 @@ TOKEN_MAX_AGE = 50 * 60
 # The tenant of the run's test data.
 TENANT = "default"
 # The run id: the label of the run's test data and the namespace of its AgentCredentials.
-RUN = f"verify-{int(time.time())}"
+# The random suffix keeps the ids of two runs that start in the same second apart.
+RUN = f"verify-{int(time.time())}-{secrets.token_hex(2)}"
 # The agent host and a write path of each AgentCredential backend.
 AGENT_HOSTS = {
     "metrics": ("mimir", "/otlp/v1/metrics"),
@@ -81,10 +87,19 @@ def namespace() -> str:
     return inputs().get("OBS_NAMESPACE", "monitoring")
 
 
-def kubectl(*args: str, input: str | None = None) -> str:
-    return subprocess.run(
-        ["kubectl", "--context", context(), *args], input=input, check=True, capture_output=True, text=True
-    ).stdout
+class KubectlError(subprocess.CalledProcessError):
+    """A kubectl call that exits non-zero. The message holds the command and kubectl's stderr, never stdout."""
+
+    def __str__(self) -> str:
+        return f"{super().__str__()} {self.stderr.strip()}".strip()
+
+
+def kubectl(*args: str, input: str | None = None, timeout: float | None = None) -> str:
+    """Run kubectl in the run's context and return its stdout. A failure raises KubectlError."""
+    result = subprocess.run(["kubectl", "--context", context(), *args], input=input, capture_output=True, text=True, timeout=timeout)
+    if result.returncode != 0:
+        raise KubectlError(result.returncode, result.args, result.stdout, result.stderr)
+    return result.stdout
 
 
 def retry(seconds: int, check):
@@ -99,6 +114,56 @@ def retry(seconds: int, check):
             time.sleep(5)
 
 
+def auth(token: str) -> dict:
+    return {"Authorization": f"Bearer {token}", "X-Scope-OrgID": TENANT}
+
+
+def now_ns() -> str:
+    return str(time.time_ns())
+
+
+def otlp_gauge(name: str, value: float, service: str) -> dict:
+    """OTLP/HTTP JSON body with one gauge sample at the current time."""
+    return {
+        "resourceMetrics": [{
+            "resource": {"attributes": [{"key": "service.name", "value": {"stringValue": service}}]},
+            "scopeMetrics": [{"metrics": [{
+                "name": name,
+                "gauge": {"dataPoints": [{"asDouble": value, "timeUnixNano": now_ns()}]},
+            }]}],
+        }]
+    }
+
+
+def otlp_span(trace_id: str, name: str, service: str) -> dict:
+    """OTLP/HTTP JSON body with one span of 100 ms that starts now."""
+    start = time.time_ns()
+    return {
+        "resourceSpans": [{
+            "resource": {"attributes": [{"key": "service.name", "value": {"stringValue": service}}]},
+            "scopeSpans": [{"spans": [{
+                "traceId": trace_id,
+                "spanId": "eee19b7ec3c1b174",
+                "name": name,
+                "kind": 1,
+                "startTimeUnixNano": str(start),
+                "endTimeUnixNano": str(start + 100_000_000),
+            }]}],
+        }]
+    }
+
+
+def read(api, token, path: str, expected: str, **kwargs):
+    """GET path through the external API until the answer holds expected."""
+
+    def check():
+        response = api.request("GET", path, headers=auth(token()), **kwargs)
+        response.raise_for_status()
+        assert expected in response.text, response.text
+
+    retry(300, check)
+
+
 @functools.cache
 def hostname(role: str) -> str:
     """The route hostname of a role in the release namespace.
@@ -108,7 +173,8 @@ def hostname(role: str) -> str:
     The role needs exactly one hostname. A failed lookup raises and stays uncached.
     """
     hosts: set[str] = set()
-    routes = kubectl("get", "httproutes.gateway.networking.k8s.io", "-n", namespace(), "-o", "json")
+    # The timeout bounds the session header, which looks up the API hostname before the cluster check.
+    routes = kubectl("get", "httproutes.gateway.networking.k8s.io", "-n", namespace(), "-o", "json", timeout=30)
     for route in json.loads(routes)["items"]:
         labels = route["metadata"].get("labels", {})
         name = labels.get("app.kubernetes.io/name")
@@ -125,6 +191,78 @@ def hostname(role: str) -> str:
     if len(hosts) != 1:
         raise LookupError(f"The {role} HTTPRoutes in namespace {namespace()} have {len(hosts)} hostnames: {sorted(hosts)}")
     return hosts.pop()
+
+
+@functools.cache
+def service(name: str, component: str) -> tuple[str, int]:
+    """The port-forward target and HTTP port of a chart's Service in the release namespace.
+
+    The charts label each Service with the chart (`name`) and the component. The
+    lookup skips headless Services and needs exactly one Service with an
+    `http-metrics` port. A failed lookup raises and stays uncached.
+    """
+    selector = f"app.kubernetes.io/name={name},app.kubernetes.io/component={component}"
+    services = [
+        item
+        for item in json.loads(kubectl("get", "services", "-n", namespace(), "-l", selector, "-o", "json"))["items"]
+        if item["spec"].get("clusterIP") != "None"
+    ]
+    if len(services) != 1:
+        raise LookupError(f"Namespace {namespace()} has {len(services)} Services that are not headless with the labels {selector}.")
+    ports = [port["port"] for port in services[0]["spec"]["ports"] if port.get("name") == "http-metrics"]
+    if len(ports) != 1:
+        raise LookupError(f"Service {services[0]['metadata']['name']} has no single http-metrics port.")
+    return f"svc/{services[0]['metadata']['name']}", ports[0]
+
+
+@contextlib.contextmanager
+def port_forward(target: str, port: int) -> Iterator[str]:
+    """Forward a local port that kubectl picks to a port of a target in the release namespace.
+
+    The target is any kubectl port-forward target, such as `svc/<name>` or
+    `pod/<name>`. Yields the local address `127.0.0.1:<port>` once the forward is
+    ready. Ends the kubectl process on exit, also on failure and on interrupt.
+    """
+    args = ["kubectl", "--context", context(), "-n", namespace(), "port-forward", "--address", "127.0.0.1", target, f":{port}"]
+    with tempfile.TemporaryFile("w+") as stderr:
+        process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=stderr, text=True)
+        ready: queue.Queue[str | None] = queue.Queue()
+
+        def drain():
+            # Reads stdout to its end, so that kubectl never blocks on a full pipe.
+            for line in process.stdout:
+                match = re.match(r"Forwarding from 127\.0\.0\.1:(\d+) ", line)
+                if match:
+                    ready.put(match.group(1))
+            ready.put(None)
+
+        reader = threading.Thread(target=drain, daemon=True)
+        reader.start()
+        try:
+            try:
+                local = ready.get(timeout=30)
+            except queue.Empty:
+                local = None
+            if local is None:
+                stderr.seek(0)
+                raise RuntimeError(f"The port-forward to {target} port {port} in namespace {namespace()} did not come up: {stderr.read().strip()}")
+            yield f"127.0.0.1:{local}"
+        finally:
+            process.terminate()
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+            reader.join(timeout=5)
+            process.stdout.close()
+
+
+def forwarded(method: str, address: str, path: str, **kwargs) -> requests.Response:
+    """Send an HTTP request to a port-forward address. The proxy variables of the environment do not apply."""
+    with requests.Session() as session:
+        session.trust_env = False
+        return session.request(method, f"http://{address}{path}", timeout=10, **kwargs)
 
 
 class HostnameAdapter(HTTPAdapter):
@@ -164,6 +302,17 @@ def grafana() -> Gateway:
 
 
 @pytest.fixture(scope="session")
+def grafana_admin() -> tuple[str, str]:
+    """User and password of the Grafana admin, from the admin Secret the Grafana chart creates."""
+    selector = "app.kubernetes.io/name=grafana,app.kubernetes.io/component=admin-secret"
+    secrets = json.loads(kubectl("get", "secret", "-n", namespace(), "-l", selector, "-o", "json"))["items"]
+    if len(secrets) != 1:
+        raise LookupError(f"Namespace {namespace()} has {len(secrets)} Secrets with the labels {selector}.")
+    data = secrets[0]["data"]
+    return tuple(base64.b64decode(data[key]).decode() for key in ("admin-user", "admin-password"))
+
+
+@pytest.fixture(scope="session")
 def api() -> Gateway:
     return Gateway(hostname("api"))
 
@@ -191,12 +340,19 @@ class Token:
         command = inputs().get("OBS_TOKEN_COMMAND")
         if not command:
             pytest.fail(f"OBS_TOKEN_COMMAND is not set. Set it in the environment or in the target file {TARGET_FILE}.", pytrace=False)
-        # The messages quote neither stdout nor stderr: either can hold the token.
-        result = subprocess.run(shlex.split(command), capture_output=True, text=True)
+        # The messages quote neither stdout nor stderr: either can hold the token. The
+        # timeout fails after the except block: TimeoutExpired quotes the command line,
+        # which can hold a secret.
+        try:
+            result = subprocess.run(shlex.split(command), capture_output=True, text=True, timeout=60)
+        except subprocess.TimeoutExpired:
+            result = None
+        if result is None:
+            pytest.fail("OBS_TOKEN_COMMAND did not finish within 60 s.", pytrace=False)
         if result.returncode != 0:
             pytest.fail(f"OBS_TOKEN_COMMAND exited with {result.returncode}.", pytrace=False)
         value = result.stdout.strip()
-        if not re.fullmatch(r"[\w.-]+", value):
+        if not re.fullmatch(r"[\w.-]+", value, re.ASCII):
             pytest.fail("OBS_TOKEN_COMMAND printed no single token: its output is empty or holds whitespace or other characters.", pytrace=False)
         self.value = value
         self.issued = time.time()
@@ -206,7 +362,7 @@ class Token:
 _token = Token()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def token() -> Callable[[], str]:
     """The current token. Call it on each request: the token command re-runs as the token ages."""
     return _token.get
@@ -214,12 +370,17 @@ def token() -> Callable[[], str]:
 
 @pytest.fixture(scope="session", autouse=True)
 def target() -> None:
-    """Resolve the inputs and the context once. End the run when they do not resolve."""
+    """Resolve the inputs and the context once. End the run when they do not resolve or the cluster does not answer."""
     try:
         inputs()
         context()
+        kubectl("version", "--request-timeout=10s", timeout=30)
+    except subprocess.TimeoutExpired:
+        # kubectl's own timeout does not bound a credential plugin that hangs.
+        pytest.exit(f"The target does not resolve: kube context {context()} does not answer within 30 s.", returncode=pytest.ExitCode.USAGE_ERROR)
     except Exception as error:
-        detail = error.stderr.strip() if isinstance(error, subprocess.CalledProcessError) else ""
+        # A KubectlError message already holds kubectl's stderr.
+        detail = error.stderr.strip() if isinstance(error, subprocess.CalledProcessError) and not isinstance(error, KubectlError) else ""
         pytest.exit(f"The target does not resolve: {error} {detail}".strip(), returncode=pytest.ExitCode.USAGE_ERROR)
 
 
@@ -230,7 +391,7 @@ def agent_credentials() -> Iterator[dict[str, tuple[str, str]]]:
     Creates the namespace RUN with one AgentCredential per backend. Waits for the
     operator to write each Secret and for each agent host to accept its credential:
     a write with the credential gets an answer other than 401, 404 or 5xx. Teardown
-    deletes the namespace and warns when the deletion fails.
+    deletes the namespace and raises when the deletion fails, so the run fails.
     """
     items = [
         {
@@ -257,10 +418,15 @@ def agent_credentials() -> Iterator[dict[str, tuple[str, str]]]:
             retry(300, accepted)
         yield credentials
     finally:
+        # The error raises after the except block, so that the report chains a setup
+        # error, not the kubectl command.
+        failure = None
         try:
             kubectl("delete", "namespace", RUN, "--ignore-not-found", "--timeout=180s")
         except subprocess.CalledProcessError as error:
-            warnings.warn(f"The deletion of namespace {RUN} failed: {error.stderr.strip()}", stacklevel=1)
+            failure = error.stderr.strip()
+        if failure is not None:
+            raise RuntimeError(f"Teardown left namespace {RUN} with the run's AgentCredentials: {failure}")
 
 
 def _agent_credential(backend: str) -> tuple[str, str]:
@@ -269,7 +435,7 @@ def _agent_credential(backend: str) -> tuple[str, str]:
     secret = status.get("secretRef", {}).get("name")
     if not secret:
         raise LookupError(f"The {backend} AgentCredential in namespace {RUN} has no Secret yet.")
-    data = json.loads(kubectl("get", "secret", secret, "-n", RUN, "-o", "jsonpath={.data}"))
+    data = json.loads(kubectl("get", "secret", secret, "-n", RUN, "-o", "json"))["data"]
     return tuple(base64.b64decode(data[key]).decode() for key in ("username", "password"))
 
 
@@ -297,7 +463,7 @@ _dumped = False
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
-    """On the first failure, attach pods, events and logs of not-ready pods."""
+    """On the first failure, attach workloads, pods, events and logs of not-ready pods."""
     global _dumped
     report = (yield).get_result()
     if report.when != "call" or not report.failed or _dumped:
@@ -306,6 +472,7 @@ def pytest_runtest_makereport(item, call):
     out = []
     try:
         for args in (
+            ["get", "deployments,statefulsets,daemonsets", "-n", namespace()],
             ["get", "pods", "-n", namespace(), "-o", "wide"],
             ["get", "events", "-n", namespace(), "--sort-by=.lastTimestamp"],
         ):
