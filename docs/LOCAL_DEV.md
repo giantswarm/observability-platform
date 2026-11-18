@@ -167,7 +167,8 @@ make verify
 
 `make verify` runs the `smoke` and `verify` checks in `tests/ats` against the kind cluster that
 `make local-up` set up. `make verify VERIFY_MARKERS="smoke or verify or slow"` adds the reads
-from the object store, which take 20 to 35 min.
+from the object store, which take 20 to 35 min. See [VERIFICATION.md](./VERIFICATION.md) for
+the inputs, the checks and other clusters.
 
 ```bash
 make local-ats
