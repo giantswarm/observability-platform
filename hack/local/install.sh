@@ -16,7 +16,7 @@ CHART=$1
 # version the platform is tested against.
 OPERATOR_VERSION=0.88.0
 # CNPG operator release for the Grafana PostgreSQL cluster. Keep in step with the
-# tested range in doc/GRAFANA_DATABASE.md.
+# tested range in docs/GRAFANA_DATABASE.md.
 CNPG_VERSION=0.1.0
 KUBECTL=(kubectl ${KUBE_CONTEXT:+--context "$KUBE_CONTEXT"})
 HELM=(helm ${KUBE_CONTEXT:+--kube-context "$KUBE_CONTEXT"})

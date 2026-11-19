@@ -12,7 +12,7 @@
 #
 # It installs the CNPG CRDs, which the Grafana PostgreSQL cluster needs. Skip this
 # release when the cluster already runs a CNPG operator that watches `monitoring`:
-# the CRDs are cluster-scoped and two operators conflict. See doc/GRAFANA_DATABASE.md.
+# the CRDs are cluster-scoped and two operators conflict. See docs/GRAFANA_DATABASE.md.
 # ---------------------------------------------------------------------------
 cloudnative-pg:
   config:

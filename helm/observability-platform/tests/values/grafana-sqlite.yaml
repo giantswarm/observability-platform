@@ -1,5 +1,5 @@
 # Keeps Grafana on SQLite inside its pod: the opt-out documented in
-# doc/GRAFANA_DATABASE.md. Keep the two in step.
+# docs/GRAFANA_DATABASE.md. Keep the two in step.
 grafana:
   postgresqlCluster:
     enabled: false

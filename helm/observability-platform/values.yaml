@@ -3,7 +3,7 @@
 #
 # Storage is Azure Blob or S3, picked by `global.objectStorage.backend`. The chart
 # consumes an existing store, its containers or buckets, and its credentials. See
-# doc/OBJECT_STORAGE.md.
+# docs/OBJECT_STORAGE.md.
 # ---------------------------------------------------------------------------
 global:
   # -- Base domain for the platform's HTTP endpoints. The API is served at
@@ -63,12 +63,12 @@ grafana:
     enabled: false
   # Grafana's database: a CloudNativePG cluster, `grafana-postgresql`. Needs the CNPG
   # operator release (values/cloudnative-pg.yaml) and the Secret `grafana-secret-key`.
-  # To keep Grafana on SQLite inside its pod instead, see doc/GRAFANA_DATABASE.md.
+  # To keep Grafana on SQLite inside its pod instead, see docs/GRAFANA_DATABASE.md.
   postgresqlCluster:
     enabled: true
     # A primary and a streaming replica: losing a node or a volume fails over.
     instances: 2
-    # Needs the Prometheus Operator CRDs. See doc/GRAFANA_DATABASE.md to turn it on.
+    # Needs the Prometheus Operator CRDs. See docs/GRAFANA_DATABASE.md to turn it on.
     podMonitor:
       enabled: false
   grafana:
@@ -164,7 +164,7 @@ tempo:
       enabled: false
       hostnames:
         - "tempo.{{ .Values.global.domain }}"
-      # Set to your Gateway: its name, namespace and HTTPS listener. See doc/AGENT_CREDENTIALS.md.
+      # Set to your Gateway: its name, namespace and HTTPS listener. See docs/AGENT_CREDENTIALS.md.
       # The other agent write routes reuse this list through the `gatewayRef` anchor.
       parentRefs: &gatewayRef
         - name: giantswarm-default
@@ -225,7 +225,7 @@ observabilityPlatformApi:
   enabled: false
 # Local object store for data storage: Azurite with backend `azure`, Garage with
 # backend `s3`.
-# Development only. See doc/LOCAL_DEV.md.
+# Development only. See docs/LOCAL_DEV.md.
 localObjectStorage:
   enabled: false
   azurite:
@@ -251,7 +251,7 @@ defaultOrganization:
 # ---------------------------------------------------------------------------
 # Default Alertmanager config: a Secret holding the files in files/alertmanager.
 # The observability-operator loads it into Mimir Alertmanager for `global.tenant`.
-# See doc/ALERTING.md.
+# See docs/ALERTING.md.
 # ---------------------------------------------------------------------------
 defaultAlertmanagerConfig:
   # -- Create the default Alertmanager config Secret. Needs the observability-operator,
@@ -264,7 +264,7 @@ defaultAlertmanagerConfig:
 #
 # Renders Gateway API routes plus Envoy Gateway filters and SecurityPolicies.
 # Prerequisites: Envoy Gateway and a Gateway that accepts routes from this
-# release's namespace. See doc/EXTERNAL_API.md.
+# release's namespace. See docs/EXTERNAL_API.md.
 #
 # Every request needs a JWT from one of `auth.jwt.providers` and an
 # `X-Scope-OrgID` header naming the tenant.
@@ -285,7 +285,7 @@ observability-platform-api:
   # Every route attaches only to the Gateway listener named `https`, so bearer
   # tokens and telemetry never travel over a plain HTTP listener on the same
   # Gateway. If your HTTPS listener has another name, override these
-  # `parentRefs`. See doc/EXTERNAL_API.md.
+  # `parentRefs`. See docs/EXTERNAL_API.md.
   basicAuth:
     parentRefs:
       - name: giantswarm-default
@@ -333,7 +333,7 @@ observability-platform-api:
 # Each backend's SecurityPolicy checks the htpasswd Secret that the
 # observability-operator aggregates from that backend's AgentCredentials, so a
 # credential pushes to one backend only. You create the AgentCredentials. See
-# doc/AGENT_CREDENTIALS.md.
+# docs/AGENT_CREDENTIALS.md.
 #
 # Off by default. Turn on all four together:
 #

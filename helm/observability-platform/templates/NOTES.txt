@@ -16,13 +16,13 @@ Log in at http://localhost:3000 as `admin`. The password is in the `grafana` sec
 {{- if not .Values.observabilityOperator.enabled }}
 
 Grafana has no datasources: no observability-operator provisions them. To add them, see
-https://github.com/giantswarm/observability-platform/blob/main/doc/LOCAL_DEV.md
+https://github.com/giantswarm/observability-platform/blob/main/docs/LOCAL_DEV.md
 {{- end }}
 {{- if dig "postgresqlCluster" "enabled" false .Values.grafana }}
 
 Grafana stores its data in the PostgreSQL cluster `grafana-postgresql`. On a first install,
 Grafana restarts until the database is ready. Uninstalling this release deletes the database
 and its volumes. See
-https://github.com/giantswarm/observability-platform/blob/main/doc/GRAFANA_DATABASE.md
+https://github.com/giantswarm/observability-platform/blob/main/docs/GRAFANA_DATABASE.md
 {{- end }}
 {{- end }}

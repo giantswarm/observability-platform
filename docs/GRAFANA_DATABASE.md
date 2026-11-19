@@ -55,7 +55,7 @@ already runs a CNPG operator, skip the operator release:
    ```
 
 3. Install the observability-operator release and the Platform chart as in the
-   [README](../README.md#installing).
+   [installation guide](./INSTALL.md).
 
 On a first install, Grafana restarts until the database is ready, usually for a minute or two.
 
@@ -64,8 +64,8 @@ while the Secret `grafana-secret-key` is missing. `helm template`, which talks t
 skips both checks and renders the PostgreSQL resources:
 
 ```text
-grafana.postgresqlCluster.enabled is true but the cluster serves no postgresql.cnpg.io/v1 Cluster. Install the CNPG operator release first, with values/cloudnative-pg.yaml, or keep Grafana on SQLite - see doc/GRAFANA_DATABASE.md.
-grafana.postgresqlCluster.enabled is true but the Secret grafana-secret-key is missing. Create it first, or keep Grafana on SQLite - see doc/GRAFANA_DATABASE.md.
+grafana.postgresqlCluster.enabled is true but the cluster serves no postgresql.cnpg.io/v1 Cluster. Install the CNPG operator release first, with values/cloudnative-pg.yaml, or keep Grafana on SQLite - see docs/GRAFANA_DATABASE.md.
+grafana.postgresqlCluster.enabled is true but the Secret grafana-secret-key is missing. Create it first, or keep Grafana on SQLite - see docs/GRAFANA_DATABASE.md.
 ```
 
 ## The secret key

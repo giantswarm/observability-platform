@@ -14,10 +14,10 @@ PostgreSQL resources render.
 {{- if and .Values.grafana.enabled (dig "postgresqlCluster" "enabled" false .Values.grafana) }}
 {{- if lookup "v1" "Namespace" "" "kube-system" }}
 {{- if not (.Capabilities.APIVersions.Has "postgresql.cnpg.io/v1/Cluster") }}
-{{- fail "grafana.postgresqlCluster.enabled is true but the cluster serves no postgresql.cnpg.io/v1 Cluster. Install the CNPG operator release first, with values/cloudnative-pg.yaml, or keep Grafana on SQLite - see doc/GRAFANA_DATABASE.md." }}
+{{- fail "grafana.postgresqlCluster.enabled is true but the cluster serves no postgresql.cnpg.io/v1 Cluster. Install the CNPG operator release first, with values/cloudnative-pg.yaml, or keep Grafana on SQLite - see docs/GRAFANA_DATABASE.md." }}
 {{- end }}
 {{- if not (lookup "v1" "Secret" .Release.Namespace "grafana-secret-key") }}
-{{- fail "grafana.postgresqlCluster.enabled is true but the Secret grafana-secret-key is missing. Create it first, or keep Grafana on SQLite - see doc/GRAFANA_DATABASE.md." }}
+{{- fail "grafana.postgresqlCluster.enabled is true but the Secret grafana-secret-key is missing. Create it first, or keep Grafana on SQLite - see docs/GRAFANA_DATABASE.md." }}
 {{- end }}
 {{- end }}
 {{- end }}
