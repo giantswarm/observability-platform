@@ -60,11 +60,6 @@ fi
   --values "$ROOT/helm/observability-platform/values-local.yaml" \
   --values "$DIR/values.yaml" "${BACKEND_VALUES[@]}"
 
-# Garage starts without buckets. The garage-init Job creates them.
-if [ "${LOCAL_BACKEND:-s3}" = s3 ]; then
-  "${KUBECTL[@]}" wait --for=condition=complete job/garage-init -n monitoring --timeout 5m
-fi
-
 # The target of the tests in tests/ats. kind maps the Envoy Gateway `https` NodePort
 # to 127.0.0.1:8443 (.ats/kind-config.yaml).
 cat > "$ROOT/tests/ats/target.env" <<EOF
