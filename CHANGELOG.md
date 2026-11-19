@@ -9,12 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Keep accepting Loki log writes while one write pod restarts.
+- Deliver Loki alerts to Mimir Alertmanager.
+- Store Loki recording rule results in Mimir.
 - The local kind cluster inherits no DNS search domain from the host. A host search domain no longer slows in-cluster lookups.
 - The `helm.sh/chart` label is valid for long chart versions: the 63-character cut trims the whole trailing run of `-`, `.` and `_`.
 - `docs/OBJECT_STORAGE.md` covers Tempo. It no longer documents an empty credentials Secret.
 
 ### Changed
 
+- Run Mimir ingesters and store-gateways without zones.
 - **Breaking:** Grafana runs on a CloudNativePG PostgreSQL cluster by default, so its users, dashboards and alert rules survive restarts. Before upgrading, install the CNPG operator release with `values/cloudnative-pg.yaml` and create the Secret `grafana-secret-key`, or keep Grafana on SQLite. See `docs/GRAFANA_DATABASE.md`.
 - Move the documentation from `doc/` to `docs/`. Links to the old paths break. The chart's render errors, values comments and install notes name the new paths.
 - Rewrite the README as an overview. The install steps, the pre-install notes and the network access list move to `docs/INSTALL.md`.

@@ -83,18 +83,14 @@ mimir:
     querier:
       enabled: false
   mimir:
-    # One zone and one replica each, with replication_factor below to match.
+    # One replica each, with replication_factor below to match.
     ingester:
-      zoneAwareReplication:
-        enabled: false
       replicas: 1
       resources:
         requests:
           cpu: 100m
           memory: 512Mi
     store_gateway:
-      zoneAwareReplication:
-        enabled: false
       replicas: 1
       resources:
         requests:
