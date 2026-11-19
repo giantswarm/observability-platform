@@ -16,6 +16,6 @@ Log in at http://localhost:3000 as `admin`. The password is in the `grafana` sec
 {{- if not .Values.observabilityOperator.enabled }}
 
 Grafana has no datasources: no observability-operator provisions them. To add them, see
-https://github.com/giantswarm/observability-platform/blob/main/doc/LOCAL_DEV.md
+https://github.com/giantswarm/observability-platform/blob/main/docs/LOCAL_DEV.md
 {{- end }}
 {{- end }}

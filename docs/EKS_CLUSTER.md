@@ -1,7 +1,7 @@
 # EKS Cluster
 
 The observability platform needs a Kubernetes cluster with persistent volume support
-and enough headroom for Mimir, Loki, Grafana and their caches. This guide creates one
+and enough headroom for Mimir, Loki, Tempo, Grafana and their caches. This guide creates one
 on AWS EKS with `eksctl`.
 
 Object storage is provisioned separately. Use the `s3` backend — see
