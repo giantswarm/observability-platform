@@ -59,8 +59,9 @@ already runs a CNPG operator, skip the operator release:
 
 On a first install, Grafana restarts until the database is ready, usually for a minute or two.
 
-The render fails while the cluster serves no CNPG `Cluster`, and, on a live install, while the
-Secret `grafana-secret-key` is missing:
+On a live install or upgrade, the render fails while the cluster serves no CNPG `Cluster`, or
+while the Secret `grafana-secret-key` is missing. `helm template`, which talks to no cluster,
+skips both checks and renders the PostgreSQL resources:
 
 ```text
 grafana.postgresqlCluster.enabled is true but the cluster serves no postgresql.cnpg.io/v1 Cluster. Install the CNPG operator release first, with values/cloudnative-pg.yaml, or keep Grafana on SQLite - see doc/GRAFANA_DATABASE.md.

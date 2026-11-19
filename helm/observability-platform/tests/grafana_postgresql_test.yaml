@@ -8,17 +8,75 @@ release:
   namespace: monitoring
 tests:
 
-  - it: fails by default when the cluster serves no CNPG Cluster
+  # The guard runs only against a live cluster: kubernetesProvider fakes one, with the
+  # `kube-system` Namespace the guard looks up.
+
+  - it: skips the guard offline, so helm template renders the defaults without CNPG
     template: templates/check-grafana-postgresql.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: fails on a live cluster that serves no CNPG Cluster
+    template: templates/check-grafana-postgresql.yaml
+    kubernetesProvider: &live
+      scheme:
+        "v1/Namespace":
+          gvr:
+            version: v1
+            resource: namespaces
+          namespaced: false
+        "v1/Secret":
+          gvr:
+            version: v1
+            resource: secrets
+          namespaced: true
+      objects:
+        - kind: Namespace
+          apiVersion: v1
+          metadata:
+            name: kube-system
     asserts:
       - failedTemplate:
           errorPattern: 'grafana\.postgresqlCluster\.enabled is true but the cluster serves no postgresql\.cnpg\.io/v1 Cluster\. Install the CNPG operator release first, with values/cloudnative-pg\.yaml, or keep Grafana on SQLite'
 
-  - it: passes by default when the cluster serves the CNPG Cluster
+  - it: fails on a live cluster without the Secret grafana-secret-key
     template: templates/check-grafana-postgresql.yaml
     capabilities:
       apiVersions:
         - postgresql.cnpg.io/v1/Cluster
+    kubernetesProvider: *live
+    asserts:
+      - failedTemplate:
+          errorPattern: 'grafana\.postgresqlCluster\.enabled is true but the Secret grafana-secret-key is missing\. Create it first, or keep Grafana on SQLite'
+
+  - it: passes on a live cluster with CNPG and the Secret
+    template: templates/check-grafana-postgresql.yaml
+    capabilities:
+      apiVersions:
+        - postgresql.cnpg.io/v1/Cluster
+    kubernetesProvider:
+      scheme:
+        "v1/Namespace":
+          gvr:
+            version: v1
+            resource: namespaces
+          namespaced: false
+        "v1/Secret":
+          gvr:
+            version: v1
+            resource: secrets
+          namespaced: true
+      objects:
+        - kind: Namespace
+          apiVersion: v1
+          metadata:
+            name: kube-system
+        - kind: Secret
+          apiVersion: v1
+          metadata:
+            name: grafana-secret-key
+            namespace: monitoring
     asserts:
       - hasDocuments:
           count: 0
@@ -27,6 +85,7 @@ tests:
     template: templates/check-grafana-postgresql.yaml
     set:
       grafana.enabled: false
+    kubernetesProvider: *live
     asserts:
       - hasDocuments:
           count: 0
@@ -104,10 +163,11 @@ tests:
 
   # The opt-out: no CNPG and no Secret needed.
 
-  - it: needs no CNPG with the opt-out
+  - it: needs no CNPG and no Secret with the opt-out, even on a live cluster
     template: templates/check-grafana-postgresql.yaml
     values:
       - values/grafana-sqlite.yaml
+    kubernetesProvider: *live
     asserts:
       - hasDocuments:
           count: 0
