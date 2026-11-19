@@ -9,15 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fixed Loki log writes failing while one write pod restarts. Loki runs at least three write pods.
-- Fixed the Loki ruler. It sends alerts to Mimir Alertmanager and writes recording rule results to Mimir.
+- Run at least three Loki write pods.
+- Send Loki ruler alerts to Mimir Alertmanager and Loki recording rule results to Mimir.
 - The local kind cluster inherits no DNS search domain from the host. A host search domain no longer slows in-cluster lookups.
 - The `helm.sh/chart` label is valid for long chart versions: the 63-character cut trims the whole trailing run of `-`, `.` and `_`.
 - `docs/OBJECT_STORAGE.md` covers Tempo. It no longer documents an empty credentials Secret.
 
 ### Changed
 
-- Run Mimir ingesters and store-gateways without zones. They restart with the new config after an upgrade.
+- Run Mimir ingesters and store-gateways without zones.
 - Move the documentation from `doc/` to `docs/`. Links to the old paths break. The chart's render errors, values comments and install notes name the new paths.
 - Rewrite the README as an overview. The install steps, the pre-install notes and the network access list move to `docs/INSTALL.md`.
 - Enable AgentCredential support in the observability-operator. Upgrade the observability-operator release with the new `values/observability-operator.yaml`: without it, no htpasswd Secret reaches `monitoring` and every push gets a 500.
