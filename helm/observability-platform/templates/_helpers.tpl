@@ -40,21 +40,21 @@ Object storage validation.
 {{- $os := .Values.global.objectStorage -}}
 {{- $backend := $os.backend | default "" -}}
 {{- if not (has $backend (list "azure" "s3")) -}}
-{{- fail (printf "global.objectStorage.backend is %q. Set it to \"azure\" or \"s3\" - see doc/OBJECT_STORAGE.md." $backend) -}}
+{{- fail (printf "global.objectStorage.backend is %q. Set it to \"azure\" or \"s3\" - see docs/OBJECT_STORAGE.md." $backend) -}}
 {{- end -}}
 {{- if eq $backend "s3" -}}
 {{- if and (not (include "observability-platform.localObjectStorage.garage.enabled" .)) (not ($os.s3 | default dict).endpoint) -}}
-{{- fail "global.objectStorage.backend is \"s3\" and global.objectStorage.s3.endpoint is empty. Set it to the store endpoint, host[:port] without a scheme - see doc/OBJECT_STORAGE.md." -}}
+{{- fail "global.objectStorage.backend is \"s3\" and global.objectStorage.s3.endpoint is empty. Set it to the store endpoint, host[:port] without a scheme - see docs/OBJECT_STORAGE.md." -}}
 {{- end -}}
 {{- end -}}
 {{- if eq $backend "azure" -}}
 {{- $azure := $os.azure -}}
 {{- $azurite := include "observability-platform.localObjectStorage.azurite.enabled" . -}}
 {{- if and (not $azurite) (not (or $azure.accountName $azure.connectionString)) -}}
-{{- fail "global.objectStorage.azure.accountName is empty. Set it to the Azure storage account holding the containers, or set global.objectStorage.azure.connectionString to reach an endpoint of your own, or set localObjectStorage.enabled to run against a local Azurite emulator - see doc/OBJECT_STORAGE.md." -}}
+{{- fail "global.objectStorage.azure.accountName is empty. Set it to the Azure storage account holding the containers, or set global.objectStorage.azure.connectionString to reach an endpoint of your own, or set localObjectStorage.enabled to run against a local Azurite emulator - see docs/OBJECT_STORAGE.md." -}}
 {{- end -}}
 {{- if and .Values.tempo.enabled $azure.connectionString (not $azurite) -}}
-{{- fail "tempo.enabled is true and global.objectStorage.azure.connectionString is set. Tempo reads no connection string: it needs global.objectStorage.azure.accountName and the account key in the credentials Secret. Set accountName instead of connectionString, or set tempo.enabled to false - see doc/OBJECT_STORAGE.md." -}}
+{{- fail "tempo.enabled is true and global.objectStorage.azure.connectionString is set. Tempo reads no connection string: it needs global.objectStorage.azure.accountName and the account key in the credentials Secret. Set accountName instead of connectionString, or set tempo.enabled to false - see docs/OBJECT_STORAGE.md." -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
