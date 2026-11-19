@@ -61,10 +61,41 @@ grafana:
   enabled: true
   ciliumNetworkPolicy:
     enabled: false
+  # Grafana's database: a CloudNativePG cluster, `grafana-postgresql`. Needs the CNPG
+  # operator release (values/cloudnative-pg.yaml) and the Secret `grafana-secret-key`.
+  # To keep Grafana on SQLite inside its pod instead, see docs/GRAFANA_DATABASE.md.
+  postgresqlCluster:
+    enabled: true
+    # A primary and a streaming replica: losing a node or a volume fails over.
+    instances: 2
+    # Needs the Prometheus Operator CRDs. See docs/GRAFANA_DATABASE.md to turn it on.
+    podMonitor:
+      enabled: false
   grafana:
     # Deterministic name: pinned, do not change. The operator's `grafana.url` and
     # datasource URLs (values/observability-operator.yaml) name this service literally.
     fullnameOverride: grafana
+    grafana.ini:
+      database:
+        type: postgres
+        # The read-write Service and the application database and user CNPG creates.
+        host: grafana-postgresql-rw:5432
+        name: app
+        user: app
+        # CNPG serves TLS, but also accepts plain connections.
+        ssl_mode: require
+    envValueFrom:
+      # The password of the `app` user, from the Secret CNPG creates.
+      GF_DATABASE_PASSWORD:
+        secretKeyRef:
+          name: grafana-postgresql-app
+          key: password
+      # Encrypts the secrets Grafana stores in the database. Replaces Grafana's public
+      # default. Never change it on a running install: stored secrets become unreadable.
+      GF_SECURITY_SECRET_KEY:
+        secretKeyRef:
+          name: grafana-secret-key
+          key: secret-key
 # -- An observability-operator release, installed separately before this chart, manages
 # this platform's Grafana. Pins the release to the `monitoring` namespace.
 observabilityOperator:

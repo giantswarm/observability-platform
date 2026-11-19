@@ -84,6 +84,7 @@ Related projects, not part of the chart:
 | [Observability overview](https://docs.giantswarm.io/overview/observability/) | The concepts: multi-tenancy, Grafana organizations, dashboards, alerting, data ingestion. Written for Giant Swarm installations, the resources are the same here. |
 | [Prepare your environment](https://docs.giantswarm.io/overview/observability/standalone/prepare-your-environment/) | Cluster, capacity, network and object storage requirements |
 | [Installation guide](docs/INSTALL.md) | Prerequisites, network access, install and uninstall |
+| [Grafana database](docs/GRAFANA_DATABASE.md) | Grafana on PostgreSQL with CloudNativePG, its secret key, and keeping Grafana on SQLite |
 | [Object storage](docs/OBJECT_STORAGE.md) | Buckets, credentials and values for S3 and Azure Blob Storage |
 | [EKS cluster](docs/EKS_CLUSTER.md) | Creating a cluster the platform runs on, with `eksctl` |
 | [Gateway](docs/GATEWAY.md) | Envoy Gateway, the Gateway, its certificate and its DNS record |

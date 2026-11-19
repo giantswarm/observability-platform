@@ -15,9 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Breaking:** Grafana runs on a CloudNativePG PostgreSQL cluster by default, so its users, dashboards and alert rules survive restarts. Before upgrading, install the CNPG operator release with `values/cloudnative-pg.yaml` and create the Secret `grafana-secret-key`, or keep Grafana on SQLite. See `docs/GRAFANA_DATABASE.md`.
 - Move the documentation from `doc/` to `docs/`. Links to the old paths break. The chart's render errors, values comments and install notes name the new paths.
 - Rewrite the README as an overview. The install steps, the pre-install notes and the network access list move to `docs/INSTALL.md`.
 - Enable AgentCredential support in the observability-operator. Upgrade the observability-operator release with the new `values/observability-operator.yaml`: without it, no htpasswd Secret reaches `monitoring` and every push gets a 500.
+- **Breaking:** Upgrade Grafana app from 2.42.0 to 2.43.0. Its Deployment selector changes, so delete the `grafana` Deployment in `monitoring` before upgrading the release.
 - Upgrade Loki app from 0.48.0 to 0.50.1. Loki reads object storage from `loki.loki.loki.storage.object_store`. Remove `loki.loki.loki.storage.azure`.
 - Upgrade Mimir app from 0.30.1 to 0.31.0, with Mimir 3.2.4. It adds the cluster-scoped `mimir-ruler` PriorityClass.
 - Install observability-operator 0.88.0 in the local kind setup. Uninstalling the chart now deletes the default `GrafanaOrganization` instead of leaving it stuck.
@@ -31,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add the CNPG operator release to the local kind setup.
+- The values schema covers `grafana.postgresqlCluster` and the SQLite opt-out's `null` values.
 - Add agent write routes for Mimir, Loki and Tempo.
 - Create one AgentCredential per backend in the local kind setup, in namespace `agents`.
 - Add the app-test-suite smoke test in CI: workloads ready, Grafana up, and one write/read round trip per signal.
