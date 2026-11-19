@@ -1,7 +1,23 @@
 # Alerting
 
-The Mimir ruler sends alerts to Mimir Alertmanager. Alertmanager routes them to your receivers.
-Grafana shows the alerts of `global.tenant` in the default organization.
+The Mimir ruler and the Loki ruler send alerts to Mimir Alertmanager. Alertmanager routes them
+to your receivers. Grafana shows the alerts of `global.tenant` in the default organization.
+
+The Loki ruler sends each alert under the tenant of its rule. It writes recording rule results to
+Mimir under the same tenant. Each rule group runs on one `loki-backend` replica.
+
+If mimir is not enabled (`mimir.enabled: false`), you should turn loki remote_write off:
+
+```yaml
+loki:
+  loki:
+    loki:
+      structuredConfig:
+        ruler:
+          alertmanager_url: ""
+          remote_write:
+            enabled: false
+```
 
 Each tenant has one Alertmanager config, stored in one Secret. A tenant without a Secret uses
 the fallback config: one receiver with no integrations.

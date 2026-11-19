@@ -243,8 +243,8 @@ beta feature that is **off by default**: enable it in the cert-manager controlle
 [cert-manager documentation](https://cert-manager.io/docs/usage/gateway/).
 
 Let's Encrypt issues the wildcard hostname of the example above through a DNS-01 solver only. An
-HTTP-01 solver needs one hostname per listener and a plain HTTP listener for the challenge, as in
-[GATEWAY.md](./GATEWAY.md).
+HTTP-01 solver needs a plain HTTP listener for the challenge and a Certificate that lists each
+hostname, as in [GATEWAY.md](./GATEWAY.md).
 
 ### Certificate from a file
 

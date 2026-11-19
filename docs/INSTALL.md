@@ -34,7 +34,8 @@ The cluster needs outbound HTTPS (port 443) to these endpoints:
 
 | Endpoint | Used for |
 | --- | --- |
-| Your object storage | Mimir, Loki and Tempo data |
+| Your object storage, `azure` | Mimir, Loki and Tempo data, at `<account>.blob.core.windows.net` |
+| Your object storage, `s3` | Mimir, Loki and Tempo data, at the `s3.endpoint` host and `<bucket>.<s3.endpoint>`, for example `<bucket>.s3.eu-west-1.amazonaws.com` |
 | `gsoci.azurecr.io` and `*.blob.core.windows.net` | Container images. The registry serves image layers from Azure Blob Storage hosts. |
 | `registry-1.docker.io`, `auth.docker.io` and `production.cloudflare.docker.com` | Container images |
 | Your OIDC issuer's JWKS URI | Token validation by the Envoy proxy pods, with the external API enabled |

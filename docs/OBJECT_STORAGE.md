@@ -115,7 +115,7 @@ The upstream Loki chart still renders `common.storage.object_store` and `ruler.s
 
 ### Credentials Secret
 
-The operator creates one Secret in the release namespace. The chart never renders it.
+You create one Secret in the release namespace. The chart never renders it.
 
 - Name: `observability-platform-object-storage`, the `existingSecret` value.
 - Keys for `azure`: `AZURE_STORAGE_KEY`.
@@ -239,7 +239,7 @@ Drop `--region` on a store that does not check the signing region.
 
 ## Credentials
 
-Static keys come from one Secret. The operator creates it in the release namespace. The
+Static keys come from one Secret. You create it in the release namespace. The
 chart never renders it, and chart values never hold a key.
 
 - Name: `observability-platform-object-storage`, fixed. `global.objectStorage.existingSecret`
@@ -329,7 +329,7 @@ These ServiceAccounts need no annotation. Their pods do not touch the bucket:
 
 - `loki-gateway`: the Loki gateway.
 - `loki-memcached`: the Loki chunks and results caches.
-- `obs-grafana-agent-operator`: the Grafana Agent operator from the Mimir chart.
+- `<release>-grafana-agent-operator`: the Grafana Agent operator from the Mimir chart.
 - `grafana`: Grafana.
 
 Values example with one role for all components:
@@ -366,6 +366,18 @@ Drop the `alertmanager` and `ruler` blocks to keep both on the shared `mimir`
 ServiceAccount. The role's trust policy must allow each ServiceAccount in the release
 namespace, for example `system:serviceaccount:monitoring:mimir`.
 See [S3 permissions](#s3-permissions).
+
+The pods need outbound HTTPS to `sts.<region>.amazonaws.com` to exchange their token.
+
+Check the role reached the pods:
+
+```bash
+kubectl get pod mimir-ingester-0 loki-write-0 tempo-ingester-0 -n monitoring \
+  -o jsonpath='{range .items[*]}{.metadata.name}{": "}{.spec.containers[0].env[?(@.name=="AWS_ROLE_ARN")].value}{"\n"}{end}'
+```
+
+Each line ends with the role ARN. An empty value means the ServiceAccount has no
+`eks.amazonaws.com/role-arn` annotation, or the pod started before the annotation was set.
 
 ### S3 permissions
 
@@ -883,14 +895,15 @@ export AWS_ACCESS_KEY_ID=<access-key-id>
 export AWS_SECRET_ACCESS_KEY=<secret-access-key>
 ENDPOINT=s3.eu-west-1.amazonaws.com   # s3.endpoint
 REGION=eu-west-1                      # s3.region
+BUCKET=<mimir-blocks-bucket>          # buckets.mimirBlocks
 
-echo ok | aws s3 cp - s3://mimir-blocks/.connectivity-check \
+echo ok | aws s3 cp - "s3://$BUCKET/.connectivity-check" \
   --endpoint-url "https://$ENDPOINT" --region "$REGION"
 
-aws s3 cp s3://mimir-blocks/.connectivity-check - \
+aws s3 cp "s3://$BUCKET/.connectivity-check" - \
   --endpoint-url "https://$ENDPOINT" --region "$REGION"
 
-aws s3 rm s3://mimir-blocks/.connectivity-check \
+aws s3 rm "s3://$BUCKET/.connectivity-check" \
   --endpoint-url "https://$ENDPOINT" --region "$REGION"
 ```
 
