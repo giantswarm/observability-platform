@@ -2,7 +2,7 @@
 Default Alertmanager config for `global.tenant`. The observability-operator loads it into
 Mimir Alertmanager. Every file in files/alertmanager becomes one key of the Secret.
 The operator loads it only while a GrafanaOrganization lists the tenant: the Default
-organization does. See doc/ALERTING.md.
+organization does. See docs/ALERTING.md.
 */ -}}
 {{- if and .Values.defaultAlertmanagerConfig.enabled .Values.defaultOrganization.enabled .Values.observabilityOperator.enabled .Values.mimir.enabled .Values.mimir.mimir.alertmanager.enabled }}
 apiVersion: v1

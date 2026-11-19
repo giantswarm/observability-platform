@@ -1,7 +1,7 @@
 # Local development
 
 By default `helm install` needs a real object store - see
-[doc/OBJECT_STORAGE.md](./OBJECT_STORAGE.md).
+[docs/OBJECT_STORAGE.md](./OBJECT_STORAGE.md).
 
 `localObjectStorage.enabled` replaces it with a store running in the cluster. The store
 follows `global.objectStorage.backend`:

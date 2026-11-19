@@ -21,6 +21,13 @@ The platform serves these hostnames:
 
 The chart configures the routes itself. Leave out the hostnames of the routes you keep disabled.
 
+Grafana and the agent write routes attach to the same Gateway, on hostnames of their own:
+`grafana.<domain>`, `mimir.<domain>`, `write.loki.<domain>` and `tempo.<domain>`. This guide
+covers `observability.<domain>` only. To serve the others, the listener, its certificate and
+your DNS records must cover those hostnames too. See
+[Expose Grafana over HTTPS](EXTERNAL_API.md#expose-grafana-over-https) and
+[AGENT_CREDENTIALS.md](AGENT_CREDENTIALS.md#point-the-routes-at-your-gateway).
+
 This guide uses Envoy Gateway, the recommended implementation. Any other Gateway API
 implementation works too, such as Traefik, HAProxy or Kong.
 

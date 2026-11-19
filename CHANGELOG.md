@@ -9,21 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Loki runs at least three write pods. Log writes no longer fail while one write pod restarts.
-- The Loki ruler sends alerts to Mimir Alertmanager. Loki alerting rules reached no Alertmanager before.
-- The Loki ruler writes recording rule results to Mimir. Loki dropped them before.
-- Each Loki rule group runs on one `loki-backend` replica. Every replica evaluated every group before.
+- Keep accepting Loki log writes while one write pod restarts.
+- Deliver Loki alerts to Mimir Alertmanager.
+- Store Loki recording rule results in Mimir.
 - The local kind cluster inherits no DNS search domain from the host. A host search domain no longer slows in-cluster lookups.
 - The `helm.sh/chart` label is valid for long chart versions: the 63-character cut trims the whole trailing run of `-`, `.` and `_`.
-- `doc/OBJECT_STORAGE.md` covers Tempo. It no longer documents an empty credentials Secret.
-- The README install steps pin the observability-operator version, build the chart dependencies and pass a values file.
-- The README network access table lists the S3 hosts.
-- `doc/OBJECT_STORAGE.md` verifies S3 with your own bucket name.
-- `doc/GATEWAY.md` creates a Gateway and a certificate that serve Grafana and the agent write hostnames, next to the external API.
+- `docs/OBJECT_STORAGE.md` covers Tempo. It no longer documents an empty credentials Secret.
 
 ### Changed
 
-- Mimir ingesters and store-gateways run without zones: one StatefulSet each, with a rolling update. They restart with the new config after an upgrade.
+- Run Mimir ingesters and store-gateways without zones.
+- Move the documentation from `doc/` to `docs/`. Links to the old paths break. The chart's render errors, values comments and install notes name the new paths.
+- Rewrite the README as an overview. The install steps, the pre-install notes and the network access list move to `docs/INSTALL.md`.
 - Enable AgentCredential support in the observability-operator. Upgrade the observability-operator release with the new `values/observability-operator.yaml`: without it, no htpasswd Secret reaches `monitoring` and every push gets a 500.
 - Upgrade Loki app from 0.48.0 to 0.50.1. Loki reads object storage from `loki.loki.loki.storage.object_store`. Remove `loki.loki.loki.storage.azure`.
 - Upgrade Mimir app from 0.30.1 to 0.31.0, with Mimir 3.2.4. It adds the cluster-scoped `mimir-ruler` PriorityClass.
@@ -34,8 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Loki reads the backend from the `OBS_BACKEND` key of the object storage ConfigMap.
 - **Breaking:** `localBlobStorage` is renamed `localObjectStorage`. `localBlobStorage.init.image` moves to `localObjectStorage.azurite.initImage`.
 - The local kind setup runs the `s3` backend with Garage by default.
-- `doc/LOCAL_DEV.md` covers both local stores.
-- Update architect to v10.18.0 (giantswarm/observability-platform#176)
+- `docs/LOCAL_DEV.md` covers both local stores.
 
 ### Added
 
@@ -44,27 +40,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Create one AgentCredential per backend in the local kind setup, in namespace `agents`.
 - Add the app-test-suite smoke test in CI: workloads ready, Grafana up, and one write/read round trip per signal.
 - Enable Mimir Alertmanager.
-- Load Alertmanager config Secrets into Mimir Alertmanager through the observability-operator. See `doc/ALERTING.md`.
+- Load Alertmanager config Secrets into Mimir Alertmanager through the observability-operator. See `docs/ALERTING.md`.
 - Add a default Alertmanager config Secret for `global.tenant`. Its config lives in `files/alertmanager/alertmanager.yaml`.
 - Give Grafana's default organization (org 1) the platform's datasources, with alerting access while Mimir's Alertmanager is enabled.
 - Enable Tempo by default. It runs multi-tenant and stores traces in Azure Blob.
 - Add the `tempo` Azure Blob container configuration.
-- Add `doc/GATEWAY.md`. It installs Envoy Gateway and cert-manager, and creates the Gateway, its certificate and its DNS record.
+- Add `docs/GATEWAY.md`. It installs Envoy Gateway and cert-manager, and creates the Gateway, its certificate and its DNS record.
 - List the network access the platform needs in the README.
 - Run the observability-operator with only its GrafanaOrganization and Dashboard controllers.
 - Add the Observability Platform API wiring for Loki and Mimir
 - Route Tempo traffic through the Observability Platform API.
-- Add Tempo to `doc/EXTERNAL_API.md` and `doc/LOCAL_DEV.md`.
+- Add Tempo to `docs/EXTERNAL_API.md` and `docs/LOCAL_DEV.md`.
 - Serve Grafana over HTTPS at `https://grafana.localhost:8443` in the local kind setup.
-- Add `doc/EXTERNAL_API.md`, walking through values and requests.
-- `doc/EXTERNAL_API.md` links `doc/GATEWAY.md` and covers the egress of the Envoy proxy pods: DNS, JWKS, xDS and backends.
+- Add `docs/EXTERNAL_API.md`, walking through values and requests.
+- `docs/EXTERNAL_API.md` links `docs/GATEWAY.md` and covers the egress of the Envoy proxy pods: DNS, JWKS, xDS and backends.
 - Add `make local-up`, `make local-token` and `make local-down`. They run the chart and the external API on kind.
 - Add a kind port mapping to the local setup. Envoy Gateway serves Grafana at `grafana.localhost:8080` and the external API at `observability.localhost:8080`.
 - Add support for deploying the stack locally, with Azurite managing object storage  
-- Document logging in to Grafana in `doc/LOCAL_DEV.md`.
+- Document logging in to Grafana in `docs/LOCAL_DEV.md`.
 - Print the Grafana port-forward and login in the `helm install` output, and flag the missing datasources when the operator is disabled.
-- Add `doc/OBJECT_STORAGE.md`, walking through provisioning the Azure Blob Storage account, containers and credentials secret that Mimir and Loki need.
-- Add `doc/EKS_CLUSTER.md`, walking through creating the AWS EKS cluster the platform runs on with `eksctl` — node sizing, the `gp3` default StorageClass the CSI driver needs, metrics-server, measured resource usage and teardown.
+- Add `docs/OBJECT_STORAGE.md`, walking through provisioning the Azure Blob Storage account, containers and credentials secret that Mimir and Loki need.
+- Add `docs/EKS_CLUSTER.md`, walking through creating the AWS EKS cluster the platform runs on with `eksctl` — node sizing, the `gp3` default StorageClass the CSI driver needs, metrics-server, measured resource usage and teardown.
 - Add Artifact Hub metadata (`artifacthub.io/license`, `artifacthub.io/links`) in the chart template ([roadmap#3940](https://github.com/giantswarm/roadmap/issues/3940)).
 - Add the `observability-platform` umbrella chart skeleton.
 - Add helm-unittest suites for the object storage guards and ConfigMap. `make helm-test` runs them.
