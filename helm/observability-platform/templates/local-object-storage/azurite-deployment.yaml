@@ -1,6 +1,6 @@
 {{/*
 Local object store with backend azure: Azurite, the Azure Storage emulator, standing in
-for a real storage account. Development only - see doc/LOCAL_DEV.md.
+for a real storage account. Development only - see docs/LOCAL_DEV.md.
 */}}
 {{- if include "observability-platform.localObjectStorage.azurite.enabled" . }}
 {{- $name := include "observability-platform.azurite.serviceName" . }}
