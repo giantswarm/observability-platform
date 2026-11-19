@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Installs the platform and its prerequisites on a kind cluster created from
-# .ats/kind-config.yaml. `make local-up` and the app-test-suite tests run it.
+# .ats/kind-config.yaml, then writes tests/ats/target.env. `make local-up` and the
+# app-test-suite pre-hook run it.
 #
-#   install.sh <chart>   <chart> is the chart directory or a packaged .tgz
+#   install.sh [<chart>]   <chart> is the chart directory or a packaged .tgz.
+#                          Unset, ATS_CHART_PATH applies: app-test-suite sets it.
 #
 # KUBE_CONTEXT selects the kubeconfig context. Unset, the current context applies.
 # LOCAL_BACKEND selects the object storage backend: `s3` (default) runs Garage, `azure`
@@ -11,7 +13,7 @@ set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$DIR/../.." && pwd)"
-CHART=$1
+CHART=${1:-${ATS_CHART_PATH:?pass the chart as an argument or set ATS_CHART_PATH}}
 # observability-operator release installed before the chart. Keep in step with the
 # version the platform is tested against.
 OPERATOR_VERSION=0.88.0
@@ -20,6 +22,7 @@ OPERATOR_VERSION=0.88.0
 CNPG_VERSION=0.1.0
 KUBECTL=(kubectl ${KUBE_CONTEXT:+--context "$KUBE_CONTEXT"})
 HELM=(helm ${KUBE_CONTEXT:+--kube-context "$KUBE_CONTEXT"})
+CONTEXT=${KUBE_CONTEXT:-$("${KUBECTL[@]}" config current-context)}
 
 # --force-conflicts: app-test-suite applies its own Gateway API and Prometheus
 # Operator CRDs first. The CRDs of the Envoy Gateway chart and of this chart take
@@ -68,3 +71,12 @@ fi
   --namespace monitoring --create-namespace --force-conflicts \
   --values "$ROOT/helm/observability-platform/values-local.yaml" \
   --values "$DIR/values.yaml" "${BACKEND_VALUES[@]}"
+
+# The target of the tests in tests/ats. kind maps the Envoy Gateway `https` NodePort
+# to 127.0.0.1:8443 (.ats/kind-config.yaml).
+cat > "$ROOT/tests/ats/target.env" <<EOF
+KUBE_CONTEXT=$CONTEXT
+OBS_TOKEN_COMMAND=kubectl --context $CONTEXT exec -n jwt-issuer deploy/jwks -c signer -- /scripts/jwt.sh token
+OBS_GATEWAY_ADDRESS=127.0.0.1:8443
+OBS_CA_BUNDLE=$DIR/.keys/tls.crt
+EOF

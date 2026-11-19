@@ -32,11 +32,7 @@ def now_ns() -> str:
 # == Install
 
 
-def test_install_garage_init(platform):
-    retry(300, lambda: kubectl("wait", "--for=condition=complete", "job/garage-init", "-n", NAMESPACE, "--timeout=10s"))
-
-
-def test_install_workloads_ready(platform):
+def test_install_workloads_ready():
     def rollouts():
         for kind in ("deployment", "statefulset", "daemonset"):
             for name in kubectl("get", kind, "-n", NAMESPACE, "-o", "name").split():

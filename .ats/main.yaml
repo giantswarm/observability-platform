@@ -1,8 +1,9 @@
 # app-test-suite configuration. The ats job in .circleci/custom.yml and
 # `make local-ats` run it.
 #
-# ATS skips its own chart deploy. The tests install the prerequisites and the
-# chart with hack/local/install.sh. See tests/ats/conftest.py.
+# ATS skips its own chart deploy. The pre-hook installs the prerequisites and the
+# chart with hack/local/install.sh, then ATS runs the tests in tests/ats.
 app-tests-skip-app-deploy: true
 app-tests-deploy-namespace: monitoring
+app-tests-pre-hook: hack/local/install.sh
 skip-steps: [functional, upgrade]
