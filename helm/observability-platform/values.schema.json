@@ -61,6 +61,38 @@
         }
       }
     },
+    "grafana": {
+      "type": "object",
+      "description": "The Grafana subchart. Its database is the CloudNativePG cluster grafana-postgresql by default - see doc/GRAFANA_DATABASE.md.",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "postgresqlCluster": {
+          "type": "object",
+          "description": "Grafana's PostgreSQL cluster. Needs the CNPG operator release and the Secret grafana-secret-key. false keeps Grafana on SQLite, together with grafana.grafana.\"grafana.ini\".database and grafana.grafana.envValueFrom set to null.",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "instances": { "type": "integer", "minimum": 1 },
+            "podMonitor": {
+              "type": "object",
+              "description": "PodMonitor for the PostgreSQL instances. Needs the Prometheus Operator CRDs.",
+              "properties": { "enabled": { "type": "boolean" } }
+            }
+          }
+        },
+        "grafana": {
+          "type": "object",
+          "properties": {
+            "grafana.ini": {
+              "type": "object",
+              "properties": {
+                "database": { "type": ["object", "null"], "description": "Grafana's database settings. null keeps Grafana on SQLite." }
+              }
+            },
+            "envValueFrom": { "type": ["object", "null"], "description": "Environment variables from Secrets, among them the database password and the secret key. null, for the whole map, drops both to keep Grafana on SQLite." }
+          }
+        }
+      }
+    },
     "defaultOrganization": {
       "type": "object",
       "description": "The GrafanaOrganization that takes over Grafana's org 1 (\"Main Org.\") with datasources reading the tenant set in global.tenant.",

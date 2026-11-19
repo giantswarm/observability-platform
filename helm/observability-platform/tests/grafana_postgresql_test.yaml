@@ -144,3 +144,24 @@ tests:
           any: true
           content:
             name: GF_SECURITY_SECRET_KEY
+
+  # The values schema.
+
+  - it: rejects fewer than one PostgreSQL instance
+    template: templates/check-grafana-postgresql.yaml
+    set:
+      grafana.postgresqlCluster.instances: 0
+    capabilities:
+      apiVersions:
+        - postgresql.cnpg.io/v1/Cluster
+    asserts:
+      - failedTemplate:
+          errorPattern: 'postgresqlCluster/instances'
+
+  - it: rejects a non-boolean postgresqlCluster.enabled
+    template: templates/check-grafana-postgresql.yaml
+    set:
+      grafana.postgresqlCluster.enabled: "no"
+    asserts:
+      - failedTemplate:
+          errorPattern: 'postgresqlCluster/enabled'
