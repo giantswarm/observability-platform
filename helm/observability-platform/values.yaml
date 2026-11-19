@@ -200,11 +200,11 @@ localObjectStorage:
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite:3.37.0
     # Job that creates the containers, which Azurite does not create itself.
-    initImage: mcr.microsoft.com/azure-cli:2.92.0
+    initImage: mcr.microsoft.com/azure-cli:2.93.0
   garage:
     image: dxflrs/garage:v2.5.0
     # Job that creates the buckets, which Garage does not create itself.
-    initImage: amazon/aws-cli:2.40.2
+    initImage: amazon/aws-cli:2.41.0
 
 # ---------------------------------------------------------------------------
 # Default organization: a GrafanaOrganization that takes over Grafana's default
