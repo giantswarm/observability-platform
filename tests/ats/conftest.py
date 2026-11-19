@@ -1,12 +1,10 @@
 """Fixtures for the app-test-suite tests.
 
-ATS skips its own chart deploy (.ats/main.yaml). The `platform` fixture installs
-the prerequisites and the chart under test with hack/local/install.sh, the same
-script `make local-up` runs, on the kind cluster ATS hands over in KUBECONFIG.
+The ATS pre-hook (.ats/main.yaml) installs the prerequisites and the chart under
+test with hack/local/install.sh, the same script `make local-up` runs.
 """
 
 import json
-import os
 import subprocess
 import time
 from pathlib import Path
@@ -50,33 +48,27 @@ class Gateway:
 
 
 @pytest.fixture(scope="session")
-def platform():
-    chart = ROOT / os.environ["ATS_CHART_PATH"]
-    subprocess.run([ROOT / "hack/local/install.sh", chart], check=True)
-
-
-@pytest.fixture(scope="session")
-def grafana(platform) -> Gateway:
+def grafana() -> Gateway:
     return Gateway("grafana.localhost")
 
 
 @pytest.fixture(scope="session")
-def api(platform) -> Gateway:
+def api() -> Gateway:
     return Gateway("observability.localhost")
 
 
 @pytest.fixture(scope="session")
-def loki_write(platform) -> Gateway:
+def loki_write() -> Gateway:
     return Gateway("write.loki.localhost")
 
 
 @pytest.fixture(scope="session")
-def mimir_write(platform) -> Gateway:
+def mimir_write() -> Gateway:
     return Gateway("mimir.localhost")
 
 
 @pytest.fixture(scope="session")
-def token(platform) -> str:
+def token() -> str:
     return kubectl("exec", "-n", "jwt-issuer", "deploy/jwks", "-c", "signer", "--", "/scripts/jwt.sh", "token").strip()
 
 
