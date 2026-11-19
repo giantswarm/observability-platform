@@ -1,6 +1,6 @@
 {{/*
 Local object store with backend s3: a single-node Garage, an S3-compatible store,
-standing in for a real one. Development only - see doc/LOCAL_DEV.md.
+standing in for a real one. Development only - see docs/LOCAL_DEV.md.
 */}}
 {{- if include "observability-platform.localObjectStorage.garage.enabled" . }}
 {{- $name := include "observability-platform.garage.serviceName" . }}

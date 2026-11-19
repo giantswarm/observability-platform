@@ -78,7 +78,7 @@
     },
     "localObjectStorage": {
       "type": "object",
-      "description": "Local object store instead of a real one: Azurite, the Azure Storage emulator, with backend azure, or Garage with backend s3. Development only - see doc/LOCAL_DEV.md.",
+      "description": "Local object store instead of a real one: Azurite, the Azure Storage emulator, with backend azure, or Garage with backend s3. Development only - see docs/LOCAL_DEV.md.",
       "required": ["enabled", "azurite", "garage"],
       "properties": {
         "enabled": { "type": "boolean" },
