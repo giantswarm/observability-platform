@@ -10,7 +10,7 @@ import time
 
 import pytest
 
-from conftest import NAMESPACE, kubectl, retry
+from conftest import kubectl, namespace, retry
 
 pytestmark = pytest.mark.smoke
 
@@ -19,7 +19,7 @@ UID = f"e2e-pg-{int(time.time())}"
 
 @pytest.fixture(scope="module")
 def admin(grafana) -> tuple[str, str]:
-    password = kubectl("get", "secret", "grafana", "-n", NAMESPACE, "-o", "jsonpath={.data.admin-password}")
+    password = kubectl("get", "secret", "grafana", "-n", namespace(), "-o", "jsonpath={.data.admin-password}")
     retry(900, lambda: grafana.request("GET", "/api/health").raise_for_status())
     return "admin", base64.b64decode(password).decode()
 
@@ -37,8 +37,8 @@ def test_dashboard_survives_grafana_restart(grafana, admin):
     dashboard = {"dashboard": {"uid": UID, "title": UID, "panels": []}, "overwrite": True}
     retry(120, lambda: grafana.request("POST", "/api/dashboards/db", auth=admin, json=dashboard).raise_for_status())
 
-    kubectl("rollout", "restart", "deployment/grafana", "-n", NAMESPACE)
-    kubectl("rollout", "status", "deployment/grafana", "-n", NAMESPACE, "--timeout=5m")
+    kubectl("rollout", "restart", "deployment/grafana", "-n", namespace())
+    kubectl("rollout", "status", "deployment/grafana", "-n", namespace(), "--timeout=5m")
 
     def check():
         response = grafana.request("GET", f"/api/dashboards/uid/{UID}", auth=admin)
