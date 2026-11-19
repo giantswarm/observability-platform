@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------
 # Standalone profile for the CloudNativePG (CNPG) operator release.
 #
-# Only needed to run Grafana on PostgreSQL (values/grafana-postgresql.yaml). The
+# Needed for Grafana's PostgreSQL database, the Platform chart's default. The
 # operator is installed as its own release, in the `monitoring` namespace, before
 # the Platform chart:
 #

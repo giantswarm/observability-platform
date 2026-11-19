@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Breaking:** Grafana runs on a CloudNativePG PostgreSQL cluster by default, so its users, dashboards and alert rules survive restarts. Before upgrading, install the CNPG operator release with `values/cloudnative-pg.yaml` and create the Secret `grafana-secret-key`, or keep Grafana on SQLite. See `doc/GRAFANA_DATABASE.md`.
 - Enable AgentCredential support in the observability-operator. Upgrade the observability-operator release with the new `values/observability-operator.yaml`: without it, no htpasswd Secret reaches `monitoring` and every push gets a 500.
 - **Breaking:** Upgrade Grafana app from 2.42.0 to 2.43.0. Its Deployment selector changes, so delete the `grafana` Deployment in `monitoring` before upgrading the release.
 - Upgrade Loki app from 0.48.0 to 0.50.1. Loki reads object storage from `loki.loki.loki.storage.object_store`. Remove `loki.loki.loki.storage.azure`.
@@ -31,8 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add an opt-in PostgreSQL overlay, `values/grafana-postgresql.yaml`, that runs Grafana on a CloudNativePG cluster. It needs the CNPG operator release, installed first with `values/cloudnative-pg.yaml`.
-- Add the CNPG operator release and the PostgreSQL overlay to the local kind setup.
+- Add the CNPG operator release to the local kind setup.
 - Add agent write routes for Mimir, Loki and Tempo.
 - Create one AgentCredential per backend in the local kind setup, in namespace `agents`.
 - Add the app-test-suite smoke test in CI: workloads ready, Grafana up, and one write/read round trip per signal.

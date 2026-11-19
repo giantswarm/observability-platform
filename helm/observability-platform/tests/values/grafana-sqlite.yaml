@@ -1,0 +1,10 @@
+# Keeps Grafana on SQLite inside its pod: the opt-out documented in
+# doc/GRAFANA_DATABASE.md. Keep the two in step.
+grafana:
+  postgresqlCluster:
+    enabled: false
+  grafana:
+    grafana.ini:
+      database: null
+    # The whole map: nulling its two keys renders them with an empty value.
+    envValueFrom: null

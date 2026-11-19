@@ -68,21 +68,33 @@ There are several ways to install this app onto a workload cluster.
 - [Using GitOps to instantiate the App](https://docs.giantswarm.io/tutorials/continuous-deployment/apps/add-appcr/)
 - By creating an [App resource](https://docs.giantswarm.io/reference/platform-api/crd/apps.application.giantswarm.io) using the platform API as explained in [Getting started with App Platform](https://docs.giantswarm.io/tutorials/fleet-management/app-platform/).
 
-On a standalone cluster, install two releases with Helm, the observability-operator first. It
-installs the CRDs this chart's resources need:
+On a standalone cluster, install three releases with Helm and create one Secret, all before
+this chart:
+
+- **The CNPG operator**, for Grafana's PostgreSQL database.
+- **The observability-operator.** It installs the CRDs this chart's resources need.
+- **The Secret `grafana-secret-key`**, holding Grafana's secret key. Keep a copy outside the
+  cluster.
 
 ```bash
+helm install cloudnative-pg cloudnative-pg \
+  --repo https://giantswarm.github.io/control-plane-catalog/ --version 0.1.0 \
+  --namespace monitoring --create-namespace \
+  --values values/cloudnative-pg.yaml
 helm install observability-operator observability-operator \
   --repo https://giantswarm.github.io/control-plane-catalog/ \
-  --namespace monitoring --create-namespace \
+  --namespace monitoring \
   --values values/observability-operator.yaml
+kubectl create secret generic grafana-secret-key -n monitoring \
+  --from-literal=secret-key="$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
 helm install observability-platform helm/observability-platform --namespace monitoring
 ```
 
-Uninstall in the opposite order: the platform first, then the operator.
+Uninstall in the opposite order: the platform first, then the operators. Uninstalling the
+platform deletes Grafana's database.
 
-To keep Grafana's users, dashboards and alert rules across restarts, run Grafana on PostgreSQL
-with `values/grafana-postgresql.yaml`. It needs the CNPG operator as a third release - see
+Grafana runs on PostgreSQL by default, so its users, dashboards and alert rules survive
+restarts. To skip the CNPG operator and the Secret, keep Grafana on SQLite instead - see
 [doc/GRAFANA_DATABASE.md](doc/GRAFANA_DATABASE.md).
 
 ## Configuring

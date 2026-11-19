@@ -67,4 +67,4 @@ fi
 "${HELM[@]}" upgrade --install observability-platform "$CHART" \
   --namespace monitoring --create-namespace --force-conflicts \
   --values "$ROOT/helm/observability-platform/values-local.yaml" \
-  --values "$DIR/values.yaml" --values "$ROOT/values/grafana-postgresql.yaml" "${BACKEND_VALUES[@]}"
+  --values "$DIR/values.yaml" "${BACKEND_VALUES[@]}"

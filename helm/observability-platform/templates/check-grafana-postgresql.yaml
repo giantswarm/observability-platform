@@ -1,17 +1,18 @@
 {{/*
-Guard for Grafana on PostgreSQL (values/grafana-postgresql.yaml). No resource or
-config is created from this template.
+Guard for Grafana on PostgreSQL, the default (`grafana.postgresqlCluster.enabled`).
+No resource or config is created from this template.
 
 The Grafana PostgreSQL cluster is a CNPG `Cluster`, so the CNPG operator release
-must be installed first. Without its CRDs, the render fails.
+must be installed first. Without its CRDs, the render fails. On a live install, the
+Secret grafana-secret-key must exist too; `helm template` skips that check.
 */}}
 {{- if and .Values.grafana.enabled (dig "postgresqlCluster" "enabled" false .Values.grafana) }}
 {{- if not (.Capabilities.APIVersions.Has "postgresql.cnpg.io/v1/Cluster") }}
-{{- fail "grafana.postgresqlCluster.enabled is true but the cluster serves no postgresql.cnpg.io/v1 Cluster. Install the CNPG operator release first, with values/cloudnative-pg.yaml - see doc/GRAFANA_DATABASE.md." }}
+{{- fail "grafana.postgresqlCluster.enabled is true but the cluster serves no postgresql.cnpg.io/v1 Cluster. Install the CNPG operator release first, with values/cloudnative-pg.yaml, or keep Grafana on SQLite - see doc/GRAFANA_DATABASE.md." }}
 {{- end }}
 {{- if lookup "v1" "Namespace" "" .Release.Namespace }}
 {{- if not (lookup "v1" "Secret" .Release.Namespace "grafana-secret-key") }}
-{{- fail "grafana.postgresqlCluster.enabled is true but the Secret grafana-secret-key is missing. Create it first - see doc/GRAFANA_DATABASE.md." }}
+{{- fail "grafana.postgresqlCluster.enabled is true but the Secret grafana-secret-key is missing. Create it first, or keep Grafana on SQLite - see doc/GRAFANA_DATABASE.md." }}
 {{- end }}
 {{- end }}
 {{- end }}

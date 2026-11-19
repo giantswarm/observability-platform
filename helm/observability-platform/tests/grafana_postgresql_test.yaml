@@ -1,4 +1,5 @@
-# Grafana on PostgreSQL: the CNPG guard and what values/grafana-postgresql.yaml renders.
+# Grafana on PostgreSQL, the default: the CNPG guard, what the defaults render, and the
+# documented opt-out to SQLite (values/grafana-sqlite.yaml).
 suite: grafana postgresql
 values:
   - values/s3-compatible.yaml
@@ -7,24 +8,14 @@ release:
   namespace: monitoring
 tests:
 
-  - it: renders no guard failure without the overlay, even without CNPG
+  - it: fails by default when the cluster serves no CNPG Cluster
     template: templates/check-grafana-postgresql.yaml
-    asserts:
-      - hasDocuments:
-          count: 0
-
-  - it: fails with the overlay when the cluster serves no CNPG Cluster
-    template: templates/check-grafana-postgresql.yaml
-    values:
-      - ../../../values/grafana-postgresql.yaml
     asserts:
       - failedTemplate:
-          errorPattern: 'grafana\.postgresqlCluster\.enabled is true but the cluster serves no postgresql\.cnpg\.io/v1 Cluster\. Install the CNPG operator release first'
+          errorPattern: 'grafana\.postgresqlCluster\.enabled is true but the cluster serves no postgresql\.cnpg\.io/v1 Cluster\. Install the CNPG operator release first, with values/cloudnative-pg\.yaml, or keep Grafana on SQLite'
 
-  - it: passes with the overlay when the cluster serves the CNPG Cluster
+  - it: passes by default when the cluster serves the CNPG Cluster
     template: templates/check-grafana-postgresql.yaml
-    values:
-      - ../../../values/grafana-postgresql.yaml
     capabilities:
       apiVersions:
         - postgresql.cnpg.io/v1/Cluster
@@ -34,18 +25,14 @@ tests:
 
   - it: skips the guard when Grafana is off
     template: templates/check-grafana-postgresql.yaml
-    values:
-      - ../../../values/grafana-postgresql.yaml
     set:
       grafana.enabled: false
     asserts:
       - hasDocuments:
           count: 0
 
-  - it: renders the PostgreSQL cluster with two instances
+  - it: renders the PostgreSQL cluster with two instances by default
     template: charts/grafana/templates/cnpg/cluster.yaml
-    values:
-      - ../../../values/grafana-postgresql.yaml
     capabilities:
       apiVersions:
         - postgresql.cnpg.io/v1/Cluster
@@ -62,10 +49,8 @@ tests:
           path: spec.instances
           value: 2
 
-  - it: points Grafana at the PostgreSQL cluster over TLS
+  - it: points Grafana at the PostgreSQL cluster over TLS by default
     template: charts/grafana/charts/grafana/templates/configmap.yaml
-    values:
-      - ../../../values/grafana-postgresql.yaml
     capabilities:
       apiVersions:
         - postgresql.cnpg.io/v1/Cluster
@@ -74,10 +59,8 @@ tests:
           path: data["grafana.ini"]
           pattern: '(?s)\[database\]\nhost = grafana-postgresql-rw:5432\nname = app\nssl_mode = require\ntype = postgres\nuser = app\n'
 
-  - it: reads the database password and the secret key from Secrets
+  - it: reads the database password and the secret key from Secrets by default
     template: charts/grafana/charts/grafana/templates/deployment.yaml
-    values:
-      - ../../../values/grafana-postgresql.yaml
     capabilities:
       apiVersions:
         - postgresql.cnpg.io/v1/Cluster
@@ -99,17 +82,8 @@ tests:
                 name: grafana-secret-key
                 key: secret-key
 
-  - it: keeps Grafana on SQLite without the overlay
-    template: charts/grafana/charts/grafana/templates/configmap.yaml
-    asserts:
-      - notMatchRegex:
-          path: data["grafana.ini"]
-          pattern: '\[database\]'
-
-  - it: renders no PodMonitor with the overlay, so it needs no Prometheus Operator CRDs
+  - it: renders no PodMonitor by default, so it needs no Prometheus Operator CRDs
     template: charts/grafana/templates/cnpg/podmonitor.yaml
-    values:
-      - ../../../values/grafana-postgresql.yaml
     capabilities:
       apiVersions:
         - postgresql.cnpg.io/v1/Cluster
@@ -117,10 +91,8 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: renders the PodMonitor when the overlay's PodMonitor is turned back on
+  - it: renders the PodMonitor when it is turned back on
     template: charts/grafana/templates/cnpg/podmonitor.yaml
-    values:
-      - ../../../values/grafana-postgresql.yaml
     set:
       grafana.postgresqlCluster.podMonitor.enabled: true
     capabilities:
@@ -129,3 +101,46 @@ tests:
     asserts:
       - isKind:
           of: PodMonitor
+
+  # The opt-out: no CNPG and no Secret needed.
+
+  - it: needs no CNPG with the opt-out
+    template: templates/check-grafana-postgresql.yaml
+    values:
+      - values/grafana-sqlite.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders no PostgreSQL cluster with the opt-out
+    template: charts/grafana/templates/cnpg/cluster.yaml
+    values:
+      - values/grafana-sqlite.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: keeps Grafana on SQLite with the opt-out
+    template: charts/grafana/charts/grafana/templates/configmap.yaml
+    values:
+      - values/grafana-sqlite.yaml
+    asserts:
+      - notMatchRegex:
+          path: data["grafana.ini"]
+          pattern: '\[database\]'
+
+  - it: reads no database password or secret key with the opt-out
+    template: charts/grafana/charts/grafana/templates/deployment.yaml
+    values:
+      - values/grafana-sqlite.yaml
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[?(@.name == "grafana")].env
+          any: true
+          content:
+            name: GF_DATABASE_PASSWORD
+      - notContains:
+          path: spec.template.spec.containers[?(@.name == "grafana")].env
+          any: true
+          content:
+            name: GF_SECURITY_SECRET_KEY

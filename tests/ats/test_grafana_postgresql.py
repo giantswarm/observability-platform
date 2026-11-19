@@ -1,4 +1,4 @@
-"""Grafana on PostgreSQL (values/grafana-postgresql.yaml, applied by hack/local/install.sh):
+"""Grafana on PostgreSQL, the chart's default (hack/local/install.sh installs the CNPG operator):
 Grafana uses the database, and a dashboard created through its API survives a restart of
 the Grafana pod.
 
