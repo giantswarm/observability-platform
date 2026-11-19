@@ -1,0 +1,23 @@
+{{/*
+Guard for Grafana on PostgreSQL, the default (`grafana.postgresqlCluster.enabled`).
+No resource or config is created from this template.
+
+On a live install or upgrade, the render fails while the cluster serves no CNPG
+`Cluster` (install the CNPG operator release first) or while the Secret
+grafana-secret-key is missing.
+
+Both checks run only against a live cluster, detected by `kube-system`, which every
+cluster has. Rendered offline (`helm template`, app-build-suite), `.Capabilities` lists
+no CRDs and `lookup` returns nothing, so the checks are skipped and the default
+PostgreSQL resources render.
+*/}}
+{{- if and .Values.grafana.enabled (dig "postgresqlCluster" "enabled" false .Values.grafana) }}
+{{- if lookup "v1" "Namespace" "" "kube-system" }}
+{{- if not (.Capabilities.APIVersions.Has "postgresql.cnpg.io/v1/Cluster") }}
+{{- fail "grafana.postgresqlCluster.enabled is true but the cluster serves no postgresql.cnpg.io/v1 Cluster. Install the CNPG operator release first, with values/cloudnative-pg.yaml, or keep Grafana on SQLite - see docs/GRAFANA_DATABASE.md." }}
+{{- end }}
+{{- if not (lookup "v1" "Secret" .Release.Namespace "grafana-secret-key") }}
+{{- fail "grafana.postgresqlCluster.enabled is true but the Secret grafana-secret-key is missing. Create it first, or keep Grafana on SQLite - see docs/GRAFANA_DATABASE.md." }}
+{{- end }}
+{{- end }}
+{{- end }}

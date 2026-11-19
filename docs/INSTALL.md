@@ -26,6 +26,9 @@ first, see [LOCAL_DEV.md](./LOCAL_DEV.md).
 - Five private buckets in S3, an S3-compatible store or Azure Blob Storage, with credentials.
   [OBJECT_STORAGE.md](./OBJECT_STORAGE.md) creates both.
 - `kubectl` and `helm`, with cluster-admin on the cluster.
+- Grafana runs on a PostgreSQL cluster by default, which needs the CloudNativePG (CNPG) operator,
+  installed below. To skip it, keep Grafana on SQLite (see [GRAFANA_DATABASE.md](./GRAFANA_DATABASE.md))
+  and leave out the CNPG and secret key steps.
 - A clone of this repository. Run the commands below from its root.
 
 ### Network access
@@ -69,6 +72,24 @@ helm install observability-operator observability-operator \
   --values values/observability-operator.yaml
 ```
 
+Install the CNPG operator for Grafana's PostgreSQL cluster. Skip it if the cluster already runs a
+CNPG operator that watches `monitoring` (see [GRAFANA_DATABASE.md](./GRAFANA_DATABASE.md)):
+
+```bash
+helm install cloudnative-pg cloudnative-pg \
+  --repo https://giantswarm.github.io/control-plane-catalog/ --version 0.1.0 \
+  --namespace monitoring \
+  --values values/cloudnative-pg.yaml
+```
+
+Create Grafana's secret key, once. Keep a copy outside the cluster: restoring Grafana's database
+needs the same key, and changing it makes the secrets Grafana stored unreadable.
+
+```bash
+kubectl create secret generic grafana-secret-key --namespace monitoring \
+  --from-literal=secret-key="$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+```
+
 Create the object storage credentials Secret. The name is fixed. For Azure Blob Storage, the key is
 `AZURE_STORAGE_KEY` instead:
 
@@ -101,7 +122,8 @@ The install notes print how to reach Grafana and log in.
 
 ## Uninstall
 
-Uninstall in the opposite order: the chart first, then the operator.
+Uninstall in the opposite order: the chart first, then the operators. Uninstalling the chart
+deletes Grafana's PostgreSQL cluster and its volumes.
 
 ```bash
 helm uninstall observability-platform --namespace monitoring
@@ -109,4 +131,8 @@ helm uninstall observability-platform --namespace monitoring
 
 ```bash
 helm uninstall observability-operator --namespace monitoring
+```
+
+```bash
+helm uninstall cloudnative-pg --namespace monitoring
 ```

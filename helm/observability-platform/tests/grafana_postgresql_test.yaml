@@ -1,0 +1,227 @@
+# Grafana on PostgreSQL, the default: the CNPG guard, what the defaults render, and the
+# documented opt-out to SQLite (values/grafana-sqlite.yaml).
+suite: grafana postgresql
+values:
+  - values/s3-compatible.yaml
+release:
+  name: obs
+  namespace: monitoring
+tests:
+
+  # The guard runs only against a live cluster: kubernetesProvider fakes one, with the
+  # `kube-system` Namespace the guard looks up.
+
+  - it: skips the guard offline, so helm template renders the defaults without CNPG
+    template: templates/check-grafana-postgresql.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: fails on a live cluster that serves no CNPG Cluster
+    template: templates/check-grafana-postgresql.yaml
+    kubernetesProvider: &live
+      scheme:
+        "v1/Namespace":
+          gvr:
+            version: v1
+            resource: namespaces
+          namespaced: false
+        "v1/Secret":
+          gvr:
+            version: v1
+            resource: secrets
+          namespaced: true
+      objects:
+        - kind: Namespace
+          apiVersion: v1
+          metadata:
+            name: kube-system
+    asserts:
+      - failedTemplate:
+          errorPattern: 'grafana\.postgresqlCluster\.enabled is true but the cluster serves no postgresql\.cnpg\.io/v1 Cluster\. Install the CNPG operator release first, with values/cloudnative-pg\.yaml, or keep Grafana on SQLite'
+
+  - it: fails on a live cluster without the Secret grafana-secret-key
+    template: templates/check-grafana-postgresql.yaml
+    capabilities:
+      apiVersions:
+        - postgresql.cnpg.io/v1/Cluster
+    kubernetesProvider: *live
+    asserts:
+      - failedTemplate:
+          errorPattern: 'grafana\.postgresqlCluster\.enabled is true but the Secret grafana-secret-key is missing\. Create it first, or keep Grafana on SQLite'
+
+  - it: passes on a live cluster with CNPG and the Secret
+    template: templates/check-grafana-postgresql.yaml
+    capabilities:
+      apiVersions:
+        - postgresql.cnpg.io/v1/Cluster
+    kubernetesProvider:
+      scheme:
+        "v1/Namespace":
+          gvr:
+            version: v1
+            resource: namespaces
+          namespaced: false
+        "v1/Secret":
+          gvr:
+            version: v1
+            resource: secrets
+          namespaced: true
+      objects:
+        - kind: Namespace
+          apiVersion: v1
+          metadata:
+            name: kube-system
+        - kind: Secret
+          apiVersion: v1
+          metadata:
+            name: grafana-secret-key
+            namespace: monitoring
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: skips the guard when Grafana is off
+    template: templates/check-grafana-postgresql.yaml
+    set:
+      grafana.enabled: false
+    kubernetesProvider: *live
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the PostgreSQL cluster with two instances by default
+    template: charts/grafana/templates/cnpg/cluster.yaml
+    capabilities:
+      apiVersions:
+        - postgresql.cnpg.io/v1/Cluster
+    asserts:
+      - isKind:
+          of: Cluster
+      - equal:
+          path: metadata.name
+          value: grafana-postgresql
+      - equal:
+          path: metadata.namespace
+          value: monitoring
+      - equal:
+          path: spec.instances
+          value: 2
+
+  - it: points Grafana at the PostgreSQL cluster over TLS by default
+    template: charts/grafana/charts/grafana/templates/configmap.yaml
+    capabilities:
+      apiVersions:
+        - postgresql.cnpg.io/v1/Cluster
+    asserts:
+      - matchRegex:
+          path: data["grafana.ini"]
+          pattern: '(?s)\[database\]\nhost = grafana-postgresql-rw:5432\nname = app\nssl_mode = require\ntype = postgres\nuser = app\n'
+
+  - it: reads the database password and the secret key from Secrets by default
+    template: charts/grafana/charts/grafana/templates/deployment.yaml
+    capabilities:
+      apiVersions:
+        - postgresql.cnpg.io/v1/Cluster
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[?(@.name == "grafana")].env
+          content:
+            name: GF_DATABASE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: grafana-postgresql-app
+                key: password
+      - contains:
+          path: spec.template.spec.containers[?(@.name == "grafana")].env
+          content:
+            name: GF_SECURITY_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: grafana-secret-key
+                key: secret-key
+
+  - it: renders no PodMonitor by default, so it needs no Prometheus Operator CRDs
+    template: charts/grafana/templates/cnpg/podmonitor.yaml
+    capabilities:
+      apiVersions:
+        - postgresql.cnpg.io/v1/Cluster
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the PodMonitor when it is turned back on
+    template: charts/grafana/templates/cnpg/podmonitor.yaml
+    set:
+      grafana.postgresqlCluster.podMonitor.enabled: true
+    capabilities:
+      apiVersions:
+        - postgresql.cnpg.io/v1/Cluster
+    asserts:
+      - isKind:
+          of: PodMonitor
+
+  # The opt-out: no CNPG and no Secret needed.
+
+  - it: needs no CNPG and no Secret with the opt-out, even on a live cluster
+    template: templates/check-grafana-postgresql.yaml
+    values:
+      - values/grafana-sqlite.yaml
+    kubernetesProvider: *live
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders no PostgreSQL cluster with the opt-out
+    template: charts/grafana/templates/cnpg/cluster.yaml
+    values:
+      - values/grafana-sqlite.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: keeps Grafana on SQLite with the opt-out
+    template: charts/grafana/charts/grafana/templates/configmap.yaml
+    values:
+      - values/grafana-sqlite.yaml
+    asserts:
+      - notMatchRegex:
+          path: data["grafana.ini"]
+          pattern: '\[database\]'
+
+  - it: reads no database password or secret key with the opt-out
+    template: charts/grafana/charts/grafana/templates/deployment.yaml
+    values:
+      - values/grafana-sqlite.yaml
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[?(@.name == "grafana")].env
+          any: true
+          content:
+            name: GF_DATABASE_PASSWORD
+      - notContains:
+          path: spec.template.spec.containers[?(@.name == "grafana")].env
+          any: true
+          content:
+            name: GF_SECURITY_SECRET_KEY
+
+  # The values schema.
+
+  - it: rejects fewer than one PostgreSQL instance
+    template: templates/check-grafana-postgresql.yaml
+    set:
+      grafana.postgresqlCluster.instances: 0
+    capabilities:
+      apiVersions:
+        - postgresql.cnpg.io/v1/Cluster
+    asserts:
+      - failedTemplate:
+          errorPattern: 'postgresqlCluster/instances'
+
+  - it: rejects a non-boolean postgresqlCluster.enabled
+    template: templates/check-grafana-postgresql.yaml
+    set:
+      grafana.postgresqlCluster.enabled: "no"
+    asserts:
+      - failedTemplate:
+          errorPattern: 'postgresqlCluster/enabled'
