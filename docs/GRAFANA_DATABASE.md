@@ -93,16 +93,6 @@ The chart points Grafana at the read-write Service `grafana-postgresql-rw:5432`:
 
 Grafana stays at one replica.
 
-## Upgrading from SQLite
-
-Earlier releases kept Grafana on SQLite. Before upgrading, install the CNPG operator release and
-create `grafana-secret-key` (see [Install](#install)), or keep Grafana on SQLite. After the
-upgrade, Grafana starts on PostgreSQL with an empty database.
-
-- **Re-created:** the observability-operator re-creates the organizations, the datasources and
-  the provisioned dashboards.
-- **Lost:** everything made by hand in the SQLite database. It is not migrated.
-
 ## Uninstall
 
 > **Uninstalling the Platform chart, or switching it to SQLite, deletes the
