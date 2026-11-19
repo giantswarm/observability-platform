@@ -6,6 +6,10 @@ the target file. Every lookup runs lazily in a fixture: the tests collect withou
 a cluster or a target file. A session fixture resolves the inputs and the context
 before the first test and ends the run when they do not resolve.
 
+Under app-test-suite, the tests read the default target file only. Its container
+entrypoint keeps PYTHONPATH, PATH and GOPATH and drops every other environment
+variable.
+
   KUBE_CONTEXT         kubectl context. Unset, the current context applies.
   OBS_NAMESPACE        Release namespace. Default `monitoring`.
   OBS_TOKEN_COMMAND    Command that prints a JWT for the external API. Required. The
