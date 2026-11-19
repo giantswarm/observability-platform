@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Installs the platform and its prerequisites on a kind cluster created from
-# .ats/kind-config.yaml, then writes tests/ats/target.env. `make local-up` and the
-# app-test-suite pre-hook run it.
+# .ats/kind-config.yaml, then writes the target file of the tests. `make local-up` and
+# the app-test-suite pre-hook run it.
 #
 #   install.sh [<chart>]   <chart> is the chart directory or a packaged .tgz.
 #                          Unset, ATS_CHART_PATH applies: app-test-suite sets it.
@@ -9,6 +9,7 @@
 # KUBE_CONTEXT selects the kubeconfig context. Unset, the current context applies.
 # LOCAL_BACKEND selects the object storage backend: `s3` (default) runs Garage, `azure`
 # runs Azurite.
+# OBS_TARGET_FILE selects the path of the target file. Unset, tests/ats/target.env applies.
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -62,7 +63,7 @@ fi
 
 # The target of the tests in tests/ats. kind maps the Envoy Gateway `https` NodePort
 # to 127.0.0.1:8443 (.ats/kind-config.yaml).
-cat > "$ROOT/tests/ats/target.env" <<EOF
+cat > "${OBS_TARGET_FILE:-$ROOT/tests/ats/target.env}" <<EOF
 KUBE_CONTEXT=$CONTEXT
 OBS_TOKEN_COMMAND=kubectl --context $CONTEXT exec -n jwt-issuer deploy/jwks -c signer -- /scripts/jwt.sh token
 OBS_GATEWAY_ADDRESS=127.0.0.1:8443
