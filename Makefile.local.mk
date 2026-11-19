@@ -29,7 +29,7 @@ local-ats: ## Run the app-test-suite smoke test on a new kind cluster `ats`, as 
 	  gsoci.azurecr.io/giantswarm/app-test-suite:$(ATS_VERSION) \
 	  --chart-file $$(ls build/observability-platform-*.tgz) --cluster-kubeconfig build/kube.config \
 	  --cluster-type kind; \
-	  status=$$?; kind delete cluster --name ats; rm -f tests/ats/target.env; exit $$status
+	  status=$$?; kind delete cluster --name ats; exit $$status
 
 local-token: ## Print a JWT for the external API, valid for one hour.
 	@$(KUBECTL) exec -n jwt-issuer deploy/jwks -c signer -- /scripts/jwt.sh token
