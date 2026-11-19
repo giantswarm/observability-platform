@@ -9,20 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Loki runs at least three write pods. Log writes no longer fail while one write pod restarts.
-- The Loki ruler sends alerts to Mimir Alertmanager. Loki alerting rules reached no Alertmanager before.
-- The Loki ruler writes recording rule results to Mimir. Loki dropped them before.
-- Each Loki rule group runs on one `loki-backend` replica. Every replica evaluated every group before.
+- Loki accepts log writes while one write pod restarts. It runs at least three write pods.
+- The Loki ruler sends alerts to Mimir Alertmanager and writes recording rule results to Mimir.
 - The local kind cluster inherits no DNS search domain from the host. A host search domain no longer slows in-cluster lookups.
 - The `helm.sh/chart` label is valid for long chart versions: the 63-character cut trims the whole trailing run of `-`, `.` and `_`.
 - `docs/OBJECT_STORAGE.md` covers Tempo. It no longer documents an empty credentials Secret.
-- `docs/INSTALL.md` lists the S3 hosts in its network access table.
-- `docs/OBJECT_STORAGE.md` verifies S3 with your own bucket name.
-- `docs/GATEWAY.md` creates a Gateway and a certificate that serve Grafana and the agent write hostnames, next to the external API.
 
 ### Changed
 
-- Mimir ingesters and store-gateways run without zones: one StatefulSet each, with a rolling update. They restart with the new config after an upgrade.
+- Run Mimir ingesters and store-gateways without zones. They restart with the new config after an upgrade.
 - Move the documentation from `doc/` to `docs/`. Links to the old paths break. The chart's render errors, values comments and install notes name the new paths.
 - Rewrite the README as an overview. The install steps, the pre-install notes and the network access list move to `docs/INSTALL.md`.
 - Enable AgentCredential support in the observability-operator. Upgrade the observability-operator release with the new `values/observability-operator.yaml`: without it, no htpasswd Secret reaches `monitoring` and every push gets a 500.
