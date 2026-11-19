@@ -21,6 +21,7 @@ local-ats: ## Run the app-test-suite smoke test on a new kind cluster `ats`, as 
 	helm package helm/observability-platform --destination build
 	kind create cluster --name ats --config .ats/kind-config.yaml --kubeconfig build/kube.config
 	docker run --rm -e USE_UID=$$(id -u) -e USE_GID=$$(id -g) -v $$(pwd):/ats/workdir --network host \
+	  -e OBS_TARGET_FILE=/ats/workdir/build/target.env \
 	  gsoci.azurecr.io/giantswarm/app-test-suite:$(ATS_VERSION) \
 	  --chart-file $$(ls build/observability-platform-*.tgz) --cluster-kubeconfig build/kube.config \
 	  --cluster-type kind; \
