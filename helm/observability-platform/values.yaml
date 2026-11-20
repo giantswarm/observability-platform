@@ -229,7 +229,7 @@ observabilityPlatformApi:
 localObjectStorage:
   enabled: false
   azurite:
-    image: mcr.microsoft.com/azure-storage/azurite:3.37.0
+    image: mcr.microsoft.com/azure-storage/azurite:3.38.0
     # Job that creates the containers, which Azurite does not create itself.
     initImage: mcr.microsoft.com/azure-cli:2.93.0
   garage:
