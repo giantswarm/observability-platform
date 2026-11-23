@@ -9,9 +9,51 @@ The checks live in `tests/ats`, the app-test-suite directory. `make verify` runs
 target that [the inputs](#inputs) name. The same checks run with the same command on kind, on EKS
 or on any other cluster.
 
+## Markers
+
+A pytest marker selects a set of checks. `make verify` selects `smoke` and `verify` by default.
+`VERIFY_MARKERS` selects others. See [Run](#run).
+
+| Marker | Checks | Purpose | Default |
+| --- | --- | --- | --- |
+| `smoke` | 12 | Proves that the platform is up: workloads ready, Grafana up on PostgreSQL, one write and read per signal | yes |
+| `verify` | 31 | Proves that the platform works: health, rejections, AgentCredentials, Grafana, rulers | yes |
+| `slow` | 3 | Proves that Mimir, Loki and Tempo serve reads from the object store | no |
+| `disruptive` | 1 | Proves that a Grafana dashboard survives a restart of Grafana | no |
+
+What each marker checks:
+
+| Feature | `smoke` | `verify` | `slow` | `disruptive` |
+| --- | --- | --- | --- | --- |
+| Workloads ready | yes | | | |
+| Health: PersistentVolumeClaims, OOMKills, routes, Gateways | | yes | | |
+| External API: one write and read per signal | yes | | | |
+| External API: rejections | no token | garbage token, no tenant, AgentCredential | | |
+| AgentCredentials | `logs` | `metrics`, `traces`, rejections | | |
+| Grafana | health, login, PostgreSQL | datasources, queries, wrong password | | dashboard after a restart |
+| Rulers | | yes | | |
+| Reads from the object store | | | yes | |
+
+The checks write and read in tenant `default`. The `slow` checks also write in a second tenant,
+the backfill tenant. See [What a run changes](#what-a-run-changes). No check proves the isolation
+of one tenant from another.
+
+Run times, measured on a warm kind cluster with Garage and on a cloud cluster with S3:
+
+| Markers | Run time |
+| --- | --- |
+| `smoke` | about 15 s |
+| `smoke or verify` | about 2 min |
+| `smoke or verify or slow` | 17 to 23 min |
+
+Four full runs, with all three markers, took 17 min 23 s, 19 min 58 s and 22 min 13 s on kind,
+and 22 min 42 s on a cloud cluster with S3. A run with `slow` lasts as long as its slowest read
+from the object store. See [`slow`](#slow).
+
 ## What a run changes
 
-A run installs, upgrades and deletes no release, and deletes no pod. It writes:
+A run installs, upgrades and deletes no release. Without the `disruptive` marker, a run restarts
+no workload and deletes no pod. It writes:
 
 - test data in tenant `default`: samples, log lines and traces, labelled with the run id
 - one AgentCredential per backend, in the **run's namespace**: a Kubernetes namespace named after
@@ -20,6 +62,8 @@ A run installs, upgrades and deletes no release, and deletes no pod. It writes:
 - with the `slow` marker: samples in the backfill tenant, and a flush of the Mimir, Loki and Tempo
   ingesters. Mimir flushes the backfill tenant only, Tempo tenant `default` only, Loki every
   tenant.
+- with the `disruptive` marker: one Grafana dashboard, and a restart of the Grafana Deployment.
+  The restart replaces the Grafana pod.
 
 The **backfill tenant** is the Mimir tenant `<run id>-backfill`. It holds only the run's 14 h old
 samples. Mimir accepts samples that old only in a tenant with no other data.
@@ -47,6 +91,8 @@ These stay on the platform:
 
 - the test data in tenant `default`
 - one backfill tenant per `slow` run
+- one Grafana dashboard per `disruptive` run, with the UID and title `e2e-pg-<epoch>`, in
+  Grafana's org 1
 
 Each is a few kB. The retention differs per backend:
 
@@ -57,7 +103,8 @@ The checks write and read in tenant `default`. The Grafana checks query the data
 `gs-mimir`, `gs-loki` and `gs-tempo` of the organization `Main Org.`, Grafana's org 1. The chart's
 default GrafanaOrganization takes over this organization. These datasources read the tenant of
 `global.tenant`. The default value of `global.tenant` is `default`. With another value,
-`test_grafana_query` fails: the datasources read a tenant without the run's data.
+`test_grafana_query` fails: the datasources read a tenant without the run's data. With Grafana
+on SQLite, `test_grafana_uses_postgresql` fails.
 
 ## Inputs
 
@@ -151,6 +198,7 @@ In the release namespace:
 - Read HTTPRoutes, GRPCRoutes, SecurityPolicies, Services, pods, events, PersistentVolumeClaims
   and Secrets.
 - Read and watch Deployments, StatefulSets and DaemonSets, for `kubectl rollout status`.
+- Patch Deployments, for the `disruptive` restart of Grafana.
 - Get `pods/log`, for the failure dump.
 - Create `pods/portforward`, for the port-forwards to a Service or a pod.
 - Create `pods/proxy`, for the `slow` flush.
@@ -233,26 +281,6 @@ and a message that starts with `The target does not resolve:`. `make verify` the
 The run header looks up the API hostname first, with a 30 s timeout. Then `kubectl version`
 checks the cluster, with a 10 s request timeout and a 30 s timeout.
 
-## Markers
-
-| Marker | Checks | Content |
-| --- | --- | --- |
-| `smoke` | 11 | Workloads ready, Grafana up, one write and read per signal, AgentCredentials |
-| `verify` | 31 | Health, rejections, AgentCredentials, Grafana, rulers |
-| `slow` | 3 | Reads from the object store |
-
-Run times, measured on a warm kind cluster with Garage and on a cloud cluster with S3:
-
-| Markers | Run time |
-| --- | --- |
-| `smoke` | about 15 s |
-| `smoke or verify` | about 2 min |
-| `smoke or verify or slow` | 17 to 23 min |
-
-Four full runs, with all three markers, took 17 min 23 s, 19 min 58 s and 22 min 13 s on kind,
-and 22 min 42 s on a cloud cluster with S3. A run with `slow` lasts as long as its slowest read
-from the object store. See [`slow`](#slow).
-
 ## Checks
 
 ### `smoke`
@@ -262,6 +290,7 @@ from the object store. See [`slow`](#slow).
 | `test_install_workloads_ready` | No Deployment or StatefulSet of the release namespace has 0 replicas, and every Deployment, StatefulSet and DaemonSet has rolled out. | `spec.replicas` once, then `kubectl rollout status` up to 15 min |
 | `test_grafana_health` | Grafana answers. | `GET /api/health` |
 | `test_grafana_login` | The Grafana admin logs in. | `GET /api/org` with the admin Secret |
+| `test_grafana_uses_postgresql` | Grafana stores its data in PostgreSQL. | `GET /api/admin/settings`, database type `postgres` |
 | `test_write_metric_otlp`, `test_write_log`, `test_write_trace_otlp` | The external API accepts one write per signal. | OTLP/HTTP JSON for metrics and traces, Loki push for logs |
 | `test_read_metric`, `test_read_log`, `test_read_trace` | The external API returns each write. | Prometheus query and Loki range query on the run's `job`, Tempo trace by id |
 | `test_auth_read_no_token` | The external API rejects a read without a token. | `401` |
@@ -326,6 +355,12 @@ Measured on kind, from the flush to the read from the store:
 Mimir took 1875 s, about 31 min, in one measurement outside the full runs. This is inside its
 40 min deadline.
 
+### `disruptive`
+
+| Check | Proves | How |
+| --- | --- | --- |
+| `test_dashboard_survives_grafana_restart` | A dashboard survives a restart of Grafana. | Create a dashboard through the API, `kubectl rollout restart deployment/grafana`, then read the dashboard |
+
 ## Out of scope
 
 The setup that installed the platform owns its own checks:
@@ -341,6 +376,7 @@ Checks to add:
 - OTLP/gRPC and Prometheus remote write
 - HPA metrics, log contents and events
 - upgrades
+- tenant isolation
 
 ## Read a failure
 
