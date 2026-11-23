@@ -39,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add the CNPG operator release to the local kind setup.
 - The values schema covers `grafana.postgresqlCluster` and the SQLite opt-out's `null` values.
-- Add `make verify`. It checks a running platform on any cluster: health, authentication, AgentCredentials, Grafana and the rulers. `VERIFY_MARKERS="smoke or verify or slow"` adds reads from the object store. On the kind cluster, `make local-up` writes the target file of `make verify`.
+- Add `make verify` to check a running platform on any cluster.
 - Add agent write routes for Mimir, Loki and Tempo.
 - Create one AgentCredential per backend in the local kind setup, in namespace `agents`.
 - Add the app-test-suite smoke test in CI: workloads ready, Grafana up, and one write/read round trip per signal.
