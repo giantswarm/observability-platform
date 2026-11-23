@@ -98,8 +98,8 @@ def flush() -> None:
     """Flush the ingesters of Mimir, Loki and Tempo through the API server's pod proxy.
 
     A Tempo ingester answers 404 when it holds no data of the tenant. At least one
-    Tempo ingester must flush the tenant. A failed flush retries the component's
-    pods with a fresh pod list.
+    Tempo ingester must flush the tenant. A failed flush, and a Tempo flush that every
+    ingester answers with 404, retries the component's pods with a fresh pod list.
     """
     for chart, (component, path) in FLUSHES.items():
 
@@ -114,10 +114,11 @@ def flush() -> None:
                         continue
                     raise
                 flushed += 1
+            if not flushed:
+                raise LookupError(f"No {chart} {component} pod flushed: each answers 404 to {path}.")
             return flushed
 
-        if not retry(120, post):
-            raise LookupError(f"No {chart} {component} pod flushed tenant {TENANT}: each answers 404 to {path}.")
+        retry(120, post)
 
 
 def poll(signal: str, flushed: float, check: Callable[[], None]) -> None:

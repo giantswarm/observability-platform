@@ -208,7 +208,9 @@ def test_agent_host_rejects_no_credential(agent_credentials, backend):
 @pytest.mark.parametrize("backend", AGENT_READS)
 def test_agent_host_has_no_read_path(api, token, agent_credentials, agent_data, backend):
     """The external API answers a read with the run's data. The same read on the agent
-    host, with a valid credential, gets 404: the agent host routes no read path."""
+    host, with a valid credential, gets 404. The Mimir and Loki agent hosts route push
+    paths only, so the 404 comes from the Gateway. The Tempo agent host routes every
+    path under `/tempo` to the distributor, so the 404 comes from its OTLP receiver."""
     path, params, expected = AGENT_READS[backend]
     read(api, token, path, expected, params=params)
     role, _ = AGENT_HOSTS[backend]
@@ -288,7 +290,7 @@ def test_grafana_query(grafana, grafana_admin, agent_data, uid):
         response = grafana.request("POST", "/api/ds/query", auth=grafana_admin, json=body)
         response.raise_for_status()
         frames = response.json()["results"]["A"].get("frames", [])
-        fields = [pair for frame in frames for pair in zip(frame["schema"]["fields"], frame.get("data", {}).get("values", []))]
+        fields = [pair for frame in frames for pair in zip(frame["schema"]["fields"], frame.get("data", {}).get("values", []), strict=True)]
         assert any(match(field, values) for field, values in fields), response.text
 
     retry(300, found)
