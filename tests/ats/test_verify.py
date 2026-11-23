@@ -290,7 +290,7 @@ def test_grafana_query(grafana, grafana_admin, agent_data, uid):
         response = grafana.request("POST", "/api/ds/query", auth=grafana_admin, json=body)
         response.raise_for_status()
         frames = response.json()["results"]["A"].get("frames", [])
-        fields = [pair for frame in frames for pair in zip(frame["schema"]["fields"], frame.get("data", {}).get("values", []))]
+        fields = [pair for frame in frames for pair in zip(frame["schema"]["fields"], frame.get("data", {}).get("values", []), strict=True)]
         assert any(match(field, values) for field, values in fields), response.text
 
     retry(300, found)
