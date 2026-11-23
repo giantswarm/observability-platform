@@ -5,7 +5,7 @@ file. An empty value counts as unset. The setup that installs the platform write
 the target file. Every lookup runs lazily in a fixture: the tests collect without
 a cluster or a target file. A session fixture resolves the inputs and the context
 before the first test. It ends the run when they do not resolve or when the cluster
-does not answer within 30 s.
+does not answer. Each kubectl call at the start of the session gives up after 30 s.
 
 Under app-test-suite, the tests read the default target file only. Its container
 entrypoint keeps PYTHONPATH, PATH and GOPATH and drops every other environment
@@ -94,8 +94,12 @@ class KubectlError(subprocess.CalledProcessError):
         return f"{super().__str__()} {self.stderr.strip()}".strip()
 
 
-def kubectl(*args: str, input: str | None = None, timeout: float | None = None) -> str:
-    """Run kubectl in the run's context and return its stdout. A failure raises KubectlError."""
+def kubectl(*args: str, input: str | None = None, timeout: float = 60) -> str:
+    """Run kubectl in the run's context and return its stdout.
+
+    A failure raises KubectlError. A call that does not finish within the timeout raises
+    subprocess.TimeoutExpired, so that a cluster that hangs does not block the run.
+    """
     result = subprocess.run(["kubectl", "--context", context(), *args], input=input, capture_output=True, text=True, timeout=timeout)
     if result.returncode != 0:
         raise KubectlError(result.returncode, result.args, result.stdout, result.stderr)
@@ -422,9 +426,11 @@ def agent_credentials() -> Iterator[dict[str, tuple[str, str]]]:
         # error, not the kubectl command.
         failure = None
         try:
-            kubectl("delete", "namespace", RUN, "--ignore-not-found", "--timeout=180s")
+            kubectl("delete", "namespace", RUN, "--ignore-not-found", "--timeout=180s", timeout=240)
         except subprocess.CalledProcessError as error:
             failure = error.stderr.strip()
+        except subprocess.TimeoutExpired:
+            failure = "kubectl did not finish within 240 s."
         if failure is not None:
             raise RuntimeError(f"Teardown left namespace {RUN} with the run's AgentCredentials: {failure}")
 
