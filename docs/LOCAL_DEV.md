@@ -37,6 +37,10 @@ make local-up
 - the CNPG operator, as its own release, with `values/cloudnative-pg.yaml`, and the Secret
   `grafana-secret-key`. Grafana runs on PostgreSQL, the chart's default. See
   [GRAFANA_DATABASE.md](./GRAFANA_DATABASE.md).
+- cert-manager and the barman-cloud plugin, as its own release, with
+  `values/plugin-barman-cloud.yaml`. Grafana's database is backed up to the Garage bucket
+  `grafana-postgresql`. On the `azure` backend (`LOCAL_BACKEND=azure`), none of this is
+  installed and backups are off: they support `s3` only.
 - the chart in namespace `monitoring`, with `values-local.yaml`, on the `s3` backend with Garage
 - the external API, with Envoy Gateway and a JWKS server. See [EXTERNAL_API.md](./EXTERNAL_API.md).
 - the agent write routes, at `mimir.localhost`, `write.loki.localhost` and `tempo.localhost`,

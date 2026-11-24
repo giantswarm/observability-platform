@@ -1,0 +1,27 @@
+{{/*
+Guards for Grafana's PostgreSQL backups (`grafana.postgresqlCluster.backup.enabled`). No
+resource or config is created from this template.
+
+- The backend must be `s3`: backups go to the platform's object storage, and the grafana
+  subchart falls back to `global.objectStorage` for S3 only.
+- Grafana's secret key must come from the Secret grafana-secret-key: a backup restored
+  under another key has secrets Grafana can't read, and the public default protects
+  nothing in a backup.
+- On a live install or upgrade, the cluster must serve the barman-cloud plugin's
+  ObjectStore. Like the CNPG guard, this check is skipped offline (`helm template`,
+  app-build-suite), where `.Capabilities` lists no CRDs.
+*/}}
+{{- $pg := dig "postgresqlCluster" dict .Values.grafana }}
+{{- if and .Values.grafana.enabled (dig "enabled" false $pg) (dig "backup" "enabled" false $pg) }}
+{{- if ne (.Values.global.objectStorage.backend | default "") "s3" }}
+{{- fail (printf "grafana.postgresqlCluster.backup.enabled is true but global.objectStorage.backend is %q. Grafana backups support the s3 backend only - see docs/GRAFANA_DATABASE.md." (.Values.global.objectStorage.backend | default "")) }}
+{{- end }}
+{{- if ne (dig "grafana" "envValueFrom" "GF_SECURITY_SECRET_KEY" "secretKeyRef" "name" "" .Values.grafana) "grafana-secret-key" }}
+{{- fail "grafana.postgresqlCluster.backup.enabled is true but Grafana's secret key doesn't come from the Secret grafana-secret-key (grafana.grafana.envValueFrom.GF_SECURITY_SECRET_KEY). Restore needs the same key, so backups require it - see docs/GRAFANA_DATABASE.md." }}
+{{- end }}
+{{- if lookup "v1" "Namespace" "" "kube-system" }}
+{{- if not (.Capabilities.APIVersions.Has "barmancloud.cnpg.io/v1/ObjectStore") }}
+{{- fail "grafana.postgresqlCluster.backup.enabled is true but the cluster serves no barmancloud.cnpg.io/v1 ObjectStore. Install cert-manager and the barman-cloud plugin release first, with values/plugin-barman-cloud.yaml - see docs/GRAFANA_DATABASE.md." }}
+{{- end }}
+{{- end }}
+{{- end }}

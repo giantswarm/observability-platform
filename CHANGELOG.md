@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Move the documentation from `doc/` to `docs/`. Links to the old paths break. The chart's render errors, values comments and install notes name the new paths.
 - Rewrite the README as an overview. The install steps, the pre-install notes and the network access list move to `docs/INSTALL.md`.
 - Enable AgentCredential support in the observability-operator. Upgrade the observability-operator release with the new `values/observability-operator.yaml`: without it, no htpasswd Secret reaches `monitoring` and every push gets a 500.
-- **Breaking:** Upgrade Grafana app from 2.42.0 to 2.43.0. Its Deployment selector changes, so delete the `grafana` Deployment in `monitoring` before upgrading the release.
+- **Breaking:** Upgrade Grafana app from 2.42.0 to 2.44.0. Its Deployment selector changes, so delete the `grafana` Deployment in `monitoring` before upgrading the release.
 - Upgrade Loki app from 0.48.0 to 0.50.1. Loki reads object storage from `loki.loki.loki.storage.object_store`. Remove `loki.loki.loki.storage.azure`.
 - Upgrade Mimir app from 0.30.1 to 0.31.0, with Mimir 3.2.4. It adds the cluster-scoped `mimir-ruler` PriorityClass.
 - Install observability-operator 0.88.0 in the local kind setup. Uninstalling the chart now deletes the default `GrafanaOrganization` instead of leaving it stuck.
@@ -37,6 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Back up Grafana's PostgreSQL database to the platform's `s3` object storage with `grafana.postgresqlCluster.backup.enabled`. Backups need cert-manager and the barman-cloud plugin release, installed with `values/plugin-barman-cloud.yaml`. See `docs/GRAFANA_DATABASE.md`.
+- Add the `global.objectStorage.buckets.grafanaPostgresql` bucket, default `grafana-postgresql`. The local Garage and Azurite stores create it.
+- The local kind setup installs cert-manager and the barman-cloud plugin, and backs Grafana up to Garage.
 - Add the CNPG operator release to the local kind setup.
 - The values schema covers `grafana.postgresqlCluster` and the SQLite opt-out's `null` values.
 - Add `make verify` to check a running platform on any cluster.

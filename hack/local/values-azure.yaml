@@ -4,3 +4,8 @@
 global:
   objectStorage:
     backend: azure
+# Grafana's backups support the s3 backend only.
+grafana:
+  postgresqlCluster:
+    backup:
+      enabled: false

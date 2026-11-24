@@ -420,3 +420,22 @@ tests:
       - hasDocuments:
           count: 0
         template: templates/local-object-storage/garage-init-job.yaml
+
+  - it: creates the grafanaPostgresql bucket in Garage
+    template: templates/local-object-storage/garage-init-job.yaml
+    values:
+      - ../values-local.yaml
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: '"\$OBS_BUCKET_GRAFANA_POSTGRESQL"; do'
+
+  - it: creates the grafanaPostgresql container in Azurite
+    template: templates/local-object-storage/azurite-init-job.yaml
+    values:
+      - ../values-local.yaml
+      - values/azure.yaml
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: '"\$OBS_BUCKET_GRAFANA_POSTGRESQL"; do'

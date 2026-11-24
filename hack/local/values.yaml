@@ -2,6 +2,14 @@
 # routes. They expose Grafana through Envoy Gateway.
 global:
   domain: localhost
+  # Garage, for Grafana's backups. The Platform chart computes Garage's endpoint for Mimir,
+  # Loki and Tempo and ignores these values under Garage, but the grafana subchart reads
+  # them from global.objectStorage.s3.
+  objectStorage:
+    s3:
+      endpoint: garage.monitoring.svc.cluster.local:3900
+      region: garage
+      insecure: true
 observabilityPlatformApi:
   enabled: true
 observability-platform-api:
@@ -16,7 +24,16 @@ observability-platform-api:
             headers:
               - name: Authorization
                 valuePrefix: "Bearer "
+# Grafana's PostgreSQL backups, to Garage, with Garage's dev keys from the
+# garage-credentials Secret. global.objectStorage.s3 above gives the endpoint.
 grafana:
+  postgresqlCluster:
+    backup:
+      enabled: true
+    objectStorage:
+      s3:
+        existingSecret:
+          name: garage-credentials
   grafana:
     route:
       main:

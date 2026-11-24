@@ -1,0 +1,176 @@
+# Grafana's PostgreSQL backups (grafana.postgresqlCluster.backup.enabled): the guards, and
+# what the grafana subchart renders from the platform's global.objectStorage.
+suite: grafana backups
+values:
+  - values/s3-compatible.yaml
+release:
+  name: obs
+  namespace: monitoring
+tests:
+
+  # Off by default: the chart renders as without backups.
+
+  - it: renders no backup ObjectStore or ScheduledBackup by default
+    templates:
+      - charts/grafana/templates/cnpg/objectstore-backup.yaml
+      - charts/grafana/templates/cnpg/scheduled-backup.yaml
+      - charts/grafana/templates/cnpg/s3-region-secret.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: needs no plugin by default, even on a live cluster
+    template: templates/check-grafana-backups.yaml
+    capabilities:
+      apiVersions:
+        - postgresql.cnpg.io/v1/Cluster
+    # A live cluster with what Grafana on PostgreSQL already needs: the CNPG operator
+    # (capabilities) and the Secret grafana-secret-key.
+    kubernetesProvider: &live
+      scheme:
+        "v1/Namespace":
+          gvr:
+            version: v1
+            resource: namespaces
+          namespaced: false
+        "v1/Secret":
+          gvr:
+            version: v1
+            resource: secrets
+          namespaced: true
+      objects:
+        - kind: Namespace
+          apiVersion: v1
+          metadata:
+            name: kube-system
+        - kind: Secret
+          apiVersion: v1
+          metadata:
+            name: grafana-secret-key
+            namespace: monitoring
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # On: what the grafana subchart renders.
+
+  - it: backs up to the platform's store, bucket and credentials Secret
+    template: charts/grafana/templates/cnpg/objectstore-backup.yaml
+    set:
+      grafana.postgresqlCluster.backup.enabled: true
+    asserts:
+      - equal:
+          path: spec.configuration.destinationPath
+          value: s3://grafana-postgresql/
+      - equal:
+          path: spec.configuration.endpointURL
+          value: https://s3.example.internal:9000
+      - equal:
+          path: spec.configuration.s3Credentials.accessKeyId
+          value:
+            name: observability-platform-object-storage
+            key: AWS_ACCESS_KEY_ID
+
+  - it: uses the platform's grafanaPostgresql bucket name
+    template: charts/grafana/templates/cnpg/objectstore-backup.yaml
+    set:
+      grafana.postgresqlCluster.backup.enabled: true
+      global.objectStorage.buckets.grafanaPostgresql: acme-grafana-backups
+    asserts:
+      - equal:
+          path: spec.configuration.destinationPath
+          value: s3://acme-grafana-backups/
+
+  - it: schedules an hourly base backup through the plugin
+    template: charts/grafana/templates/cnpg/scheduled-backup.yaml
+    set:
+      grafana.postgresqlCluster.backup.enabled: true
+    asserts:
+      - equal:
+          path: spec.method
+          value: plugin
+      - equal:
+          path: spec.schedule
+          value: "0 0 * * * *"
+
+  # The guards.
+
+  - it: passes offline with backups on, so helm template renders them
+    template: templates/check-grafana-backups.yaml
+    set:
+      grafana.postgresqlCluster.backup.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: fails with backups on and backend azure
+    template: templates/check-grafana-backups.yaml
+    values:
+      - values/azure.yaml
+    set:
+      grafana.postgresqlCluster.backup.enabled: true
+    asserts:
+      - failedTemplate:
+          errorPattern: 'grafana\.postgresqlCluster\.backup\.enabled is true but global\.objectStorage\.backend is "azure"\. Grafana backups support the s3 backend only'
+
+  - it: fails with backups on and the secret key not from grafana-secret-key
+    template: templates/check-grafana-backups.yaml
+    set:
+      grafana.postgresqlCluster.backup.enabled: true
+      grafana.grafana.envValueFrom.GF_SECURITY_SECRET_KEY.secretKeyRef.name: other-secret
+    asserts:
+      - failedTemplate:
+          errorPattern: 'Grafana''s secret key doesn''t come from the Secret grafana-secret-key'
+
+  - it: fails with backups on and no secret key at all
+    template: templates/check-grafana-backups.yaml
+    set:
+      grafana.postgresqlCluster.backup.enabled: true
+      grafana.grafana.envValueFrom: null
+    asserts:
+      - failedTemplate:
+          errorPattern: 'Grafana''s secret key doesn''t come from the Secret grafana-secret-key'
+
+  - it: fails on a live cluster that serves no barman-cloud ObjectStore
+    template: templates/check-grafana-backups.yaml
+    set:
+      grafana.postgresqlCluster.backup.enabled: true
+    capabilities:
+      apiVersions:
+        - postgresql.cnpg.io/v1/Cluster
+    kubernetesProvider: *live
+    asserts:
+      - failedTemplate:
+          errorPattern: 'the cluster serves no barmancloud\.cnpg\.io/v1 ObjectStore\. Install cert-manager and the barman-cloud plugin release first'
+
+  - it: passes on a live cluster that serves the ObjectStore
+    template: templates/check-grafana-backups.yaml
+    set:
+      grafana.postgresqlCluster.backup.enabled: true
+    capabilities:
+      apiVersions:
+        - postgresql.cnpg.io/v1/Cluster
+        - barmancloud.cnpg.io/v1/ObjectStore
+    kubernetesProvider: *live
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: skips the guards when the database is off
+    template: templates/check-grafana-backups.yaml
+    values:
+      - values/azure.yaml
+    set:
+      grafana.postgresqlCluster.enabled: false
+      grafana.postgresqlCluster.backup.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: rejects a non-boolean backup.enabled
+    template: templates/check-grafana-backups.yaml
+    set:
+      grafana.postgresqlCluster.backup.enabled: "yes"
+    asserts:
+      - failedTemplate:
+          errorPattern: 'postgresqlCluster/backup/enabled'

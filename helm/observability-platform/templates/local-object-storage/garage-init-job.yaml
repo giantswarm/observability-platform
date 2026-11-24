@@ -73,7 +73,8 @@ spec:
                   "$OBS_BUCKET_MIMIR_ALERTMANAGER" \
                   "$OBS_BUCKET_MIMIR_RULER" \
                   "$OBS_BUCKET_LOKI" \
-                  "$OBS_BUCKET_TEMPO"; do
+                  "$OBS_BUCKET_TEMPO" \
+                  "$OBS_BUCKET_GRAFANA_POSTGRESQL"; do
                 echo "creating bucket $bucket"
                 if ! out=$(aws --endpoint-url "$endpoint" s3api create-bucket \
                     --bucket "$bucket" \

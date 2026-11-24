@@ -52,6 +52,8 @@ global:
       mimirRuler: mimir-ruler
       loki: loki
       tempo: tempo
+      # Grafana's PostgreSQL backups, when they're on. See docs/GRAFANA_DATABASE.md.
+      grafanaPostgresql: grafana-postgresql
 
 # ---------------------------------------------------------------------------
 # Component toggles. Each one drives the matching `condition:` in Chart.yaml.
@@ -70,6 +72,12 @@ grafana:
     instances: 2
     # Needs the Prometheus Operator CRDs. See docs/GRAFANA_DATABASE.md to turn it on.
     podMonitor:
+      enabled: false
+    # Backups of Grafana's database to the platform's `s3` object storage, in the bucket
+    # `global.objectStorage.buckets.grafanaPostgresql`. Off by default: they need
+    # cert-manager and the barman-cloud plugin release (values/plugin-barman-cloud.yaml).
+    # See docs/GRAFANA_DATABASE.md.
+    backup:
       enabled: false
   grafana:
     # Deterministic name: pinned, do not change. The operator's `grafana.url` and
