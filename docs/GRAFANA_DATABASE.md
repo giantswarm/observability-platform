@@ -7,7 +7,7 @@ rules, service accounts, preferences and annotations survive restarts:
 - **Two instances on persistent volumes.** A primary and a streaming replica, so losing a node
   or a volume fails over.
 - **Two prerequisites:** the CNPG operator release and the Secret `grafana-secret-key`.
-- **Backups are opt-in.** With them on, the database is backed up continuously to the platform's
+- **Backups are opt-in.** With them on, the database is backed up hourly to the platform's
   `s3` object storage (see [Backups](#backups)). With them off, the replica is the only copy of
   the data.
 
