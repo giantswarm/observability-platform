@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Breaking:** `localBlobStorage` is renamed `localObjectStorage`. `localBlobStorage.init.image` moves to `localObjectStorage.azurite.initImage`.
 - The local kind setup runs the `s3` backend with Garage by default.
 - `docs/LOCAL_DEV.md` covers both local stores.
+- Update github/codeql-action to v4.39.4 (giantswarm/observability-platform#188)
 
 ### Added
 
