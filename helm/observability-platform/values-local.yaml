@@ -181,6 +181,24 @@ tempo:
 global:
   objectStorage:
     backend: s3
+    # Garage, for Grafana's backups. The chart computes Garage's endpoint, region and
+    # `insecure` for Mimir, Loki and Tempo, and ignores these values under Garage. The
+    # grafana subchart can't see what the chart computes, so they're repeated here; they
+    # only matter while grafana.postgresqlCluster.backup.enabled is true.
+    s3:
+      endpoint: garage.monitoring.svc.cluster.local:3900
+      region: garage
+      insecure: true
+
+# Grafana's backups use Garage's dev keys, from the garage-credentials Secret, rather than
+# the platform's credentials Secret, which a Garage setup doesn't create. Backups stay off
+# here: they need cert-manager and the barman-cloud plugin release.
+grafana:
+  postgresqlCluster:
+    objectStorage:
+      s3:
+        existingSecret:
+          name: garage-credentials
 
 # Garage as the S3-compatible store. Computes the endpoint, the region and `insecure`.
 localObjectStorage:

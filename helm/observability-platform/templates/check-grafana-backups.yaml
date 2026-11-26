@@ -4,6 +4,13 @@ resource or config is created from this template.
 
 - The backend must be `s3`: backups go to the platform's object storage, and the grafana
   subchart falls back to `global.objectStorage` for S3 only.
+- Under the local Garage store, the grafana subchart needs Garage's endpoint in
+  `global.objectStorage.s3.endpoint` and the garage-credentials Secret in
+  `grafana.postgresqlCluster.objectStorage.s3.existingSecret`: it can't see the endpoint
+  and credentials this chart computes for Mimir, Loki and Tempo. values-local.yaml sets
+  both. Without the endpoint, the subchart's own error fires first, as Helm renders
+  subchart templates before this chart's; this guard catches the missing Secret, which
+  the subchart can't see.
 - Grafana's secret key must come from the Secret grafana-secret-key: a backup restored
   under another key has secrets Grafana can't read, and the public default protects
   nothing in a backup.
@@ -15,6 +22,11 @@ resource or config is created from this template.
 {{- if and .Values.grafana.enabled (dig "enabled" false $pg) (dig "backup" "enabled" false $pg) }}
 {{- if ne (.Values.global.objectStorage.backend | default "") "s3" }}
 {{- fail (printf "grafana.postgresqlCluster.backup.enabled is true but global.objectStorage.backend is %q. Grafana backups support the s3 backend only - see docs/GRAFANA_DATABASE.md." (.Values.global.objectStorage.backend | default "")) }}
+{{- end }}
+{{- if include "observability-platform.localObjectStorage.garage.enabled" . }}
+{{- if or (not (dig "s3" "endpoint" "" .Values.global.objectStorage)) (not (dig "objectStorage" "s3" "existingSecret" "name" "" $pg)) }}
+{{- fail "grafana.postgresqlCluster.backup.enabled is true with the local Garage store, but the grafana subchart doesn't know Garage: set global.objectStorage.s3.endpoint (garage.<namespace>.svc.cluster.local:3900, with region garage and insecure true) and grafana.postgresqlCluster.objectStorage.s3.existingSecret.name (garage-credentials), as values-local.yaml does - see docs/LOCAL_DEV.md." }}
+{{- end }}
 {{- end }}
 {{- if ne (dig "grafana" "envValueFrom" "GF_SECURITY_SECRET_KEY" "secretKeyRef" "name" "" .Values.grafana) "grafana-secret-key" }}
 {{- fail "grafana.postgresqlCluster.backup.enabled is true but Grafana's secret key doesn't come from the Secret grafana-secret-key (grafana.grafana.envValueFrom.GF_SECURITY_SECRET_KEY). Restore needs the same key, so backups require it - see docs/GRAFANA_DATABASE.md." }}

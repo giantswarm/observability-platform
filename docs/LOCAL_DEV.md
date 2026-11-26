@@ -41,6 +41,13 @@ make local-up
   `values/plugin-barman-cloud.yaml`. Grafana's database is backed up to the Garage bucket
   `grafana-postgresql`. On the `azure` backend (`LOCAL_BACKEND=azure`), none of this is
   installed and backups are off: they support `s3` only.
+
+The chart computes Garage's endpoint and credentials for Mimir, Loki and Tempo, but the grafana
+subchart can't see them. For Grafana's backups, `values-local.yaml` repeats them: Garage's
+endpoint in `global.objectStorage.s3` (`garage.monitoring.svc.cluster.local:3900`, region
+`garage`, `insecure: true`), and `grafana.postgresqlCluster.objectStorage.s3.existingSecret.name:
+garage-credentials`. Running Garage without `values-local.yaml`, set both before turning
+backups on; the render fails until you do.
 - the chart in namespace `monitoring`, with `values-local.yaml`, on the `s3` backend with Garage
 - the external API, with Envoy Gateway and a JWKS server. See [EXTERNAL_API.md](./EXTERNAL_API.md).
 - the agent write routes, at `mimir.localhost`, `write.loki.localhost` and `tempo.localhost`,

@@ -174,3 +174,53 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: 'postgresqlCluster/backup/enabled'
+
+  # The local Garage store (giantswarm/observability-platform#189 review).
+
+  - it: backs up to Garage with values-local.yaml
+    template: charts/grafana/templates/cnpg/objectstore-backup.yaml
+    values:
+      - ../values-local.yaml
+    set:
+      grafana.postgresqlCluster.backup.enabled: true
+    asserts:
+      - equal:
+          path: spec.configuration.endpointURL
+          value: http://garage.monitoring.svc.cluster.local:3900
+      - equal:
+          path: spec.configuration.s3Credentials.accessKeyId.name
+          value: garage-credentials
+
+  # Helm renders subchart templates first, so the grafana subchart's own error on the
+  # missing endpoint fires before this chart's guard.
+  - it: fails with Garage and backups on but no Garage endpoint for the subchart
+    template: charts/grafana/templates/cnpg/objectstore-backup.yaml
+    values:
+      - ../values-local.yaml
+    set:
+      grafana.postgresqlCluster.backup.enabled: true
+      global.objectStorage.s3.endpoint: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: 'global\.objectStorage\.s3\.endpoint is empty'
+
+  - it: fails with Garage and backups on but no garage-credentials Secret for the subchart
+    template: templates/check-grafana-backups.yaml
+    values:
+      - ../values-local.yaml
+    set:
+      grafana.postgresqlCluster.backup.enabled: true
+      grafana.postgresqlCluster.objectStorage.s3.existingSecret.name: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: 'with the local Garage store, but the grafana subchart doesn''t know Garage'
+
+  - it: passes with Garage and backups off, whatever the Garage values
+    template: templates/check-grafana-backups.yaml
+    values:
+      - ../values-local.yaml
+    set:
+      global.objectStorage.s3.endpoint: ""
+    asserts:
+      - hasDocuments:
+          count: 0
