@@ -16,7 +16,11 @@ observability-platform-api:
             headers:
               - name: Authorization
                 valuePrefix: "Bearer "
+# Grafana's PostgreSQL backups, to Garage. values-local.yaml points them at Garage.
 grafana:
+  postgresqlCluster:
+    backup:
+      enabled: true
   grafana:
     route:
       main:

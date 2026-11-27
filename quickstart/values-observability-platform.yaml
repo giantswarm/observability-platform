@@ -22,6 +22,14 @@ global:
   # An S3-compatible store as the object storage backend, served by Garage below.
   objectStorage:
     backend: s3
+    # Garage, for Grafana's backups. The chart computes Garage's endpoint, region and
+    # `insecure` for Mimir, Loki and Tempo, and ignores these values under Garage. The
+    # grafana subchart can't see what the chart computes, so they're repeated here; they
+    # only matter while grafana.postgresqlCluster.backup.enabled is true.
+    s3:
+      endpoint: garage.monitoring.svc.cluster.local:3900
+      region: garage
+      insecure: true
 
 # Garage as the S3-compatible store. Computes the endpoint, the region and `insecure`.
 localObjectStorage:
@@ -50,6 +58,18 @@ observability-platform-api:
 # giantswarm-default in envoy-gateway-system. install.sh creates that Gateway with
 # CREATE_GATEWAY=true.
 grafana:
+  postgresqlCluster:
+    # Backups of Grafana's database to Garage. They need cert-manager and the barman-cloud
+    # plugin: set INSTALL_CERT_MANAGER and INSTALL_PLUGIN_BARMAN_CLOUD in config.env too.
+    # See docs/GRAFANA_DATABASE.md.
+    backup:
+      enabled: false
+    # Garage's dev keys, from the garage-credentials Secret, rather than the platform's
+    # credentials Secret, which a Garage setup doesn't create.
+    objectStorage:
+      s3:
+        existingSecret:
+          name: garage-credentials
   grafana:
     route:
       main:

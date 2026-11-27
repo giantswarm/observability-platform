@@ -48,13 +48,14 @@
             },
             "buckets": {
               "type": "object",
-              "required": ["mimirBlocks", "mimirAlertmanager", "mimirRuler", "loki", "tempo"],
+              "required": ["mimirBlocks", "mimirAlertmanager", "mimirRuler", "loki", "tempo", "grafanaPostgresql"],
               "properties": {
                 "mimirBlocks": { "type": "string", "minLength": 1 },
                 "mimirAlertmanager": { "type": "string", "minLength": 1 },
                 "mimirRuler": { "type": "string", "minLength": 1 },
                 "loki": { "type": "string", "minLength": 1 },
-                "tempo": { "type": "string", "minLength": 1 }
+                "tempo": { "type": "string", "minLength": 1 },
+                "grafanaPostgresql": { "type": "string", "minLength": 1, "description": "Bucket for Grafana's PostgreSQL backups, read by the grafana subchart when its backups are on." }
               }
             }
           }
@@ -75,6 +76,11 @@
             "podMonitor": {
               "type": "object",
               "description": "PodMonitor for the PostgreSQL instances. Needs the Prometheus Operator CRDs.",
+              "properties": { "enabled": { "type": "boolean" } }
+            },
+            "backup": {
+              "type": "object",
+              "description": "Backups to the platform's s3 object storage through the barman-cloud plugin. Need cert-manager and the plugin release - see docs/GRAFANA_DATABASE.md.",
               "properties": { "enabled": { "type": "boolean" } }
             }
           }

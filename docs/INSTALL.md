@@ -119,6 +119,9 @@ The install notes print how to reach Grafana and log in.
 - **Expose Grafana:** serve it over HTTPS on your Gateway, as in
   [EXTERNAL_API.md](./EXTERNAL_API.md#expose-grafana-over-https).
 - **Route alerts:** provide your own Alertmanager config, as in [ALERTING.md](./ALERTING.md).
+- **Back up Grafana:** turn on backups of Grafana's database to your object storage, as in
+  [GRAFANA_DATABASE.md](./GRAFANA_DATABASE.md#backups). They need cert-manager and the
+  barman-cloud plugin release.
 
 ## Uninstall
 

@@ -42,7 +42,7 @@ Edit [`quickstart/config.env`](../quickstart/config.env). These toggles take `tr
 | `CREATE_TLS_SECRET` | a self-signed certificate for the Gateway | you create the Secret `local-https-tls` yourself |
 | `INSTALL_CNPG` | the CloudNativePG operator, for Grafana's database | the cluster already runs one that watches `monitoring` |
 | `CREATE_GRAFANA_SECRET_KEY` | the Secret `grafana-secret-key`, unless it exists | you create it yourself |
-| `INSTALL_PLUGIN_BARMAN_CLOUD` | the barman-cloud plugin, for backups of Grafana's database. Off by default: the chart can't turn backups on yet. | you don't need backups |
+| `INSTALL_PLUGIN_BARMAN_CLOUD` | the barman-cloud plugin, for backups of Grafana's database. Off by default: turn it on with `grafana.postgresqlCluster.backup.enabled` in `values-observability-platform.yaml`. | you don't need backups |
 
 The observability-operator and the Platform chart are always installed, in namespace
 `monitoring`.
