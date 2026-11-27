@@ -68,7 +68,8 @@ spec:
                   "$OBS_BUCKET_MIMIR_ALERTMANAGER" \
                   "$OBS_BUCKET_MIMIR_RULER" \
                   "$OBS_BUCKET_LOKI" \
-                  "$OBS_BUCKET_TEMPO"; do
+                  "$OBS_BUCKET_TEMPO" \
+                  "$OBS_BUCKET_GRAFANA_POSTGRESQL"; do
                 echo "creating container $container"
                 az storage container create --name "$container" \
                   --connection-string "$OBS_AZURE_CONNECTION_STRING" -o none

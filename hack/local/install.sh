@@ -20,6 +20,10 @@ OPERATOR_VERSION=0.88.0
 # CNPG operator release for the Grafana PostgreSQL cluster. Keep in step with the
 # tested range in docs/GRAFANA_DATABASE.md.
 CNPG_VERSION=0.1.0
+# cert-manager and the barman-cloud plugin release for Grafana's PostgreSQL backups.
+# Keep in step with docs/GRAFANA_DATABASE.md and docs/GATEWAY.md.
+CERT_MANAGER_VERSION=v1.21.2
+PLUGIN_BARMAN_CLOUD_VERSION=0.4.0
 KUBECTL=(kubectl ${KUBE_CONTEXT:+--context "$KUBE_CONTEXT"})
 HELM=(helm ${KUBE_CONTEXT:+--kube-context "$KUBE_CONTEXT"})
 CONTEXT=${KUBE_CONTEXT:-$("${KUBECTL[@]}" config current-context)}
@@ -57,6 +61,17 @@ trap 'rm -f "$KEY"' EXIT
   --repo https://giantswarm.github.io/control-plane-catalog/ --version "$CNPG_VERSION" \
   --namespace monitoring --create-namespace \
   --values "$ROOT/values/cloudnative-pg.yaml" --wait --timeout 5m
+# Grafana's backups (values.yaml): the plugin needs cert-manager for its mTLS
+# certificates. The Azure local backend has no backups, so it skips both.
+if [ "${LOCAL_BACKEND:-s3}" != azure ]; then
+  "${HELM[@]}" upgrade --install cert-manager oci://quay.io/jetstack/charts/cert-manager \
+    --version "$CERT_MANAGER_VERSION" --namespace cert-manager --create-namespace \
+    --set crds.enabled=true --wait --timeout 5m
+  "${HELM[@]}" upgrade --install plugin-barman-cloud plugin-barman-cloud \
+    --repo https://giantswarm.github.io/control-plane-catalog/ --version "$PLUGIN_BARMAN_CLOUD_VERSION" \
+    --namespace monitoring \
+    --values "$ROOT/values/plugin-barman-cloud.yaml" --wait --timeout 5m
+fi
 if ! "${KUBECTL[@]}" get secret grafana-secret-key -n monitoring >/dev/null 2>&1; then
   "${KUBECTL[@]}" create secret generic grafana-secret-key -n monitoring \
     --from-literal=secret-key="$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
