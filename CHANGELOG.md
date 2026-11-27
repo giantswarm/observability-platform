@@ -44,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Back up Grafana's PostgreSQL database to the platform's `s3` object storage with the barman-cloud plugin release. Require cert-manager.
 - Add the `global.objectStorage.buckets.grafanaPostgresql` bucket, default `grafana-postgresql`. The local Garage and Azurite stores create it.
 - The local kind setup installs cert-manager and the barman-cloud plugin, and backs Grafana up to Garage.
-- `hack/local/install.sh` installs only the prerequisites turned on in `hack/local/config.env`, on any cluster. See `docs/QUICKSTART.md`.
+- `hack/local/install.sh` installs only the prerequisites turned on in `hack/local/config.env`, on any cluster.
 - Add the CNPG operator release to the local kind setup.
 - The values schema covers `grafana.postgresqlCluster` and the SQLite opt-out's `null` values.
 - Add `make verify` to check a running platform on any cluster.

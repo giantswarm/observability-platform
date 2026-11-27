@@ -9,7 +9,7 @@
 #
 # They enable the external API, the agent write routes and Grafana's backups, and expose
 # Grafana through Envoy Gateway. install.sh turns each of them off when the toggle it
-# needs in hack/local/config.env is off. See docs/QUICKSTART.md.
+# needs in hack/local/config.env is off.
 # ---------------------------------------------------------------------------
 global:
   domain: localhost

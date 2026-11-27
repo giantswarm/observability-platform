@@ -75,7 +75,6 @@ Related projects, not part of the chart:
 ## Getting started
 
 - **On your laptop:** `make local-up` runs the whole platform on kind. See [Local development](docs/LOCAL_DEV.md).
-- **First try:** `hack/local/install.sh` installs the platform and the prerequisites you turn on in one config file. See [Quickstart](docs/QUICKSTART.md).
 - **On a cluster:** follow the [Installation guide](docs/INSTALL.md).
 
 ## Documentation
@@ -84,7 +83,6 @@ Related projects, not part of the chart:
 |---|---|
 | [Observability overview](https://docs.giantswarm.io/overview/observability/) | The concepts: multi-tenancy, Grafana organizations, dashboards, alerting, data ingestion. Written for Giant Swarm installations, the resources are the same here. |
 | [Prepare your environment](https://docs.giantswarm.io/overview/observability/standalone/prepare-your-environment/) | Cluster, capacity, network and object storage requirements |
-| [Quickstart](docs/QUICKSTART.md) | One script that installs the platform and the prerequisites you toggle on |
 | [Installation guide](docs/INSTALL.md) | Prerequisites, network access, install and uninstall |
 | [Grafana database](docs/GRAFANA_DATABASE.md) | Grafana on PostgreSQL with CloudNativePG, its secret key, backups to object storage, and keeping Grafana on SQLite |
 | [Object storage](docs/OBJECT_STORAGE.md) | Buckets, credentials and values for S3 and Azure Blob Storage |

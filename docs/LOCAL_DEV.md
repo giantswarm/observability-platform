@@ -56,7 +56,7 @@ backups on; the render fails until you do.
   `make local-up` applies them after `hack/local/install.sh`. See [AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md).
 
 `make local-up` runs `hack/local/install.sh` with every toggle of `hack/local/config.env` on.
-See [QUICKSTART.md](./QUICKSTART.md) for the toggles.
+The comments in `hack/local/config.env` describe each toggle.
 
 `make local-up` then writes `.env.verify`, the target file of `make verify`. See [Test](#test).
 

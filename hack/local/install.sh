@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Installs the platform and the prerequisites hack/local/config.env turns on. See
-# docs/QUICKSTART.md. `make local-up` and the app-test-suite pre-hook run it too.
+# Installs the platform and the prerequisites hack/local/config.env turns on.
+# `make local-up` and the app-test-suite pre-hook run it too.
 #
 #   install.sh [<chart>]   <chart> is the chart directory, a packaged .tgz or an OCI
 #                          reference. Unset, ATS_CHART_PATH applies, then PLATFORM_CHART.
