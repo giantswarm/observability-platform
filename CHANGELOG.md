@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Breaking:** Loki runs in Distributed mode by default, each component in its own pods. On upgrade, the new ingesters start empty while the `loki-write` pods flush, and writes can fail for up to 15 minutes. To keep both running during the move, set `loki.loki.deploymentMode: SimpleScalable<->Distributed` with the `read`, `write` and `backend` replicas, then remove them.
+- Loki runs in Distributed mode by default.
 - Rename the target file of `make verify` from `tests/ats/target.env` to `.env.verify` at the repository root.
 - Run Mimir ingesters and store-gateways without zones.
 - **Breaking:** Grafana runs on a CloudNativePG PostgreSQL cluster by default, so its users, dashboards and alert rules survive restarts. Before upgrading, install the CNPG operator release with `values/cloudnative-pg.yaml` and create the Secret `grafana-secret-key`, or keep Grafana on SQLite. See `docs/GRAFANA_DATABASE.md`.
