@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Loki runs in Distributed mode by default.
 - Rename the target file of `make verify` from `tests/ats/target.env` to `.env.verify` at the repository root.
 - The Platform chart values of the local setup move from `hack/local/values.yaml` to `values/observability-platform.yaml`. `hack/local/values-azure.yaml` is gone: `LOCAL_BACKEND=azure` sets the backend itself.
 - Run Mimir ingesters and store-gateways without zones.

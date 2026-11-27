@@ -571,11 +571,35 @@ loki:
       # on any CNI that enforces NetworkPolicies.
       egressKubeApiserver:
         enabled: false
-    # Loki's replication factor is 3: a write needs 2 live write pods. With 3 pods,
-    # writes continue while one restarts.
+    # Each Loki component runs in its own pods. The upstream chart fails the render
+    # when the SimpleScalable targets (read, write, backend) and the distributed
+    # targets both have replicas, so read, write and backend get 0.
+    deploymentMode: Distributed
+    read:
+      replicas: 0
     write:
-      autoscaling:
-        minReplicas: 3
+      replicas: 0
+    backend:
+      replicas: 0
+    # Loki's replication factor is 3: a write needs 2 live ingesters. With 3 ingesters,
+    # writes continue while one restarts.
+    ingester:
+      replicas: 3
+      # Time to flush the chunks to object storage on shutdown.
+      terminationGracePeriodSeconds: 900
+    # The distributors scale with loki-app's HPA, from 2 replicas.
+    querier:
+      replicas: 2
+    queryFrontend:
+      replicas: 2
+    queryScheduler:
+      replicas: 2
+    indexGateway:
+      replicas: 2
+    compactor:
+      replicas: 1
+    ruler:
+      replicas: 2
     loki:
       # Repeated from loki-app's own values. Overriding a list replaces it.
       schemaConfig:
@@ -643,7 +667,7 @@ loki:
         # `mimir.enabled: false`, set `alertmanager_url: ""` and `remote_write.enabled: false`.
         ruler:
           alertmanager_url: http://mimir-alertmanager:8080/alertmanager
-          # Each rule group runs on one loki-backend replica. The ring joins the
+          # Each rule group runs on one loki-ruler replica. The ring joins the
           # existing memberlist.
           enable_sharding: true
           remote_write:
@@ -651,6 +675,10 @@ loki:
             clients:
               mimir:
                 url: http://mimir-gateway/api/v1/push
+        # loki-app 0.50.1 enables multi-tenant queries through `read`'s extraArgs only.
+        # In Distributed mode the queriers need it in the config.
+        querier:
+          multi_tenant_queries_enabled: true
         # The compactor needs no storage block. It follows `schemaConfig`. No
         # retention is enabled, so no delete request store is set. Enabling
         # retention requires `compactor.delete_request_store: ${OBS_BACKEND}`.

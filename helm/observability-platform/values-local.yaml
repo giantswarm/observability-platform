@@ -29,7 +29,7 @@ loki:
           name: garage-credentials
           optional: true
   loki:
-    # One write replica, with replication_factor to match.
+    # One replica each, with replication_factor to match.
     loki:
       commonConfig:
         replication_factor: 1
@@ -37,30 +37,60 @@ loki:
       enabled: false
     resultsCache:
       enabled: false
-    write:
+    distributor:
       autoscaling:
         enabled: false
       replicas: 1
       resources:
         requests:
-          cpu: 100m
-          memory: 512Mi
-    read:
-      autoscaling:
-        enabled: false
+          cpu: 50m
+          memory: 128Mi
+    ingester:
       replicas: 1
       resources:
         requests:
           cpu: 100m
           memory: 512Mi
-    backend:
-      autoscaling:
-        enabled: false
+    querier:
       replicas: 1
       resources:
         requests:
           cpu: 100m
-          memory: 512Mi
+          memory: 256Mi
+    queryFrontend:
+      replicas: 1
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+    queryScheduler:
+      replicas: 1
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+    indexGateway:
+      replicas: 1
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+    compactor:
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+    ruler:
+      replicas: 1
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+    patternIngester:
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
     gateway:
       autoscaling:
         enabled: false

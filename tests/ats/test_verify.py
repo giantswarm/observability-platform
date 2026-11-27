@@ -320,7 +320,7 @@ def test_grafana_query(grafana, grafana_admin, agent_data, uid):
 # rule API path, and the recording rule the run's group holds.
 RULERS = {
     "mimir": ("mimir", "gateway", "/prometheus/config/v1/rules", "verify:const"),
-    "loki": ("loki", "backend", "/loki/api/v1/rules", "verify:loki_const"),
+    "loki": ("loki", "ruler", "/loki/api/v1/rules", "verify:loki_const"),
 }
 
 
