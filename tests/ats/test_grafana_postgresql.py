@@ -2,7 +2,7 @@
 Grafana uses the database, and a dashboard created through its API survives a restart of
 the Grafana pod.
 
-The tests run in file order and build on each other.
+The restart test has the `disruptive` marker: `make verify` does not select it by default.
 """
 
 import base64
@@ -11,8 +11,6 @@ import time
 import pytest
 
 from conftest import kubectl, namespace, retry
-
-pytestmark = pytest.mark.smoke
 
 UID = f"e2e-pg-{int(time.time())}"
 
@@ -24,6 +22,7 @@ def admin(grafana) -> tuple[str, str]:
     return "admin", base64.b64decode(password).decode()
 
 
+@pytest.mark.smoke
 def test_grafana_uses_postgresql(grafana, admin):
     def check():
         response = grafana.request("GET", "/api/admin/settings", auth=admin)
@@ -33,6 +32,7 @@ def test_grafana_uses_postgresql(grafana, admin):
     retry(300, check)
 
 
+@pytest.mark.disruptive
 def test_dashboard_survives_grafana_restart(grafana, admin):
     dashboard = {"dashboard": {"uid": UID, "title": UID, "panels": []}, "overwrite": True}
     retry(120, lambda: grafana.request("POST", "/api/dashboards/db", auth=admin, json=dashboard).raise_for_status())

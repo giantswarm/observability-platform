@@ -22,6 +22,7 @@ markers = [
     "health: read-only checks of a running platform, a subset of verify",
     "verify: checks of a running platform: health, auth, agent credentials, Grafana, rulers",
     "slow: proof that reads come from the object store",
+    "disruptive: checks that restart a component of the platform",
     "functional: full feature tests",
     "upgrade: run during upgrade scenario (before and after helm upgrade)",
 ]
