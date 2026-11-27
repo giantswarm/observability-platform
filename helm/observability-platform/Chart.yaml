@@ -17,23 +17,23 @@ annotations:
 dependencies:
   - name: grafana
     version: 2.44.0
-    repository: https://giantswarm.github.io/giantswarm-catalog/
+    repository: oci://gsoci.azurecr.io/charts/giantswarm
     condition: grafana.enabled
   - name: loki
     version: 0.50.1
-    repository: https://giantswarm.github.io/giantswarm-catalog/
+    repository: oci://gsoci.azurecr.io/charts/giantswarm
     condition: loki.enabled
   - name: mimir
     version: 0.31.0
-    repository: https://giantswarm.github.io/control-plane-catalog/
+    repository: oci://gsoci.azurecr.io/charts/giantswarm
     condition: mimir.enabled
   - name: observability-platform-api
     version: 0.6.0
-    repository: https://giantswarm.github.io/control-plane-catalog/
+    repository: oci://gsoci.azurecr.io/charts/giantswarm
     condition: observabilityPlatformApi.enabled
   - name: tempo
     version: 0.18.0
-    repository: https://giantswarm.github.io/control-plane-catalog/
+    repository: oci://gsoci.azurecr.io/charts/giantswarm
     condition: tempo.enabled
 maintainers:
   - name: giantswarm/team-atlas

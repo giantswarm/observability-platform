@@ -1,18 +1,18 @@
 dependencies:
 - name: grafana
-  repository: https://giantswarm.github.io/giantswarm-catalog/
+  repository: oci://gsoci.azurecr.io/charts/giantswarm
   version: 2.44.0
 - name: loki
-  repository: https://giantswarm.github.io/giantswarm-catalog/
+  repository: oci://gsoci.azurecr.io/charts/giantswarm
   version: 0.50.1
 - name: mimir
-  repository: https://giantswarm.github.io/control-plane-catalog/
+  repository: oci://gsoci.azurecr.io/charts/giantswarm
   version: 0.31.0
 - name: observability-platform-api
-  repository: https://giantswarm.github.io/control-plane-catalog/
+  repository: oci://gsoci.azurecr.io/charts/giantswarm
   version: 0.6.0
 - name: tempo
-  repository: https://giantswarm.github.io/control-plane-catalog/
+  repository: oci://gsoci.azurecr.io/charts/giantswarm
   version: 0.18.0
-digest: sha256:68e2916ee33ccb13e85f52dee48f2051efb05fb7019011ca5b3de24d9db0436a
-generated: "2026-11-24T11:29:51.73380948+01:00"
+digest: sha256:09cb09b13e896cbe7e636721fb1725e38080996dbe647453585c73ce6ae6e212
+generated: "2026-11-27T21:11:46.145216966+01:00"
