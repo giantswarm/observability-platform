@@ -225,6 +225,10 @@ kubectl create secret generic observability-platform-object-storage --namespace 
 
 Your copy of `config.env` configures the install script. Set:
 
+- `PLATFORM_CHART_VERSION` to the release of the Platform chart to install. The script pulls
+  it from `oci://gsoci.azurecr.io/charts/giantswarm/observability-platform`. Until the chart's
+  first release is out, set `PLATFORM_CHART=helm/observability-platform` to install it from your
+  clone instead.
 - `PLATFORM_VALUES` to your values file, then any other values files, separated by spaces.
   Later files win.
 - `KUBE_CONTEXT` to your cluster's context, or leave it empty for the current context.
@@ -265,6 +269,10 @@ The script installs, in this order:
 3. The CNPG operator and the barman-cloud plugin releases, as toggled.
 4. The Secret `grafana-secret-key`, as toggled.
 5. The observability-platform chart, with the values files in `PLATFORM_VALUES`.
+
+Every chart comes from Giant Swarm's OCI registry, `oci://gsoci.azurecr.io/charts/giantswarm`,
+except a Platform chart you install from your clone. The machine that runs the script needs
+HTTPS access to `gsoci.azurecr.io`.
 
 The script turns off the chart features whose prerequisites the cluster lacks, and prints a note
 for each: the routes and the external API without Envoy Gateway, the external API while it

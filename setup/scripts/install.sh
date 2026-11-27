@@ -13,6 +13,9 @@
 # agentcredentials.yaml.
 set -euo pipefail
 
+# Giant Swarm's OCI registry for Helm charts. Every release comes from it, except a
+# Platform chart given as a directory or a .tgz.
+REGISTRY=oci://gsoci.azurecr.io/charts/giantswarm
 # This script's directory, setup/scripts, and the setup files in setup/config.
 DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$DIR/../.." && pwd)"
@@ -25,7 +28,7 @@ NAMESPACE=monitoring
 TOGGLES=(INSTALL_ENVOY_GATEWAY CREATE_GATEWAY INSTALL_CERT_MANAGER DEPLOY_JWT_ISSUER
   CREATE_TLS_SECRET INSTALL_CNPG CREATE_GRAFANA_SECRET_KEY INSTALL_PLUGIN_BARMAN_CLOUD
   USE_LOCAL_PROFILE)
-SETTINGS=("${TOGGLES[@]}" KUBE_CONTEXT GATEWAY_OVERLAY LOCAL_BACKEND PLATFORM_CHART PLATFORM_VALUES
+SETTINGS=("${TOGGLES[@]}" KUBE_CONTEXT GATEWAY_OVERLAY LOCAL_BACKEND PLATFORM_CHART PLATFORM_CHART_VERSION PLATFORM_VALUES
   ENVOY_GATEWAY_VERSION CERT_MANAGER_VERSION OPERATOR_VERSION CNPG_VERSION PLUGIN_BARMAN_CLOUD_VERSION)
 
 log() { printf '\n==> %s\n' "$*"; }
@@ -213,23 +216,23 @@ fi
 # --- Operators -----------------------------------------------------------------
 
 log "Installing the observability-operator $OPERATOR_VERSION"
-"${HELM[@]}" upgrade --install observability-operator observability-operator \
-  --repo https://giantswarm.github.io/control-plane-catalog/ --version "$OPERATOR_VERSION" \
+"${HELM[@]}" upgrade --install observability-operator "$REGISTRY/observability-operator" \
+  --version "$OPERATOR_VERSION" \
   --namespace "$NAMESPACE" --create-namespace \
   --values "$ROOT/values/observability-operator.yaml" --wait --timeout 5m
 
 if enabled INSTALL_CNPG; then
   log "Installing the CloudNativePG operator $CNPG_VERSION"
-  "${HELM[@]}" upgrade --install cloudnative-pg cloudnative-pg \
-    --repo https://giantswarm.github.io/control-plane-catalog/ --version "$CNPG_VERSION" \
+  "${HELM[@]}" upgrade --install cloudnative-pg "$REGISTRY/cloudnative-pg" \
+    --version "$CNPG_VERSION" \
     --namespace "$NAMESPACE" --create-namespace \
     --values "$ROOT/values/cloudnative-pg.yaml" --wait --timeout 5m
 fi
 
 if enabled INSTALL_PLUGIN_BARMAN_CLOUD; then
   log "Installing the barman-cloud plugin $PLUGIN_BARMAN_CLOUD_VERSION"
-  "${HELM[@]}" upgrade --install plugin-barman-cloud plugin-barman-cloud \
-    --repo https://giantswarm.github.io/control-plane-catalog/ --version "$PLUGIN_BARMAN_CLOUD_VERSION" \
+  "${HELM[@]}" upgrade --install plugin-barman-cloud "$REGISTRY/plugin-barman-cloud" \
+    --version "$PLUGIN_BARMAN_CLOUD_VERSION" \
     --namespace "$NAMESPACE" --create-namespace \
     --values "$ROOT/values/plugin-barman-cloud.yaml" --wait --timeout 5m
 fi
@@ -284,10 +287,14 @@ elif ! enabled DEPLOY_JWT_ISSUER; then
 fi
 
 log "Installing the Observability Platform"
-if [ -d "$CHART" ]; then
-  "${HELM[@]}" dependency update "$CHART"
-fi
-"${HELM[@]}" upgrade --install observability-platform "$CHART" \
+# A directory needs its subcharts. A registry chart takes PLATFORM_CHART_VERSION, or its
+# latest release when that's empty.
+CHART_ARGS=()
+case "$CHART" in
+  oci://*) CHART_ARGS=(${PLATFORM_CHART_VERSION:+--version "$PLATFORM_CHART_VERSION"}) ;;
+  *) [ ! -d "$CHART" ] || "${HELM[@]}" dependency update "$CHART" ;;
+esac
+"${HELM[@]}" upgrade --install observability-platform "$CHART" "${CHART_ARGS[@]}" \
   --namespace "$NAMESPACE" --create-namespace "${FORCE[@]}" \
   "${VALUES[@]}" "${OVERRIDES[@]}"
 
