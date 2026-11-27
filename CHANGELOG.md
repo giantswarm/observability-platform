@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add `quickstart/install.sh`, which installs the platform with Envoy Gateway, cert-manager and the other prerequisites each toggled in `quickstart/config.env`. See `docs/QUICKSTART.md`.
 - Add the CNPG operator release to the local kind setup.
 - The values schema covers `grafana.postgresqlCluster` and the SQLite opt-out's `null` values.
 - Add `make verify` to check a running platform on any cluster.
