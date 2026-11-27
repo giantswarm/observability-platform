@@ -1,15 +1,16 @@
 # ---------------------------------------------------------------------------
-# Platform chart values for hack/local/install.sh, on top of
-# helm/observability-platform/values-local.yaml:
+# Platform chart values. hack/local/install.sh installs the chart with this file: edit it
+# directly. See docs/INSTALL.md.
 #
-#   helm install observability-platform helm/observability-platform \
-#     --namespace monitoring \
-#     --values helm/observability-platform/values-local.yaml \
-#     --values values/observability-platform.yaml
+# The values below are the local setup's. They enable the external API, the agent write
+# routes and Grafana's backups, and expose Grafana through Envoy Gateway, on
+# `localhost` hostnames with a local JWT issuer. install.sh turns each feature off when
+# the cluster lacks its prerequisite.
 #
-# They enable the external API, the agent write routes and Grafana's backups, and expose
-# Grafana through Envoy Gateway. install.sh turns each of them off when the toggle it
-# needs in hack/local/config.env is off.
+# With USE_LOCAL_PROFILE=true in hack/local/config.env (`make local-up` sets it),
+# helm/observability-platform/values-local.yaml goes under this file: small sizing and
+# an object store in the cluster. With it off, set your own `global.objectStorage` here,
+# and replace the domain, the hostnames and the JWT issuer below.
 # ---------------------------------------------------------------------------
 global:
   domain: localhost

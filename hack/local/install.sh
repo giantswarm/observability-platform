@@ -21,7 +21,8 @@ CONFIG=${LOCAL_CONFIG:-$DIR/config.env}
 NAMESPACE=monitoring
 
 TOGGLES=(INSTALL_ENVOY_GATEWAY CREATE_GATEWAY INSTALL_CERT_MANAGER DEPLOY_JWT_ISSUER
-  CREATE_TLS_SECRET INSTALL_CNPG CREATE_GRAFANA_SECRET_KEY INSTALL_PLUGIN_BARMAN_CLOUD)
+  CREATE_TLS_SECRET INSTALL_CNPG CREATE_GRAFANA_SECRET_KEY INSTALL_PLUGIN_BARMAN_CLOUD
+  USE_LOCAL_PROFILE)
 SETTINGS=("${TOGGLES[@]}" KUBE_CONTEXT GATEWAY_OVERLAY LOCAL_BACKEND PLATFORM_CHART
   ENVOY_GATEWAY_VERSION CERT_MANAGER_VERSION OPERATOR_VERSION CNPG_VERSION PLUGIN_BARMAN_CLOUD_VERSION)
 
@@ -183,14 +184,23 @@ fi
 
 # --- Platform ------------------------------------------------------------------
 
+# The local profile: small sizing and a store in the cluster, under the platform values.
+VALUES=()
+OVERRIDES=()
+if enabled USE_LOCAL_PROFILE; then
+  VALUES=(--values "$ROOT/helm/observability-platform/values-local.yaml")
+  if [ "$LOCAL_BACKEND" = azure ]; then
+    # Backups support the s3 backend only.
+    OVERRIDES+=(--set global.objectStorage.backend=azure
+      --set grafana.postgresqlCluster.backup.enabled=false)
+  fi
+fi
+VALUES+=(--values "$ROOT/values/observability-platform.yaml")
+
 # values/observability-platform.yaml turns on the features below. Turn off the ones whose
 # prerequisites are missing, so the chart's render checks pass.
-OVERRIDES=()
-if [ "$LOCAL_BACKEND" = azure ]; then
-  OVERRIDES+=(--set global.objectStorage.backend=azure)
-fi
-# Backups support the s3 backend only.
-if ! enabled INSTALL_PLUGIN_BARMAN_CLOUD || [ "$LOCAL_BACKEND" = azure ]; then
+if ! has_crd objectstores.barmancloud.cnpg.io; then
+  echo "note: the cluster serves no barman-cloud ObjectStore CRD. Grafana's backups stay off." >&2
   OVERRIDES+=(--set grafana.postgresqlCluster.backup.enabled=false)
 fi
 # Grafana's route, the agent write routes and the external API need Envoy Gateway.
@@ -214,8 +224,7 @@ if [ -d "$CHART" ]; then
 fi
 "${HELM[@]}" upgrade --install observability-platform "$CHART" \
   --namespace "$NAMESPACE" --create-namespace "${FORCE[@]}" \
-  --values "$ROOT/helm/observability-platform/values-local.yaml" \
-  --values "$ROOT/values/observability-platform.yaml" "${OVERRIDES[@]}"
+  "${VALUES[@]}" "${OVERRIDES[@]}"
 
 # The target of the tests in tests/ats. With the kind overlay, kind maps the Envoy Gateway
 # `https` NodePort to 127.0.0.1:8443 (.ats/kind-config.yaml).

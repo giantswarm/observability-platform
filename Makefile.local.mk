@@ -10,7 +10,7 @@ LOCAL_BACKEND ?= s3
 # Toggles of hack/local/config.env that `make local-up` turns on: the whole local setup.
 LOCAL_TOGGLES := INSTALL_ENVOY_GATEWAY=true CREATE_GATEWAY=true INSTALL_CERT_MANAGER=true \
   DEPLOY_JWT_ISSUER=true CREATE_TLS_SECRET=true INSTALL_CNPG=true CREATE_GRAFANA_SECRET_KEY=true \
-  INSTALL_PLUGIN_BARMAN_CLOUD=true GATEWAY_OVERLAY=kind
+  INSTALL_PLUGIN_BARMAN_CLOUD=true USE_LOCAL_PROFILE=true GATEWAY_OVERLAY=kind
 # Markers `make verify` selects.
 VERIFY_MARKERS ?= smoke or verify
 

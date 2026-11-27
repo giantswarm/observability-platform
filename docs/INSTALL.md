@@ -5,9 +5,9 @@ your laptop first, see [LOCAL_DEV.md](./LOCAL_DEV.md).
 
 1. Check the [required prerequisites](#required-prerequisites).
 2. Pick the [optional features](#optional-features) you want.
-3. [Write `values.yaml`](#step-1--write-valuesyaml).
+3. [Edit `values/observability-platform.yaml`](#step-1--edit-valuesobservability-platformyaml).
 4. [Create the Secrets](#step-2--create-the-secrets).
-5. [Install](#step-3--install).
+5. [Configure and install](#step-3--configure-and-install).
 6. Optional: [verify](#step-4--verify-optional).
 7. Optional: [send data](#step-5--send-data-optional).
 
@@ -32,7 +32,8 @@ lists the requirements in detail: sizing, cluster add-ons, network access and pr
 
 ### Optional features
 
-Each feature needs the items in its row. Pick them now: steps 1 to 3 add their values and releases.
+Each feature needs the items in its row. Pick them now: step 1 sets their values, and step 3
+installs their releases.
 
 | Feature | What it gives you | What it needs | Details |
 | --- | --- | --- | --- |
@@ -44,9 +45,14 @@ Each feature needs the items in its row. Pick them now: steps 1 to 3 add their v
 | **Alert routing** | Alerts reach your receivers | Your Alertmanager config | [ALERTING.md](./ALERTING.md) |
 | **IRSA or workload identity** | Object storage access without static keys | An IAM role or a managed identity | [OBJECT_STORAGE.md](./OBJECT_STORAGE.md#ambient-credentials-and-irsa) |
 
-## Step 1 — Write `values.yaml`
+## Step 1 — Edit `values/observability-platform.yaml`
 
-Start from the required values. The example uses AWS S3. For an S3-compatible store, set its
+The install script installs the chart with
+[`values/observability-platform.yaml`](../values/observability-platform.yaml). Edit that file
+directly: it is the only values file you change. It ships with the values of the local setup,
+on `localhost` hostnames with a local JWT issuer. Replace them with yours.
+
+Add the required values. The example uses AWS S3. For an S3-compatible store, set its
 `endpoint` and keep the default bucket names. For Azure Blob Storage, see
 [OBJECT_STORAGE.md](./OBJECT_STORAGE.md#azure-blob-storage).
 
@@ -66,7 +72,9 @@ global:
       tempo: <prefix>-tempo
 ```
 
-Add the values of each optional feature you picked. The routes attach to the Gateway
+The file already turns on the Grafana route, the agent write routes, the external API and
+Grafana backups. Set the hostnames and the issuer of the features you picked, as below, and
+set `enabled: false` on the ones you didn't. The routes attach to the Gateway
 `giantswarm-default` in `envoy-gateway-system`, on its listener `https`.
 [GATEWAY.md](./GATEWAY.md) creates that Gateway. For another Gateway, set the `parentRefs` as the
 linked page shows.
@@ -201,7 +209,7 @@ kubectl create secret generic observability-platform-object-storage --namespace 
   --from-literal=AWS_SECRET_ACCESS_KEY="<secret-access-key>"
 ```
 
-## Step 3 — Install
+## Step 3 — Configure and install
 
 Fetch the chart's dependencies:
 
@@ -209,30 +217,46 @@ Fetch the chart's dependencies:
 helm dependency update helm/observability-platform
 ```
 
+[`hack/local/config.env`](../hack/local/config.env) configures the install script. Set
+`KUBE_CONTEXT` to your cluster's context, or leave it empty for the current context. Keep
+`USE_LOCAL_PROFILE=false`: the local profile sizes the platform for a laptop and runs its own
+object store.
+
+The other settings toggle the releases and resources the script installs, with `true` or
+`false`. Turn on the ones your optional features need and your cluster doesn't run yet:
+
+| Toggle | Default | Installs | Needed by |
+| --- | --- | --- | --- |
+| `INSTALL_ENVOY_GATEWAY` | `false` | Envoy Gateway and the Gateway API CRDs | the Gateway |
+| `CREATE_GATEWAY` | `false` | the Gateway `giantswarm-default` in `envoy-gateway-system`. `GATEWAY_OVERLAY=base` exposes it through a LoadBalancer Service. | the Gateway, when you have none |
+| `CREATE_TLS_SECRET` | `false` | a self-signed certificate for the Gateway. Not for real use. Needs `DEPLOY_JWT_ISSUER`. | |
+| `DEPLOY_JWT_ISSUER` | `false` | a local JWT issuer. Not for real use. | |
+| `INSTALL_CERT_MANAGER` | `false` | cert-manager | Grafana backups |
+| `INSTALL_PLUGIN_BARMAN_CLOUD` | `false` | the barman-cloud plugin release, with [`values/plugin-barman-cloud.yaml`](../values/plugin-barman-cloud.yaml) | Grafana backups |
+| `INSTALL_CNPG` | `true` | the CNPG operator release, with [`values/cloudnative-pg.yaml`](../values/cloudnative-pg.yaml) | Grafana on PostgreSQL. Turn it off when the cluster already runs a CNPG operator that watches `monitoring`. |
+| `CREATE_GRAFANA_SECRET_KEY` | `true` | the Secret `grafana-secret-key`, when it is missing | Grafana on PostgreSQL |
+
+The comments in `config.env` describe each setting, with the release versions. The script checks
+that the toggles fit together before it changes anything.
+
 Run the install script:
 
-> [!WARNING]
-> **TODO:** make the install script take your values before this guide merges. The command
-> below shows the intended interface.
-
 ```bash
-hack/install.sh --values values.yaml
+hack/local/install.sh
 ```
 
 The script installs, in this order:
 
-1. The observability-operator release, with [`values/observability-operator.yaml`](../values/observability-operator.yaml).
-2. The CNPG operator release, with [`values/cloudnative-pg.yaml`](../values/cloudnative-pg.yaml).
-3. The Secret `grafana-secret-key`, when it is missing.
-4. The observability-platform chart, with your `values.yaml`.
+1. Envoy Gateway, cert-manager, the Gateway and its certificate, as toggled.
+2. The observability-operator release, with [`values/observability-operator.yaml`](../values/observability-operator.yaml). It is always installed.
+3. The CNPG operator and the barman-cloud plugin releases, as toggled.
+4. The Secret `grafana-secret-key`, as toggled.
+5. The observability-platform chart, with `values/observability-platform.yaml`.
 
-Your `values.yaml` is the only values file you write. The other releases take the values in
-[`values/`](../values/). The Grafana backup settings are platform chart values: the CNPG
-operator and the barman-cloud plugin need no values of their own.
-
-By default, the script installs only these required releases. Envoy Gateway, cert-manager and
-the barman-cloud plugin are optional. The script installs one only when you pass the flag of
-the feature that needs it.
+The script turns off the chart features whose prerequisites the cluster lacks, and prints a note
+for each: the routes and the external API without Envoy Gateway, the external API while it
+trusts the local issuer without `DEPLOY_JWT_ISSUER`, and Grafana backups without the barman-cloud
+plugin. The script is safe to run again.
 
 Keep a copy of Grafana's secret key outside the cluster. Restoring Grafana's database needs the
 same key.
