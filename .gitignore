@@ -3,4 +3,4 @@ tests/ats/.venv/
 __pycache__/
 build/
 tests/ats/test_results_*.xml
-tests/ats/target.env
+.env.verify

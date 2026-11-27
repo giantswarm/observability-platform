@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Rename the target file of `make verify` from `tests/ats/target.env` to `.env.verify` at the repository root.
 - Run Mimir ingesters and store-gateways without zones.
 - **Breaking:** Grafana runs on a CloudNativePG PostgreSQL cluster by default, so its users, dashboards and alert rules survive restarts. Before upgrading, install the CNPG operator release with `values/cloudnative-pg.yaml` and create the Secret `grafana-secret-key`, or keep Grafana on SQLite. See `docs/GRAFANA_DATABASE.md`.
 - Move the documentation from `doc/` to `docs/`. Links to the old paths break. The chart's render errors, values comments and install notes name the new paths.
@@ -38,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add `make verify-health` to check the health of a running platform without writing to it.
 - Back up Grafana's PostgreSQL database to the platform's `s3` object storage with the barman-cloud plugin release. Require cert-manager.
 - Add the `global.objectStorage.buckets.grafanaPostgresql` bucket, default `grafana-postgresql`. The local Garage and Azurite stores create it.
 - The local kind setup installs cert-manager and the barman-cloud plugin, and backs Grafana up to Garage.

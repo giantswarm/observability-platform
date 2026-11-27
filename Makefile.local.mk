@@ -10,7 +10,7 @@ LOCAL_BACKEND ?= s3
 # Markers `make verify` selects.
 VERIFY_MARKERS ?= smoke or verify
 
-.PHONY: local-up local-ats local-token local-down verify
+.PHONY: local-up local-ats local-token local-down verify verify-health
 
 local-up: ## Create a kind cluster running the chart and the external API. LOCAL_BACKEND=azure runs Azurite.
 	kind create cluster --config .ats/kind-config.yaml
@@ -22,10 +22,10 @@ local-ats: ## Run the app-test-suite smoke test on a new kind cluster `ats`, as 
 	helm dependency update helm/observability-platform
 	helm package helm/observability-platform --destination build
 	kind create cluster --name ats --config .ats/kind-config.yaml --kubeconfig build/kube.config
-	# The run writes its target file to build/target.env. The target file of `make local-up` stays.
-	touch build/target.env
+	# The run writes its target file to build/.env.verify. The target file of `make local-up` stays.
+	touch build/.env.verify
 	docker run --rm -e USE_UID=$$(id -u) -e USE_GID=$$(id -g) -v $$(pwd):/ats/workdir --network host \
-	  -v $$(pwd)/build/target.env:/ats/workdir/tests/ats/target.env \
+	  -v $$(pwd)/build/.env.verify:/ats/workdir/.env.verify \
 	  gsoci.azurecr.io/giantswarm/app-test-suite:$(ATS_VERSION) \
 	  --chart-file $$(ls build/observability-platform-*.tgz) --cluster-kubeconfig build/kube.config \
 	  --cluster-type kind; \
@@ -36,9 +36,12 @@ local-token: ## Print a JWT for the external API, valid for one hour.
 
 local-down: ## Delete the kind cluster, the local certificate and the target file.
 	kind delete cluster
-	rm -rf $(LOCAL)/.keys tests/ats/target.env
+	rm -rf $(LOCAL)/.keys .env.verify
 
 ##@ Verification
 
-verify: ## Verify the platform the inputs or tests/ats/target.env name. VERIFY_MARKERS selects the checks.
+verify: ## Verify the platform the inputs or .env.verify name. VERIFY_MARKERS selects the checks.
 	cd tests/ats && uv run pytest -m "$(VERIFY_MARKERS)" -v -rs --tb=short
+
+verify-health: ## Run the read-only health checks against the platform the inputs or .env.verify name. Needs no external API.
+	cd tests/ats && uv run pytest -m health -v -rs --tb=short

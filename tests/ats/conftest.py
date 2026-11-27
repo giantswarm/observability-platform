@@ -20,7 +20,7 @@ variable.
                        certificate check still use the route hostname.
   OBS_CA_BUNDLE        CA file for the HTTPS client. Unset, the system CA bundle applies.
   OBS_TARGET_FILE      Path of the target file, from the environment only.
-                       Default `target.env` next to this file.
+                       Default `.env.verify` at the repository root.
 """
 
 import base64
@@ -44,7 +44,7 @@ import requests
 from requests.adapters import HTTPAdapter
 
 INPUTS = ("KUBE_CONTEXT", "OBS_NAMESPACE", "OBS_TOKEN_COMMAND", "OBS_GATEWAY_ADDRESS", "OBS_CA_BUNDLE")
-TARGET_FILE = Path(os.environ.get("OBS_TARGET_FILE") or Path(__file__).resolve().parent / "target.env").absolute()
+TARGET_FILE = Path(os.environ.get("OBS_TARGET_FILE") or Path(__file__).resolve().parents[2] / ".env.verify").absolute()
 # The token command re-runs when its token is older than this.
 TOKEN_MAX_AGE = 50 * 60
 # The tenant of the run's test data.

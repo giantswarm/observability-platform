@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Installs the platform and its prerequisites on a kind cluster created from
-# .ats/kind-config.yaml, then writes tests/ats/target.env. `make local-up` and the
+# .ats/kind-config.yaml, then writes .env.verify. `make local-up` and the
 # app-test-suite pre-hook run it.
 #
 #   install.sh [<chart>]   <chart> is the chart directory or a packaged .tgz.
@@ -89,7 +89,7 @@ fi
 
 # The target of the tests in tests/ats. kind maps the Envoy Gateway `https` NodePort
 # to 127.0.0.1:8443 (.ats/kind-config.yaml).
-cat > "$ROOT/tests/ats/target.env" <<EOF
+cat > "$ROOT/.env.verify" <<EOF
 KUBE_CONTEXT=$CONTEXT
 OBS_TOKEN_COMMAND=kubectl --context $CONTEXT exec -n jwt-issuer deploy/jwks -c signer -- /scripts/jwt.sh token
 OBS_GATEWAY_ADDRESS=127.0.0.1:8443
