@@ -1,97 +1,205 @@
 # Installation
 
-This guide installs the Observability Platform on a cluster you own. To try it on your laptop
-first, see [LOCAL_DEV.md](./LOCAL_DEV.md).
+This guide installs the Observability Platform on a cluster you own, step by step. To try it on
+your laptop first, see [LOCAL_DEV.md](./LOCAL_DEV.md).
 
-## Before you install
+1. Check the [required prerequisites](#required-prerequisites).
+2. Pick the [optional features](#optional-features) you want.
+3. [Write `values.yaml`](#step-1--write-valuesyaml).
+4. [Create the Secrets](#step-2--create-the-secrets).
+5. [Install](#step-3--install).
+6. Optional: [verify](#step-4--verify-optional).
+7. Optional: [send data](#step-5--send-data-optional).
 
-- **The namespace is `monitoring`.** The chart and the operator both install there, and the
-  operator's values in [`values/observability-operator.yaml`](../values/observability-operator.yaml)
-  must agree with the chart's. Nothing checks this across the two releases.
-- **You bring the Gateway.** The chart creates no Gateway and no TLS certificate. Grafana, the
-  external API and the agent write routes attach to a Gateway you provide, and the API and agent
-  routes need [Envoy Gateway](https://gateway.envoyproxy.io/). [GATEWAY.md](./GATEWAY.md) sets
-  one up.
-- **Tenants are not bound to credentials.** A client chooses its tenant with the `X-Scope-OrgID`
-  header, so any valid credential can read or write any tenant its route serves.
-- **The defaults are sized small.** They fit the minimum profile in
-  [Prepare your environment](https://docs.giantswarm.io/overview/observability/standalone/prepare-your-environment/).
-  Larger volumes need more capacity in your values.
+> [!IMPORTANT]
+> - **The namespace is `monitoring`.** The chart and its operators all install there.
+> - **Tenants are not bound to credentials.** A client chooses its tenant with the
+>   `X-Scope-OrgID` header, so any valid credential reads or writes any tenant its route serves.
 
 ## Prerequisites
 
-- A conformant Kubernetes cluster with a default StorageClass and metrics-server.
-  [Prepare your environment](https://docs.giantswarm.io/overview/observability/standalone/prepare-your-environment/)
-  lists the requirements and sizing, and [EKS_CLUSTER.md](./EKS_CLUSTER.md) creates one on AWS.
-- Five private buckets in S3, an S3-compatible store or Azure Blob Storage, with credentials.
-  [OBJECT_STORAGE.md](./OBJECT_STORAGE.md) creates both.
-- `kubectl` and `helm`, with cluster-admin on the cluster.
-- Grafana runs on a PostgreSQL cluster by default, which needs the CloudNativePG (CNPG) operator,
-  installed below. To skip it, keep Grafana on SQLite (see [GRAFANA_DATABASE.md](./GRAFANA_DATABASE.md))
-  and leave out the CNPG and secret key steps.
-- A clone of this repository. Run the commands below from its root.
+[Prepare your environment](https://docs.giantswarm.io/overview/observability/standalone/prepare-your-environment/)
+lists the requirements in detail: sizing, cluster add-ons, network access and provider guidance.
 
-### Network access
+### Required prerequisites
 
-The cluster needs outbound HTTPS (port 443) to these endpoints:
+| Prerequisite | Check | Details |
+| --- | --- | --- |
+| A conformant cluster with a default StorageClass | `kubectl get storageclass` shows one `(default)` | [Prepare your environment](https://docs.giantswarm.io/overview/observability/standalone/prepare-your-environment/), [EKS_CLUSTER.md](./EKS_CLUSTER.md) |
+| metrics-server | `kubectl top nodes` prints usage | [Prepare your environment](https://docs.giantswarm.io/overview/observability/standalone/prepare-your-environment/) |
+| `kubectl` and `helm`, with cluster-admin | `kubectl auth can-i '*' '*' --all-namespaces` prints `yes` | |
+| A clone of this repository | Run every command from its root | |
+| Five private buckets, in S3, an S3-compatible store or Azure Blob Storage | Your store lists them | [OBJECT_STORAGE.md](./OBJECT_STORAGE.md#buckets) |
+| Credentials with read and write access to the buckets | | [OBJECT_STORAGE.md](./OBJECT_STORAGE.md#credentials) |
 
-| Endpoint | Used for |
-| --- | --- |
-| Your object storage, `azure` | Mimir, Loki and Tempo data, at `<account>.blob.core.windows.net` |
-| Your object storage, `s3` | Mimir, Loki and Tempo data, at the `s3.endpoint` host and `<bucket>.<s3.endpoint>`, for example `<bucket>.s3.eu-west-1.amazonaws.com` |
-| `gsoci.azurecr.io` and `*.blob.core.windows.net` | Container images. The registry serves image layers from Azure Blob Storage hosts. |
-| `registry-1.docker.io`, `auth.docker.io` and `production.cloudflare.docker.com` | Container images |
-| Your OIDC issuer's JWKS URI | Token validation by the Envoy proxy pods, with the external API enabled |
-| Your alert receivers | Notifications from Mimir Alertmanager |
+The Helm charts come from public catalogs and the images from public registries. They need no
+credentials.
 
-The machine that runs `helm install` needs `https://giantswarm.github.io/giantswarm-catalog/` and
-`https://giantswarm.github.io/control-plane-catalog/` for the Helm charts.
+### Optional features
 
-## Install
+Each feature needs the items in its row. Pick them now: steps 1 to 3 add their values and releases.
 
-Write a `values.yaml` that names your object store:
+| Feature | What it gives you | What it needs | Details |
+| --- | --- | --- | --- |
+| **Gateway** | HTTPS access from outside the cluster. The three features below need it. | Envoy Gateway, a Gateway with an HTTPS listener, a TLS certificate, a DNS record, a base domain | [GATEWAY.md](./GATEWAY.md) (example on EKS) |
+| ↳ Grafana route | Grafana over HTTPS, at a hostname you choose | The Gateway | [EXTERNAL_API.md](./EXTERNAL_API.md#expose-grafana-over-https) |
+| ↳ Agent write routes | Agents push metrics, logs and traces with AgentCredentials | The Gateway. A certificate that covers `write.loki.<domain>` | [AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md) |
+| ↳ External API | Reads and writes from outside the cluster, with JWTs | The Gateway. An OIDC issuer | [EXTERNAL_API.md](./EXTERNAL_API.md) |
+| **Grafana backups** | Hourly backups of Grafana's database to your object storage | The `s3` backend. A sixth bucket. cert-manager | [GRAFANA_DATABASE.md](./GRAFANA_DATABASE.md#backups) |
+| **Alert routing** | Alerts reach your receivers | Your Alertmanager config | [ALERTING.md](./ALERTING.md) |
+| **IRSA or workload identity** | Object storage access without static keys | An IAM role or a managed identity | [OBJECT_STORAGE.md](./OBJECT_STORAGE.md#ambient-credentials-and-irsa) |
+
+## Step 1 — Write `values.yaml`
+
+Start from the required values. The example uses AWS S3. For an S3-compatible store, set its
+`endpoint` and keep the default bucket names. For Azure Blob Storage, see
+[OBJECT_STORAGE.md](./OBJECT_STORAGE.md#azure-blob-storage).
 
 ```yaml
 global:
   objectStorage:
-    backend: s3                             # or azure
+    backend: s3
     s3:
       endpoint: s3.eu-west-1.amazonaws.com
       region: eu-west-1
-    # On AWS S3, also set your own bucket names under `buckets`.
+    # AWS S3 bucket names are global: set your own.
+    buckets:
+      mimirBlocks: <prefix>-mimir-blocks
+      mimirAlertmanager: <prefix>-mimir-alertmanager
+      mimirRuler: <prefix>-mimir-ruler
+      loki: <prefix>-loki
+      tempo: <prefix>-tempo
 ```
 
-Install the observability-operator first. It brings the CRDs the chart needs. The command installs
-the latest operator. The version the chart is tested against is `OPERATOR_VERSION` in
-[`hack/local/install.sh`](../hack/local/install.sh): pass it with `--version` to pin it.
+Add the values of each optional feature you picked. The routes attach to the Gateway
+`giantswarm-default` in `envoy-gateway-system`, on its listener `https`.
+[GATEWAY.md](./GATEWAY.md) creates that Gateway. For another Gateway, set the `parentRefs` as the
+linked page shows.
+
+<details>
+<summary>Gateway: the base domain</summary>
+
+```yaml
+global:
+  domain: example.com
+```
+
+</details>
+
+<details>
+<summary>Grafana route</summary>
+
+```yaml
+grafana:
+  grafana:
+    route:
+      main:
+        enabled: true
+        hostnames:
+          - grafana.example.com
+        parentRefs:
+          - name: giantswarm-default
+            namespace: envoy-gateway-system
+            sectionName: https
+    grafana.ini:
+      server:
+        root_url: https://grafana.example.com
+```
+
+See [EXTERNAL_API.md](./EXTERNAL_API.md#expose-grafana-over-https).
+
+</details>
+
+<details>
+<summary>Agent write routes</summary>
+
+```yaml
+mimir:
+  routes:
+    gateway:
+      enabled: true
+loki:
+  gatewayRoute:
+    enabled: true
+tempo:
+  routes:
+    https:
+      enabled: true
+    grpc:
+      enabled: true
+```
+
+See [AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md#turn-it-on).
+
+</details>
+
+<details>
+<summary>External API</summary>
+
+```yaml
+observabilityPlatformApi:
+  enabled: true
+observability-platform-api:
+  auth:
+    jwt:
+      providers:
+        - name: my-issuer
+          issuer: https://issuer.example.com
+          remoteJWKS:
+            uri: https://issuer.example.com/keys
+          extractFrom:
+            headers:
+              - name: Authorization
+                valuePrefix: "Bearer "
+```
+
+See [EXTERNAL_API.md](./EXTERNAL_API.md#values).
+
+</details>
+
+<details>
+<summary>Grafana backups</summary>
+
+```yaml
+global:
+  objectStorage:
+    buckets:
+      grafanaPostgresql: <prefix>-grafana-postgresql
+grafana:
+  postgresqlCluster:
+    backup:
+      enabled: true
+```
+
+See [GRAFANA_DATABASE.md](./GRAFANA_DATABASE.md#enable-backups).
+
+</details>
+
+<details>
+<summary>Alert routing</summary>
+
+```yaml
+defaultAlertmanagerConfig:
+  enabled: false
+```
+
+Then create your Alertmanager config Secret. See [ALERTING.md](./ALERTING.md).
+
+</details>
+
+Grafana stores its data in PostgreSQL, run by the CloudNativePG (CNPG) operator. To keep it on
+SQLite instead, see [GRAFANA_DATABASE.md](./GRAFANA_DATABASE.md#keep-grafana-on-sqlite).
+
+## Step 2 — Create the Secrets
+
+Create the namespace:
 
 ```bash
-helm install observability-operator observability-operator \
-  --repo https://giantswarm.github.io/control-plane-catalog/ \
-  --namespace monitoring --create-namespace \
-  --values values/observability-operator.yaml
+kubectl create namespace monitoring
 ```
 
-Install the CNPG operator for Grafana's PostgreSQL cluster. Skip it if the cluster already runs a
-CNPG operator that watches `monitoring` (see [GRAFANA_DATABASE.md](./GRAFANA_DATABASE.md)):
-
-```bash
-helm install cloudnative-pg cloudnative-pg \
-  --repo https://giantswarm.github.io/control-plane-catalog/ --version 0.1.0 \
-  --namespace monitoring \
-  --values values/cloudnative-pg.yaml
-```
-
-Create Grafana's secret key, once. Keep a copy outside the cluster: restoring Grafana's database
-needs the same key, and changing it makes the secrets Grafana stored unreadable.
-
-```bash
-kubectl create secret generic grafana-secret-key --namespace monitoring \
-  --from-literal=secret-key="$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
-```
-
-Create the object storage credentials Secret. The name is fixed. For Azure Blob Storage, the key is
-`AZURE_STORAGE_KEY` instead:
+Create the object storage credentials Secret. The name is fixed. For Azure Blob Storage, the key
+is `AZURE_STORAGE_KEY`. With IRSA or workload identity, skip this Secret.
 
 ```bash
 kubectl create secret generic observability-platform-object-storage --namespace monitoring \
@@ -99,29 +207,108 @@ kubectl create secret generic observability-platform-object-storage --namespace 
   --from-literal=AWS_SECRET_ACCESS_KEY="<secret-access-key>"
 ```
 
-Fetch the chart's dependencies, then install it:
+## Step 3 — Install
+
+Fetch the chart's dependencies:
 
 ```bash
 helm dependency update helm/observability-platform
 ```
 
+Run the install script:
+
+> [!WARNING]
+> **Placeholder.** The install script does not take your values yet. This command shows the
+> intended interface.
+
 ```bash
-helm install observability-platform helm/observability-platform \
-  --namespace monitoring --values values.yaml
+hack/install.sh --values values.yaml helm/observability-platform
+```
+
+The script installs, in this order:
+
+1. The observability-operator release, with [`values/observability-operator.yaml`](../values/observability-operator.yaml).
+2. The CNPG operator release, with [`values/cloudnative-pg.yaml`](../values/cloudnative-pg.yaml).
+3. The Secret `grafana-secret-key`, when it is missing.
+4. The observability-platform chart, with your `values.yaml`.
+
+Each optional feature adds its own releases, such as Envoy Gateway or cert-manager and the
+barman-cloud plugin. Pass the flags of the features you picked.
+
+Keep a copy of Grafana's secret key outside the cluster. Restoring Grafana's database needs the
+same key.
+
+```bash
+kubectl get secret grafana-secret-key --namespace monitoring -o jsonpath='{.data.secret-key}' | base64 -d; echo
+```
+
+Check that every pod runs:
+
+```bash
+kubectl get pods --namespace monitoring
 ```
 
 The install notes print how to reach Grafana and log in.
 
-## Next steps
+## Step 4 — Verify (optional)
 
-- **Send data:** give your agents [AgentCredentials](./AGENT_CREDENTIALS.md), or turn on the
-  [external API](./EXTERNAL_API.md).
-- **Expose Grafana:** serve it over HTTPS on your Gateway, as in
-  [EXTERNAL_API.md](./EXTERNAL_API.md#expose-grafana-over-https).
-- **Route alerts:** provide your own Alertmanager config, as in [ALERTING.md](./ALERTING.md).
-- **Back up Grafana:** turn on backups of Grafana's database to your object storage, as in
-  [GRAFANA_DATABASE.md](./GRAFANA_DATABASE.md#backups). They need cert-manager and the
-  barman-cloud plugin release.
+The checks need [`uv`](https://docs.astral.sh/uv/). They read the target from `.env.verify` at the
+repository root, or from the same variables in the environment.
+
+The health checks only read the cluster and work on any install. They check that the PVCs are
+bound, that no container was OOMKilled, and that the routes and Gateways are accepted. Without
+`.env.verify`, they use the current kubectl context:
+
+```bash
+make verify-health
+```
+
+The full checks also write and read data through every route. They need the Gateway, the Grafana
+route, the agent write routes and the external API.
+
+> [!WARNING]
+> The full checks change the platform. They write test data to the `default` tenant, create a
+> namespace with AgentCredentials and rule groups, and restart Grafana.
+
+Write `.env.verify`:
+
+```bash
+KUBE_CONTEXT=<your-kube-context>
+# A command that prints a JWT from your OIDC issuer.
+OBS_TOKEN_COMMAND=<command>
+# Only when your Gateway certificate comes from a private CA.
+# OBS_CA_BUNDLE=/path/to/ca.crt
+```
+
+Run the full checks:
+
+```bash
+make verify
+```
+
+## Step 5 — Send data (optional)
+
+Agents push with AgentCredentials, through the agent write routes. Create one per agent and
+backend:
+
+```yaml
+apiVersion: observability.giantswarm.io/v1alpha1
+kind: AgentCredential
+metadata:
+  name: alloy-metrics
+  namespace: my-team
+spec:
+  backend: metrics    # metrics, logs or traces
+```
+
+The operator creates a Secret with the same name and namespace. It holds the `username` and
+`password` of the agent:
+
+```bash
+kubectl get secret alloy-metrics -n my-team -o jsonpath='{.data.password}' | base64 -d; echo
+```
+
+[AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md#configure-an-agent) configures Alloy with it.
 
 ## Uninstall
 
@@ -130,12 +317,8 @@ deletes Grafana's PostgreSQL cluster and its volumes.
 
 ```bash
 helm uninstall observability-platform --namespace monitoring
-```
-
-```bash
+helm uninstall cloudnative-pg --namespace monitoring
 helm uninstall observability-operator --namespace monitoring
 ```
 
-```bash
-helm uninstall cloudnative-pg --namespace monitoring
-```
+Then uninstall the releases of the optional features you installed.
