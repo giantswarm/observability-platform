@@ -1,0 +1,62 @@
+# ---------------------------------------------------------------------------
+# Platform chart values: the configuration of the chart and its features.
+#
+# hack/local/install.sh installs the chart with the files PLATFORM_VALUES lists in
+# hack/local/config.env, this one by default. To change it, copy it outside the
+# repository, point PLATFORM_VALUES at the copy, and add more values files after it for
+# specific settings. See docs/INSTALL.md.
+#
+# The defaults turn on the external API, the agent write routes, Grafana's backups and
+# Grafana's route, with example hostnames under `localhost` and an example JWT issuer.
+# Replace them with yours, or set `enabled: false`. install.sh turns a feature off while
+# the cluster lacks its prerequisite.
+#
+# This file sets no object storage: add `global.objectStorage`, see
+# docs/OBJECT_STORAGE.md. The local kind setup (`make local-up`) sets USE_LOCAL_PROFILE,
+# which applies helm/observability-platform/values-local.yaml first, for small sizing and
+# an object store in the cluster. This file still applies after it, and wins.
+# ---------------------------------------------------------------------------
+global:
+  domain: localhost
+observabilityPlatformApi:
+  enabled: true
+observability-platform-api:
+  auth:
+    jwt:
+      providers:
+        - name: dev
+          issuer: http://jwks.jwt-issuer.svc.cluster.local
+          remoteJWKS:
+            uri: http://jwks.jwt-issuer.svc.cluster.local/jwks.json
+          extractFrom:
+            headers:
+              - name: Authorization
+                valuePrefix: "Bearer "
+# Grafana's PostgreSQL backups, to Garage. values-local.yaml points them at Garage.
+grafana:
+  postgresqlCluster:
+    backup:
+      enabled: true
+  grafana:
+    route:
+      main:
+        enabled: true
+        hostnames:
+          - grafana.localhost
+        parentRefs:
+          - name: giantswarm-default
+            namespace: envoy-gateway-system
+            sectionName: https
+mimir:
+  routes:
+    gateway:
+      enabled: true
+loki:
+  gatewayRoute:
+    enabled: true
+tempo:
+  routes:
+    https:
+      enabled: true
+    grpc:
+      enabled: true

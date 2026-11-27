@@ -388,10 +388,12 @@ tests:
           count: 0
         template: templates/local-object-storage/azurite-secret.yaml
 
-  - it: deploys Azurite and no Garage with values-local.yaml and the azure override
+  - it: deploys Azurite and no Garage with values-local.yaml and the azure backend
     values:
       - ../values-local.yaml
-      - ../../../hack/local/values-azure.yaml
+    # The override hack/local/install.sh applies with LOCAL_BACKEND=azure.
+    set:
+      global.objectStorage.backend: azure
     asserts:
       - hasDocuments:
           count: 1
