@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `setup/scripts/install.sh` installs the observability-operator, CNPG, barman-cloud plugin and Platform charts from `oci://gsoci.azurecr.io/charts/giantswarm` instead of the Helm catalogs. Set `PLATFORM_CHART_VERSION`, or `PLATFORM_CHART=helm/observability-platform` until the chart's first release.
 - Loki runs in Distributed mode by default.
 - Move `hack/local/` to `setup/`: the scripts go to `setup/scripts/` and their configuration, `config.env` included, to `setup/config/`. Run `setup/scripts/install.sh`.
 - Rename the target file of `make verify` from `tests/ats/target.env` to `.env.verify` at the repository root.
