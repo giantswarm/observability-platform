@@ -10,7 +10,7 @@ LOCAL_BACKEND ?= s3
 # Markers `make verify` selects.
 VERIFY_MARKERS ?= smoke or verify
 
-.PHONY: local-up local-ats local-token local-down verify
+.PHONY: local-up local-ats local-token local-down verify verify-health
 
 local-up: ## Create a kind cluster running the chart and the external API. LOCAL_BACKEND=azure runs Azurite.
 	kind create cluster --config .ats/kind-config.yaml
@@ -42,3 +42,6 @@ local-down: ## Delete the kind cluster, the local certificate and the target fil
 
 verify: ## Verify the platform the inputs or .env.verify name. VERIFY_MARKERS selects the checks.
 	cd tests/ats && uv run pytest -m "$(VERIFY_MARKERS)" -v -rs --tb=short
+
+verify-health: ## Run the read-only health checks against the platform the inputs or .env.verify name. Needs no external API.
+	cd tests/ats && uv run pytest -m health -v -rs --tb=short

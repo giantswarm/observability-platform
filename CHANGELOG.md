@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add `make verify-health` to check the health of a running platform without writing to it.
 - Back up Grafana's PostgreSQL database to the platform's `s3` object storage with the barman-cloud plugin release. Require cert-manager.
 - Add the `global.objectStorage.buckets.grafanaPostgresql` bucket, default `grafana-postgresql`. The local Garage and Azurite stores create it.
 - The local kind setup installs cert-manager and the barman-cloud plugin, and backs Grafana up to Garage.
