@@ -19,6 +19,7 @@ dependencies = [
 [tool.pytest.ini_options]
 markers = [
     "smoke: fast sanity checks run first",
+    "health: read-only checks of a running platform, a subset of verify",
     "verify: checks of a running platform: health, auth, agent credentials, Grafana, rulers",
     "slow: proof that reads come from the object store",
     "functional: full feature tests",

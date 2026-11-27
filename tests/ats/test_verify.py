@@ -64,6 +64,13 @@ def items(kind: str, *args: str) -> list[dict]:
     return json.loads(kubectl("get", kind, *args, "-o", "json"))["items"]
 
 
+def served(resource: str) -> list[dict]:
+    """The objects of `resource` in the release namespace. None when the cluster does not serve the resource."""
+    if resource not in kubectl("api-resources", "-o", "name").split():
+        return []
+    return items(resource, "-n", namespace())
+
+
 def false_conditions(conditions: list[dict], *types: str) -> list[str]:
     """The condition types of `types` that are missing or not True."""
     status = {condition["type"]: condition["status"] for condition in conditions}
@@ -71,8 +78,13 @@ def false_conditions(conditions: list[dict], *types: str) -> list[str]:
 
 
 # == Health
+#
+# The health checks only read the cluster. `make verify-health` runs them alone. The
+# route, SecurityPolicy and Gateway checks skip on a release that exposes nothing on a
+# Gateway.
 
 
+@pytest.mark.health
 def test_health_pvcs_bound():
     def bound():
         pvcs = items("persistentvolumeclaims", "-n", namespace())
@@ -83,6 +95,7 @@ def test_health_pvcs_bound():
     retry(120, bound)
 
 
+@pytest.mark.health
 def test_health_no_container_oomkilled():
     """No container is OOMKilled now, and none was OOMKilled within the last hour.
 
@@ -109,8 +122,9 @@ def route_parents() -> tuple[list[str], set[tuple[str, str]]]:
     """The route parents that are not Accepted and ResolvedRefs, and the Gateways the routes attach to."""
     failures = []
     gateways = set()
-    routes = items("httproutes.gateway.networking.k8s.io", "-n", namespace()) + items("grpcroutes.gateway.networking.k8s.io", "-n", namespace())
-    assert routes, f"Namespace {namespace()} has no HTTPRoute or GRPCRoute."
+    routes = served("httproutes.gateway.networking.k8s.io") + served("grpcroutes.gateway.networking.k8s.io")
+    if not routes:
+        pytest.skip(f"Namespace {namespace()} has no HTTPRoute or GRPCRoute.")
     for route in routes:
         name = f"{route['kind']}/{route['metadata']['name']}"
         statuses = {
@@ -132,6 +146,7 @@ def route_parents() -> tuple[list[str], set[tuple[str, str]]]:
     return failures, gateways
 
 
+@pytest.mark.health
 def test_health_routes_accepted():
     def accepted():
         failures, _ = route_parents()
@@ -140,10 +155,12 @@ def test_health_routes_accepted():
     retry(120, accepted)
 
 
+@pytest.mark.health
 def test_health_security_policies_accepted():
     def accepted():
-        policies = items("securitypolicies.gateway.envoyproxy.io", "-n", namespace())
-        assert policies, f"Namespace {namespace()} has no SecurityPolicy."
+        policies = served("securitypolicies.gateway.envoyproxy.io")
+        if not policies:
+            pytest.skip(f"Namespace {namespace()} has no SecurityPolicy.")
         failures = []
         for policy in policies:
             ancestors = policy.get("status", {}).get("ancestors", [])
@@ -157,6 +174,7 @@ def test_health_security_policies_accepted():
     retry(120, accepted)
 
 
+@pytest.mark.health
 def test_health_gateways_programmed():
     """The Gateways the routes attach to, wherever they live, are Programmed."""
 

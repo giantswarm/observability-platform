@@ -9,7 +9,7 @@
 # A variable set in the environment wins over the config file. Under app-test-suite
 # (ATS_CHART_PATH set), every toggle is on: the tests need the whole setup.
 #
-# With the issuer and the certificate on, it writes tests/ats/target.env, the target of
+# With the issuer and the certificate on, it writes .env.verify, the target of
 # `make verify`. It does not apply agentcredentials.yaml.
 set -euo pipefail
 
@@ -220,7 +220,7 @@ fi
 # The target of the tests in tests/ats. With the kind overlay, kind maps the Envoy Gateway
 # `https` NodePort to 127.0.0.1:8443 (.ats/kind-config.yaml).
 if enabled DEPLOY_JWT_ISSUER && enabled CREATE_TLS_SECRET; then
-  cat > "$ROOT/tests/ats/target.env" <<EOF
+  cat > "$ROOT/.env.verify" <<EOF
 KUBE_CONTEXT=$CONTEXT
 OBS_TOKEN_COMMAND=kubectl --context $CONTEXT exec -n jwt-issuer deploy/jwks -c signer -- /scripts/jwt.sh token
 OBS_GATEWAY_ADDRESS=127.0.0.1:8443
