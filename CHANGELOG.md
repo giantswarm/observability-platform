@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add `docs/GRAFANA_RESTORE.md`: restore Grafana's database from its backups, to a point in time.
 - Back up Grafana's PostgreSQL database to the platform's `s3` object storage with the barman-cloud plugin release. Require cert-manager.
 - Add the `global.objectStorage.buckets.grafanaPostgresql` bucket, default `grafana-postgresql`. The local Garage and Azurite stores create it.
 - The local kind setup installs cert-manager and the barman-cloud plugin, and backs Grafana up to Garage.

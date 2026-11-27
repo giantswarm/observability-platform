@@ -107,7 +107,8 @@ backs up Grafana's database to the platform's object storage:
 - **Credentials:** the platform's credentials Secret, `observability-platform-object-storage`,
   unless you set dedicated ones (see [Dedicated credentials](#dedicated-credentials)).
 
-Backups support the `s3` backend only, AWS S3 or an S3-compatible store.
+Backups support the `s3` backend only, AWS S3 or an S3-compatible store. To restore from them,
+see [GRAFANA_RESTORE.md](./GRAFANA_RESTORE.md).
 
 ### Enable backups
 
@@ -220,7 +221,7 @@ Both must be `Ready` (`True`), with `NOT_AFTER` in the future.
 
 > **Uninstalling the Platform chart, or switching it to SQLite, deletes the
 > `grafana-postgresql` cluster, and CNPG deletes its volumes. Grafana's data is gone.** With
-> backups on, the bucket keeps the backups.
+> backups on, the bucket keeps the backups: see [GRAFANA_RESTORE.md](./GRAFANA_RESTORE.md).
 
 Uninstall the plugin and the CNPG operator releases after the Platform chart.
 
