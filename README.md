@@ -75,7 +75,7 @@ Related projects, not part of the chart:
 ## Getting started
 
 - **On your laptop:** `make local-up` runs the whole platform on kind. See [Local development](docs/LOCAL_DEV.md).
-- **First try:** `quickstart/install.sh` installs the platform and its prerequisites, set by one config file. See [Quickstart](docs/QUICKSTART.md).
+- **First try:** `hack/local/install.sh` installs the platform and the prerequisites you turn on in one config file. See [Quickstart](docs/QUICKSTART.md).
 - **On a cluster:** follow the [Installation guide](docs/INSTALL.md).
 
 ## Documentation

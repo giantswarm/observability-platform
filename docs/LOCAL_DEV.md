@@ -39,8 +39,8 @@ make local-up
   [GRAFANA_DATABASE.md](./GRAFANA_DATABASE.md).
 - cert-manager and the barman-cloud plugin, as its own release, with
   `values/plugin-barman-cloud.yaml`. Grafana's database is backed up to the Garage bucket
-  `grafana-postgresql`. On the `azure` backend (`LOCAL_BACKEND=azure`), none of this is
-  installed and backups are off: they support `s3` only.
+  `grafana-postgresql`. On the `azure` backend (`LOCAL_BACKEND=azure`), backups are off:
+  they support `s3` only.
 
 The chart computes Garage's endpoint and credentials for Mimir, Loki and Tempo, but the grafana
 subchart can't see them. For Grafana's backups, `values-local.yaml` repeats them: Garage's
@@ -48,11 +48,15 @@ endpoint in `global.objectStorage.s3` (`garage.monitoring.svc.cluster.local:3900
 `garage`, `insecure: true`), and `grafana.postgresqlCluster.objectStorage.s3.existingSecret.name:
 garage-credentials`. Running Garage without `values-local.yaml`, set both before turning
 backups on; the render fails until you do.
-- the chart in namespace `monitoring`, with `values-local.yaml`, on the `s3` backend with Garage
+- the chart in namespace `monitoring`, with `values-local.yaml` and `values/observability-platform.yaml`,
+  on the `s3` backend with Garage
 - the external API, with Envoy Gateway and a JWKS server. See [EXTERNAL_API.md](./EXTERNAL_API.md).
 - the agent write routes, at `mimir.localhost`, `write.loki.localhost` and `tempo.localhost`,
   with one AgentCredential per backend in namespace `agents` (`hack/local/agentcredentials.yaml`).
-  See [AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md).
+  `make local-up` applies them after `hack/local/install.sh`. See [AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md).
+
+`make local-up` runs `hack/local/install.sh` with every toggle of `hack/local/config.env` on.
+See [QUICKSTART.md](./QUICKSTART.md) for the toggles.
 
 `make local-up` then writes `tests/ats/target.env`, the target file of `make verify`. See [Test](#test).
 
@@ -109,8 +113,9 @@ discards both. The dev key survives: Garage creates it again on every start.
 make local-up LOCAL_BACKEND=azure
 ```
 
-`LOCAL_BACKEND` defaults to `s3`. `LOCAL_BACKEND=azure` adds `hack/local/values-azure.yaml`
-after the other values files. It sets `backend: azure`. The rest of the setup is the same.
+`LOCAL_BACKEND` defaults to `s3`. With `LOCAL_BACKEND=azure`, `hack/local/install.sh` sets
+`global.objectStorage.backend=azure` and turns Grafana's backups off. The rest of the setup is
+the same.
 
 These parts differ:
 

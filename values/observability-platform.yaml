@@ -1,5 +1,16 @@
-# Chart values for the local setup. They enable the external API and the agent write
-# routes. They expose Grafana through Envoy Gateway.
+# ---------------------------------------------------------------------------
+# Platform chart values for hack/local/install.sh, on top of
+# helm/observability-platform/values-local.yaml:
+#
+#   helm install observability-platform helm/observability-platform \
+#     --namespace monitoring \
+#     --values helm/observability-platform/values-local.yaml \
+#     --values values/observability-platform.yaml
+#
+# They enable the external API, the agent write routes and Grafana's backups, and expose
+# Grafana through Envoy Gateway. install.sh turns each of them off when the toggle it
+# needs in hack/local/config.env is off. See docs/QUICKSTART.md.
+# ---------------------------------------------------------------------------
 global:
   domain: localhost
 observabilityPlatformApi:

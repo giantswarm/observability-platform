@@ -37,10 +37,12 @@ tests:
             OBS_S3_REGION: ""
             OBS_S3_INSECURE: "false"
 
-  - it: sets all 14 OBS_* keys with values-local.yaml and the azure override
+  - it: sets all 14 OBS_* keys with values-local.yaml and the azure backend
     values:
       - ../values-local.yaml
-      - ../../../hack/local/values-azure.yaml
+    # The override hack/local/install.sh applies with LOCAL_BACKEND=azure.
+    set:
+      global.objectStorage.backend: azure
     asserts:
       # The connection string carries the Azurite dev key. Match its shape, not its literal.
       - isSubset:

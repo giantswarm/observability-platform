@@ -7,6 +7,10 @@ HELM := helm --kube-context kind-kind
 ATS_VERSION := 1.1.0
 # Object storage backend of the local setup: `s3` runs Garage, `azure` runs Azurite.
 LOCAL_BACKEND ?= s3
+# Toggles of hack/local/config.env that `make local-up` turns on: the whole local setup.
+LOCAL_TOGGLES := INSTALL_ENVOY_GATEWAY=true CREATE_GATEWAY=true INSTALL_CERT_MANAGER=true \
+  DEPLOY_JWT_ISSUER=true CREATE_TLS_SECRET=true INSTALL_CNPG=true CREATE_GRAFANA_SECRET_KEY=true \
+  INSTALL_PLUGIN_BARMAN_CLOUD=true GATEWAY_OVERLAY=kind
 # Markers `make verify` selects.
 VERIFY_MARKERS ?= smoke or verify
 
@@ -15,7 +19,9 @@ VERIFY_MARKERS ?= smoke or verify
 local-up: ## Create a kind cluster running the chart and the external API. LOCAL_BACKEND=azure runs Azurite.
 	kind create cluster --config .ats/kind-config.yaml
 	$(HELM) dependency update helm/observability-platform
-	KUBE_CONTEXT=kind-kind LOCAL_BACKEND=$(LOCAL_BACKEND) $(LOCAL)/install.sh helm/observability-platform
+	$(LOCAL_TOGGLES) KUBE_CONTEXT=kind-kind LOCAL_BACKEND=$(LOCAL_BACKEND) $(LOCAL)/install.sh helm/observability-platform
+	# One AgentCredential per backend, for the agent write routes. install.sh leaves them out.
+	$(KUBECTL) apply -f $(LOCAL)/agentcredentials.yaml
 
 local-ats: ## Run the app-test-suite smoke test on a new kind cluster `ats`, as CI does. Needs ports 8080 and 8443 free.
 	rm -rf build
