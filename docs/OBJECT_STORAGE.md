@@ -322,7 +322,7 @@ webhook then injects the role into the pods.
 | Mimir | `mimir.mimir.serviceAccount.annotations` | `mimir` | Shared by all Mimir components. Required. |
 | Mimir | `mimir.mimir.alertmanager.serviceAccount.create` and `.annotations` | `mimir-alertmanager` | Optional. Without `create: true`, the Alertmanager uses `mimir`. |
 | Mimir | `mimir.mimir.ruler.serviceAccount.create` and `.annotations` | `mimir-ruler` | Optional. Without `create: true`, the ruler uses `mimir`. |
-| Loki | `loki.loki.serviceAccount.annotations` | `loki` | Used by `loki-read`, `loki-write` and `loki-backend`. Required. |
+| Loki | `loki.loki.serviceAccount.annotations` | `loki` | Shared by all Loki components except the gateway, the canary and the caches. Required. |
 | Tempo | `tempo.tempo.serviceAccount.annotations` | `tempo` | Shared by all Tempo components. Required. |
 
 These ServiceAccounts need no annotation. Their pods do not touch the bucket:
