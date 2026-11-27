@@ -43,7 +43,7 @@ Each feature needs the items in its row. Pick them now: steps 1 to 3 add their v
 | ↳ Grafana route | Grafana over HTTPS, at a hostname you choose | The Gateway | [EXTERNAL_API.md](./EXTERNAL_API.md#expose-grafana-over-https) |
 | ↳ Agent write routes | Agents push metrics, logs and traces with AgentCredentials | The Gateway. A certificate that covers `write.loki.<domain>` | [AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md) |
 | ↳ External API | Reads and writes from outside the cluster, with JWTs | The Gateway. An OIDC issuer | [EXTERNAL_API.md](./EXTERNAL_API.md) |
-| **Grafana backups** | Hourly backups of Grafana's database to your object storage | The `s3` backend. A sixth bucket. cert-manager | [GRAFANA_DATABASE.md](./GRAFANA_DATABASE.md#backups) |
+| **Grafana backups** | Hourly backups of Grafana's database to your object storage | The `s3` backend. A sixth bucket. cert-manager and the barman-cloud plugin | [GRAFANA_DATABASE.md](./GRAFANA_DATABASE.md#backups) |
 | **Alert routing** | Alerts reach your receivers | Your Alertmanager config | [ALERTING.md](./ALERTING.md) |
 | **IRSA or workload identity** | Object storage access without static keys | An IAM role or a managed identity | [OBJECT_STORAGE.md](./OBJECT_STORAGE.md#ambient-credentials-and-irsa) |
 
@@ -231,10 +231,11 @@ The script installs, in this order:
 
 Your `values.yaml` is the only values file you write. The other releases take the values in
 [`values/`](../values/). The Grafana backup settings are platform chart values: the CNPG
-operator and the barman-cloud plugin need none of their own.
+operator and the barman-cloud plugin need no values of their own.
 
-Each optional feature adds its own releases, such as Envoy Gateway or cert-manager and the
-barman-cloud plugin. Pass the flags of the features you picked.
+By default, the script installs only these required releases. Envoy Gateway, cert-manager and
+the barman-cloud plugin are optional. The script installs one only when you pass the flag of
+the feature that needs it.
 
 Keep a copy of Grafana's secret key outside the cluster. Restoring Grafana's database needs the
 same key.
