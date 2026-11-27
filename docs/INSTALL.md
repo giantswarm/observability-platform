@@ -30,9 +30,6 @@ lists the requirements in detail: sizing, cluster add-ons, network access and pr
 | Five private buckets, in S3, an S3-compatible store or Azure Blob Storage | Your store lists them | [OBJECT_STORAGE.md](./OBJECT_STORAGE.md#buckets) |
 | Credentials with read and write access to the buckets | | [OBJECT_STORAGE.md](./OBJECT_STORAGE.md#credentials) |
 
-The Helm charts come from public catalogs and the images from public registries. They need no
-credentials.
-
 ### Optional features
 
 Each feature needs the items in its row. Pick them now: steps 1 to 3 add their values and releases.
