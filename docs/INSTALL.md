@@ -5,7 +5,7 @@ your laptop first, see [LOCAL_DEV.md](./LOCAL_DEV.md).
 
 1. Check the [required prerequisites](#required-prerequisites).
 2. Pick the [optional features](#optional-features) you want.
-3. [Edit `values/observability-platform.yaml`](#step-1--edit-valuesobservability-platformyaml).
+3. [Write the platform values](#step-1--write-the-platform-values).
 4. [Create the Secrets](#step-2--create-the-secrets).
 5. [Configure and install](#step-3--configure-and-install).
 6. Optional: [verify](#step-4--verify-optional).
@@ -45,12 +45,21 @@ installs their releases.
 | **Alert routing** | Alerts reach your receivers | Your Alertmanager config | [ALERTING.md](./ALERTING.md) |
 | **IRSA or workload identity** | Object storage access without static keys | An IAM role or a managed identity | [OBJECT_STORAGE.md](./OBJECT_STORAGE.md#ambient-credentials-and-irsa) |
 
-## Step 1 — Edit `values/observability-platform.yaml`
+## Step 1 — Write the platform values
 
-The install script installs the chart with
-[`values/observability-platform.yaml`](../values/observability-platform.yaml). Edit that file
-directly: it is the only values file you change. It ships with the values of the local setup,
-on `localhost` hostnames with a local JWT issuer. Replace them with yours.
+The install script installs the chart with the configuration defined in
+[`values/observability-platform.yaml`](../values/observability-platform.yaml). Copy it, and the
+script's configuration [`hack/local/config.env`](../hack/local/config.env), outside the
+repository. Your changes then stay out of the files that `make local-up` uses and `git pull`
+updates:
+
+```bash
+mkdir -p "$HOME/observability-platform"
+cp values/observability-platform.yaml hack/local/config.env "$HOME/observability-platform/"
+```
+
+Edit your copy, `$HOME/observability-platform/observability-platform.yaml`. Its defaults use
+example hostnames under `localhost` and an example JWT issuer: replace them with yours.
 
 Add the required values. The example uses AWS S3. For an S3-compatible store, set its
 `endpoint` and keep the default bucket names. For Azure Blob Storage, see
@@ -193,6 +202,9 @@ Then create your Alertmanager config Secret. See [ALERTING.md](./ALERTING.md).
 Grafana stores its data in PostgreSQL, run by the CloudNativePG (CNPG) operator. To keep it on
 SQLite instead, see [GRAFANA_DATABASE.md](./GRAFANA_DATABASE.md#keep-grafana-on-sqlite).
 
+To keep some settings apart, for example per environment, write them in more values files.
+Step 3 passes them to the script after this one.
+
 ## Step 2 — Create the Secrets
 
 Create the namespace:
@@ -211,16 +223,16 @@ kubectl create secret generic observability-platform-object-storage --namespace 
 
 ## Step 3 — Configure and install
 
-Fetch the chart's dependencies:
+Your copy of `config.env` configures the install script. Set:
+
+- `PLATFORM_VALUES` to your values file, then any other values files, separated by spaces.
+  Later files win.
+- `KUBE_CONTEXT` to your cluster's context, or leave it empty for the current context.
 
 ```bash
-helm dependency update helm/observability-platform
+PLATFORM_VALUES="$HOME/observability-platform/observability-platform.yaml"
+KUBE_CONTEXT=my-cluster
 ```
-
-[`hack/local/config.env`](../hack/local/config.env) configures the install script. Set
-`KUBE_CONTEXT` to your cluster's context, or leave it empty for the current context. Keep
-`USE_LOCAL_PROFILE=false`: the local profile sizes the platform for a laptop and runs its own
-object store.
 
 The other settings toggle the releases and resources the script installs, with `true` or
 `false`. Turn on the ones your optional features need and your cluster doesn't run yet:
@@ -236,13 +248,14 @@ The other settings toggle the releases and resources the script installs, with `
 | `INSTALL_CNPG` | `true` | the CNPG operator release, with [`values/cloudnative-pg.yaml`](../values/cloudnative-pg.yaml) | Grafana on PostgreSQL. Turn it off when the cluster already runs a CNPG operator that watches `monitoring`. |
 | `CREATE_GRAFANA_SECRET_KEY` | `true` | the Secret `grafana-secret-key`, when it is missing | Grafana on PostgreSQL |
 
-The comments in `config.env` describe each setting, with the release versions. The script checks
-that the toggles fit together before it changes anything.
+The comments in `config.env` describe each setting, with the release versions. Before it
+changes anything, the script checks that the toggles fit together, and that Grafana's database
+will have the CNPG operator and the Secret `grafana-secret-key`.
 
-Run the install script:
+Run the install script with your copy of `config.env`:
 
 ```bash
-hack/local/install.sh
+LOCAL_CONFIG="$HOME/observability-platform/config.env" hack/local/install.sh
 ```
 
 The script installs, in this order:
@@ -251,7 +264,7 @@ The script installs, in this order:
 2. The observability-operator release, with [`values/observability-operator.yaml`](../values/observability-operator.yaml). It is always installed.
 3. The CNPG operator and the barman-cloud plugin releases, as toggled.
 4. The Secret `grafana-secret-key`, as toggled.
-5. The observability-platform chart, with `values/observability-platform.yaml`.
+5. The observability-platform chart, with the values files in `PLATFORM_VALUES`.
 
 The script turns off the chart features whose prerequisites the cluster lacks, and prints a note
 for each: the routes and the external API without Envoy Gateway, the external API while it

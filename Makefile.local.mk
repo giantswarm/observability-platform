@@ -18,10 +18,13 @@ VERIFY_MARKERS ?= smoke or verify
 
 local-up: ## Create a kind cluster running the chart and the external API. LOCAL_BACKEND=azure runs Azurite.
 	kind create cluster --config .ats/kind-config.yaml
-	$(HELM) dependency update helm/observability-platform
 	$(LOCAL_TOGGLES) KUBE_CONTEXT=kind-kind LOCAL_BACKEND=$(LOCAL_BACKEND) $(LOCAL)/install.sh helm/observability-platform
 	# One AgentCredential per backend, for the agent write routes. install.sh leaves them out.
 	$(KUBECTL) apply -f $(LOCAL)/agentcredentials.yaml
+	# The target of `make verify`. kind maps the Envoy Gateway `https` NodePort to 127.0.0.1:8443.
+	printf '%s\n' 'KUBE_CONTEXT=kind-kind' \
+	  'OBS_TOKEN_COMMAND=$(KUBECTL) exec -n jwt-issuer deploy/jwks -c signer -- /scripts/jwt.sh token' \
+	  'OBS_GATEWAY_ADDRESS=127.0.0.1:8443' "OBS_CA_BUNDLE=$$(pwd)/$(LOCAL)/.keys/tls.crt" > .env.verify
 
 local-ats: ## Run the app-test-suite smoke test on a new kind cluster `ats`, as CI does. Needs ports 8080 and 8443 free.
 	rm -rf build

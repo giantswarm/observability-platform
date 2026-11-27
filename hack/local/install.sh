@@ -9,8 +9,8 @@
 # A variable set in the environment wins over the config file. Under app-test-suite
 # (ATS_CHART_PATH set), every toggle is on: the tests need the whole setup.
 #
-# With the issuer and the certificate on, it writes .env.verify, the target of
-# `make verify`. It does not apply agentcredentials.yaml.
+# Under app-test-suite, it writes .env.verify, the target of the tests. It does not apply
+# agentcredentials.yaml.
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -23,7 +23,7 @@ NAMESPACE=monitoring
 TOGGLES=(INSTALL_ENVOY_GATEWAY CREATE_GATEWAY INSTALL_CERT_MANAGER DEPLOY_JWT_ISSUER
   CREATE_TLS_SECRET INSTALL_CNPG CREATE_GRAFANA_SECRET_KEY INSTALL_PLUGIN_BARMAN_CLOUD
   USE_LOCAL_PROFILE)
-SETTINGS=("${TOGGLES[@]}" KUBE_CONTEXT GATEWAY_OVERLAY LOCAL_BACKEND PLATFORM_CHART
+SETTINGS=("${TOGGLES[@]}" KUBE_CONTEXT GATEWAY_OVERLAY LOCAL_BACKEND PLATFORM_CHART PLATFORM_VALUES
   ENVOY_GATEWAY_VERSION CERT_MANAGER_VERSION OPERATOR_VERSION CNPG_VERSION PLUGIN_BARMAN_CLOUD_VERSION)
 
 log() { printf '\n==> %s\n' "$*"; }
@@ -72,6 +72,47 @@ CONTEXT=${KUBE_CONTEXT:-$("${KUBECTL[@]}" config current-context)}
 # has_crd NAME: true when the cluster serves the CRD NAME.
 has_crd() { "${KUBECTL[@]}" get crd "$1" >/dev/null 2>&1; }
 
+# The Platform chart's values files, in order. Relative paths are relative to the
+# repository root.
+read -r -a VALUES_FILES <<< "${PLATFORM_VALUES:-values/observability-platform.yaml}"
+[ ${#VALUES_FILES[@]} -gt 0 ] || fail "PLATFORM_VALUES names no values file"
+for i in "${!VALUES_FILES[@]}"; do
+  case "${VALUES_FILES[$i]}" in
+    /*) ;;
+    *) VALUES_FILES[i]=$ROOT/${VALUES_FILES[i]} ;;
+  esac
+  [ -f "${VALUES_FILES[i]}" ] || fail "values file ${VALUES_FILES[i]} not found"
+done
+
+# last_with PATTERN: the last values file with a line matching PATTERN, the one whose
+# setting wins. Empty when none has one.
+last_with() {
+  local file found=
+  for file in "${VALUES_FILES[@]}"; do
+    if grep -qE "$1" "$file"; then found=$file; fi
+  done
+  echo "$found"
+}
+
+# grafana_on_postgresql: false when the last values file that sets
+# grafana.postgresqlCluster.enabled sets it to false, for Grafana on SQLite.
+grafana_on_postgresql() {
+  local file setting=true
+  for file in "${VALUES_FILES[@]}"; do
+    case "$(awk '
+      /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+      { indent = match($0, /[^ ]/) }
+      block && indent <= block { block = 0 }
+      /^[[:space:]]*postgresqlCluster:[[:space:]]*$/ { block = indent; next }
+      block && /^[[:space:]]*enabled:[[:space:]]*/ { sub(/^[[:space:]]*enabled:[[:space:]]*/, ""); print; exit }
+    ' "$file")" in
+      false) setting=false ;;
+      true) setting=true ;;
+    esac
+  done
+  [ "$setting" = true ]
+}
+
 # --- Checks, before anything changes -------------------------------------------
 
 for tool in kubectl helm; do
@@ -89,6 +130,17 @@ fi
 if enabled INSTALL_PLUGIN_BARMAN_CLOUD && ! enabled INSTALL_CERT_MANAGER \
   && ! has_crd certificates.cert-manager.io; then
   fail "INSTALL_PLUGIN_BARMAN_CLOUD=true needs cert-manager: set INSTALL_CERT_MANAGER=true or install it first"
+fi
+# Grafana on PostgreSQL needs the CNPG operator and its secret key. The chart's render
+# checks catch both too, but only after every release above it is installed.
+if grafana_on_postgresql; then
+  if ! enabled INSTALL_CNPG && ! has_crd clusters.postgresql.cnpg.io; then
+    fail "INSTALL_CNPG=false needs a CNPG operator: set INSTALL_CNPG=true or install it first"
+  fi
+  if ! enabled CREATE_GRAFANA_SECRET_KEY \
+    && ! "${KUBECTL[@]}" get secret grafana-secret-key -n "$NAMESPACE" >/dev/null 2>&1; then
+    fail "CREATE_GRAFANA_SECRET_KEY=false needs the Secret grafana-secret-key in $NAMESPACE: create it first"
+  fi
 fi
 
 CHART=${1:-${ATS_CHART_PATH:-$PLATFORM_CHART}}
@@ -114,11 +166,17 @@ if enabled INSTALL_ENVOY_GATEWAY; then
 fi
 
 # After Envoy Gateway: cert-manager detects the Gateway API CRDs at start-up only.
+# --enable-gateway-api only while the cluster serves them: without them, cert-manager
+# crashloops.
 if enabled INSTALL_CERT_MANAGER; then
   log "Installing cert-manager $CERT_MANAGER_VERSION"
+  CERT_MANAGER_ARGS=()
+  if has_crd gateways.gateway.networking.k8s.io; then
+    CERT_MANAGER_ARGS=(--set 'extraArgs={--enable-gateway-api}')
+  fi
   "${HELM[@]}" upgrade --install cert-manager oci://quay.io/jetstack/charts/cert-manager \
     --version "$CERT_MANAGER_VERSION" --namespace cert-manager --create-namespace \
-    --set crds.enabled=true --set 'extraArgs={--enable-gateway-api}' --wait --timeout 10m
+    --set crds.enabled=true "${CERT_MANAGER_ARGS[@]}" --wait --timeout 10m
 fi
 
 # The signer generates the JWT signing key and the Gateway certificate. See jwks.yaml.
@@ -195,9 +253,11 @@ if enabled USE_LOCAL_PROFILE; then
       --set grafana.postgresqlCluster.backup.enabled=false)
   fi
 fi
-VALUES+=(--values "$ROOT/values/observability-platform.yaml")
+for file in "${VALUES_FILES[@]}"; do
+  VALUES+=(--values "$file")
+done
 
-# values/observability-platform.yaml turns on the features below. Turn off the ones whose
+# The platform values turn on the features below. Turn off the ones whose
 # prerequisites are missing, so the chart's render checks pass.
 if ! has_crd objectstores.barmancloud.cnpg.io; then
   echo "note: the cluster serves no barman-cloud ObjectStore CRD. Grafana's backups stay off." >&2
@@ -211,24 +271,28 @@ if ! has_crd securitypolicies.gateway.envoyproxy.io; then
     --set mimir.routes.gateway.enabled=false --set loki.gatewayRoute.enabled=false
     --set tempo.routes.https.enabled=false --set tempo.routes.grpc.enabled=false
     --set observabilityPlatformApi.enabled=false)
-elif ! enabled DEPLOY_JWT_ISSUER \
-  && grep -q 'jwks.jwt-issuer.svc' "$ROOT/values/observability-platform.yaml"; then
-  echo "note: DEPLOY_JWT_ISSUER=false and values/observability-platform.yaml trusts the local" \
-    "issuer. The external API stays off." >&2
-  OVERRIDES+=(--set observabilityPlatformApi.enabled=false)
+elif ! enabled DEPLOY_JWT_ISSUER; then
+  # The last file that lists JWT providers sets them: lists replace, they don't merge.
+  PROVIDERS=$(last_with '^[[:space:]]*providers:')
+  if [ -n "$PROVIDERS" ] && grep -q 'jwks.jwt-issuer.svc' "$PROVIDERS"; then
+    echo "note: DEPLOY_JWT_ISSUER=false and $PROVIDERS trusts the local issuer." \
+      "The external API stays off." >&2
+    OVERRIDES+=(--set observabilityPlatformApi.enabled=false)
+  fi
 fi
 
 log "Installing the Observability Platform"
 if [ -d "$CHART" ]; then
-  "${HELM[@]}" dependency build "$CHART"
+  "${HELM[@]}" dependency update "$CHART"
 fi
 "${HELM[@]}" upgrade --install observability-platform "$CHART" \
   --namespace "$NAMESPACE" --create-namespace "${FORCE[@]}" \
   "${VALUES[@]}" "${OVERRIDES[@]}"
 
-# The target of the tests in tests/ats. With the kind overlay, kind maps the Envoy Gateway
-# `https` NodePort to 127.0.0.1:8443 (.ats/kind-config.yaml).
-if enabled DEPLOY_JWT_ISSUER && enabled CREATE_TLS_SECRET; then
+# The target of the tests in tests/ats, under app-test-suite. kind maps the Envoy Gateway
+# `https` NodePort to 127.0.0.1:8443 (.ats/kind-config.yaml). `make local-up` writes its
+# own.
+if [ "$ATS" = true ]; then
   cat > "$ROOT/.env.verify" <<EOF
 KUBE_CONTEXT=$CONTEXT
 OBS_TOKEN_COMMAND=kubectl --context $CONTEXT exec -n jwt-issuer deploy/jwks -c signer -- /scripts/jwt.sh token
