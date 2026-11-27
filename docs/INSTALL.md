@@ -209,6 +209,9 @@ Fetch the chart's dependencies:
 helm dependency update helm/observability-platform
 ```
 
+To check the signatures of the dependency charts and the images, see
+[VERIFY_SIGNATURES.md](./VERIFY_SIGNATURES.md).
+
 Run the install script:
 
 > [!WARNING]

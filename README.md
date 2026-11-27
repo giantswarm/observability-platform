@@ -91,6 +91,7 @@ Related projects, not part of the chart:
 | [External API](docs/EXTERNAL_API.md) | Authenticated ingest and read from outside the cluster |
 | [Agent credentials](docs/AGENT_CREDENTIALS.md) | Credentials for agents that push metrics, logs and traces |
 | [Alerting](docs/ALERTING.md) | The default Alertmanager config and how to provide your own |
+| [Verify signatures](docs/VERIFY_SIGNATURES.md) | Checking the cosign signatures of the dependency charts and the images |
 | [Local development](docs/LOCAL_DEV.md) | The kind setup, test data, smoke tests and chart unit tests |
 
 ## Contributing
