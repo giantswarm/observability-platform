@@ -4,7 +4,7 @@ The Mimir ruler and the Loki ruler send alerts to Mimir Alertmanager. Alertmanag
 to your receivers. Grafana shows the alerts of `global.tenant` in the default organization.
 
 The Loki ruler sends each alert under the tenant of its rule. It writes recording rule results to
-Mimir under the same tenant. Each rule group runs on one `loki-backend` replica.
+Mimir under the same tenant. Each rule group runs on one `loki-ruler` replica.
 
 If mimir is not enabled (`mimir.enabled: false`), you should turn loki remote_write off:
 

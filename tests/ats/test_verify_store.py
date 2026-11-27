@@ -34,7 +34,7 @@ STORE_TRACE_ID = secrets.token_hex(16)
 # Mimir and Tempo flush the run's tenants only. Loki's flush has no tenant scope.
 FLUSHES = {
     "mimir": ("ingester", f"/ingester/flush?tenant={BACKFILL_TENANT}&wait=true"),
-    "loki": ("write", "/flush"),
+    "loki": ("ingester", "/flush"),
     "tempo": ("ingester", f"/flush?tenant={TENANT}"),
 }
 # Per signal: minutes from the flush to the read from the store.
