@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Installs the platform and the prerequisites hack/local/config.env turns on.
+# Installs the platform and the prerequisites setup/config/config.env turns on.
 # `make local-up` and the app-test-suite pre-hook run it too.
 #
 #   install.sh [<chart>]   <chart> is the chart directory, a packaged .tgz or an OCI
 #                          reference. Unset, ATS_CHART_PATH applies, then PLATFORM_CHART.
 #
-# LOCAL_CONFIG names the config file. Unset, config.env next to this script applies.
+# LOCAL_CONFIG names the config file. Unset, setup/config/config.env applies.
 # A variable set in the environment wins over the config file. Under app-test-suite
 # (ATS_CHART_PATH set), every toggle is on: the tests need the whole setup.
 #
@@ -13,9 +13,11 @@
 # agentcredentials.yaml.
 set -euo pipefail
 
+# This script's directory, setup/scripts, and the setup files in setup/config.
 DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$DIR/../.." && pwd)"
-CONFIG=${LOCAL_CONFIG:-$DIR/config.env}
+CONFIG_DIR=$ROOT/setup/config
+CONFIG=${LOCAL_CONFIG:-$CONFIG_DIR/config.env}
 # The operator's values and the chart's name services in this namespace. See
 # values/observability-operator.yaml.
 NAMESPACE=monitoring
@@ -32,7 +34,7 @@ fail() { echo "error: $*" >&2; exit 1; }
 [ -f "$CONFIG" ] || fail "config file $CONFIG not found"
 # The environment wins: keep what it sets, source the config, then restore it.
 ENVIRONMENT=$(for v in "${SETTINGS[@]}"; do [ -z "${!v+set}" ] || declare -p "$v"; done)
-# shellcheck source=config.env
+# shellcheck source=../config/config.env
 . "$CONFIG"
 eval "$ENVIRONMENT"
 
@@ -186,26 +188,26 @@ if enabled DEPLOY_JWT_ISSUER; then
   "${KUBECTL[@]}" create configmap local-scripts -n jwt-issuer \
     --from-file="$DIR/jwt.sh" --from-file="$DIR/tls.sh" \
     --dry-run=client -o yaml | "${KUBECTL[@]}" apply -f -
-  "${KUBECTL[@]}" apply -f "$DIR/jwks.yaml"
+  "${KUBECTL[@]}" apply -f "$CONFIG_DIR/jwks.yaml"
   "${KUBECTL[@]}" rollout status deployment/jwks -n jwt-issuer --timeout 5m
 fi
 
 if enabled CREATE_TLS_SECRET; then
   log "Creating the self-signed Gateway certificate"
-  mkdir -p "$DIR/.keys"
-  "${KUBECTL[@]}" exec -n jwt-issuer deploy/jwks -c signer -- cat /keys/tls.crt > "$DIR/.keys/tls.crt"
+  mkdir -p "$CONFIG_DIR/.keys"
+  "${KUBECTL[@]}" exec -n jwt-issuer deploy/jwks -c signer -- cat /keys/tls.crt > "$CONFIG_DIR/.keys/tls.crt"
   KEY=$(mktemp)
   trap 'rm -f "$KEY"' EXIT
   "${KUBECTL[@]}" exec -n jwt-issuer deploy/jwks -c signer -- cat /keys/tls.key > "$KEY"
   "${KUBECTL[@]}" create namespace envoy-gateway-system --dry-run=client -o yaml | "${KUBECTL[@]}" apply -f -
   "${KUBECTL[@]}" create secret tls local-https-tls -n envoy-gateway-system \
-    --cert="$DIR/.keys/tls.crt" --key="$KEY" \
+    --cert="$CONFIG_DIR/.keys/tls.crt" --key="$KEY" \
     --dry-run=client -o yaml | "${KUBECTL[@]}" apply -f -
 fi
 
 if enabled CREATE_GATEWAY; then
   log "Creating the Gateway ($GATEWAY_OVERLAY)"
-  "${KUBECTL[@]}" apply -k "$DIR/envoy-gateway/$GATEWAY_OVERLAY"
+  "${KUBECTL[@]}" apply -k "$CONFIG_DIR/envoy-gateway/$GATEWAY_OVERLAY"
 fi
 
 # --- Operators -----------------------------------------------------------------
@@ -297,7 +299,7 @@ if [ "$ATS" = true ]; then
 KUBE_CONTEXT=$CONTEXT
 OBS_TOKEN_COMMAND=kubectl --context $CONTEXT exec -n jwt-issuer deploy/jwks -c signer -- /scripts/jwt.sh token
 OBS_GATEWAY_ADDRESS=127.0.0.1:8443
-OBS_CA_BUNDLE=$DIR/.keys/tls.crt
+OBS_CA_BUNDLE=$CONFIG_DIR/.keys/tls.crt
 EOF
 fi
 
@@ -309,5 +311,5 @@ Done. Watch the pods start, which takes a few minutes:
 
 To push data from agents, create AgentCredentials. Examples, one per backend:
 
-  kubectl --context $CONTEXT apply -f $DIR/agentcredentials.yaml
+  kubectl --context $CONTEXT apply -f $CONFIG_DIR/agentcredentials.yaml
 EOF

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Self-signed certificate for the Envoy Gateway `https` listener. The `signer` container
-# in jwks.yaml runs it.
+# in setup/config/jwks.yaml runs it.
 # Do not use this anywhere real.
 #
 #   tls.sh [hostname...]   writes a self-signed certificate for the hostnames, once

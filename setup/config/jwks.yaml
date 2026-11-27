@@ -1,7 +1,7 @@
 # JWKS server for the local setup. The external API checks tokens against it.
 #
 # The `signer` container generates the JWT signing key and the Gateway certificate with
-# jwt.sh and tls.sh, mounted from the `local-scripts` ConfigMap. It keeps the keys in its
+# setup/scripts/jwt.sh and tls.sh, mounted from the `local-scripts` ConfigMap. It keeps the keys in its
 # own emptyDir and copies only jwks.json to nginx. Restarting the pod discards the keys.
 apiVersion: apps/v1
 kind: Deployment

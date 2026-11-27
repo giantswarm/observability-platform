@@ -20,7 +20,7 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
-    # install.sh creates the Secret from the certificate `tls.sh` generates.
+    # setup/scripts/install.sh creates the Secret from the certificate `tls.sh` generates.
     - name: https
       protocol: HTTPS
       port: 443

@@ -2,8 +2,8 @@
 # `make local-ats` run it.
 #
 # ATS skips its own chart deploy. The pre-hook installs the prerequisites and the
-# chart with hack/local/install.sh, then ATS runs the tests in tests/ats.
+# chart with setup/scripts/install.sh, then ATS runs the tests in tests/ats.
 app-tests-skip-app-deploy: true
 app-tests-deploy-namespace: monitoring
-app-tests-pre-hook: hack/local/install.sh
+app-tests-pre-hook: setup/scripts/install.sh
 skip-steps: [functional, upgrade]

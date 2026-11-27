@@ -1,4 +1,4 @@
-"""Grafana's PostgreSQL backups (hack/local/install.sh turns them on against Garage): an
+"""Grafana's PostgreSQL backups (setup/scripts/install.sh turns them on against Garage): an
 on-demand base backup completes, and its files land in the Garage `grafana-postgresql`
 bucket.
 

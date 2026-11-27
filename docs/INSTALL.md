@@ -49,13 +49,13 @@ installs their releases.
 
 The install script installs the chart with the configuration defined in
 [`values/observability-platform.yaml`](../values/observability-platform.yaml). Copy it, and the
-script's configuration [`hack/local/config.env`](../hack/local/config.env), outside the
+script's configuration [`setup/config/config.env`](../setup/config/config.env), outside the
 repository. Your changes then stay out of the files that `make local-up` uses and `git pull`
 updates:
 
 ```bash
 mkdir -p "$HOME/observability-platform"
-cp values/observability-platform.yaml hack/local/config.env "$HOME/observability-platform/"
+cp values/observability-platform.yaml setup/config/config.env "$HOME/observability-platform/"
 ```
 
 Edit your copy, `$HOME/observability-platform/observability-platform.yaml`. Its defaults use
@@ -255,7 +255,7 @@ will have the CNPG operator and the Secret `grafana-secret-key`.
 Run the install script with your copy of `config.env`:
 
 ```bash
-LOCAL_CONFIG="$HOME/observability-platform/config.env" hack/local/install.sh
+LOCAL_CONFIG="$HOME/observability-platform/config.env" setup/scripts/install.sh
 ```
 
 The script installs, in this order:
