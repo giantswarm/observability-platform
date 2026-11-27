@@ -12,9 +12,7 @@ your laptop first, see [LOCAL_DEV.md](./LOCAL_DEV.md).
 7. Optional: [send data](#step-5--send-data-optional).
 
 > [!IMPORTANT]
-> - **The namespace is `monitoring`.** The chart and its operators all install there.
-> - **Tenants are not bound to credentials.** A client chooses its tenant with the
->   `X-Scope-OrgID` header, so any valid credential reads or writes any tenant its route serves.
+> **The namespace is `monitoring`.** The chart and its operators all install there.
 
 ## Prerequisites
 
@@ -28,7 +26,7 @@ lists the requirements in detail: sizing, cluster add-ons, network access and pr
 | A conformant cluster with a default StorageClass | `kubectl get storageclass` shows one `(default)` | [Prepare your environment](https://docs.giantswarm.io/overview/observability/standalone/prepare-your-environment/), [EKS_CLUSTER.md](./EKS_CLUSTER.md) |
 | metrics-server | `kubectl top nodes` prints usage | [Prepare your environment](https://docs.giantswarm.io/overview/observability/standalone/prepare-your-environment/) |
 | `kubectl` and `helm`, with cluster-admin | `kubectl auth can-i '*' '*' --all-namespaces` prints `yes` | |
-| A clone of this repository | Run every command from its root | |
+| A clone of this repository | Run every command from its root | It holds the chart, the values of the other releases, the install script and the checks |
 | Five private buckets, in S3, an S3-compatible store or Azure Blob Storage | Your store lists them | [OBJECT_STORAGE.md](./OBJECT_STORAGE.md#buckets) |
 | Credentials with read and write access to the buckets | | [OBJECT_STORAGE.md](./OBJECT_STORAGE.md#credentials) |
 
@@ -198,8 +196,7 @@ Create the namespace:
 kubectl create namespace monitoring
 ```
 
-Create the object storage credentials Secret. The name is fixed. For Azure Blob Storage, the key
-is `AZURE_STORAGE_KEY`. With IRSA or workload identity, skip this Secret.
+Create the S3 credentials Secret. The name is fixed. With IRSA, skip this Secret.
 
 ```bash
 kubectl create secret generic observability-platform-object-storage --namespace monitoring \
@@ -218,11 +215,11 @@ helm dependency update helm/observability-platform
 Run the install script:
 
 > [!WARNING]
-> **Placeholder.** The install script does not take your values yet. This command shows the
-> intended interface.
+> **TODO:** make the install script take your values before this guide merges. The command
+> below shows the intended interface.
 
 ```bash
-hack/install.sh --values values.yaml helm/observability-platform
+hack/install.sh --values values.yaml
 ```
 
 The script installs, in this order:
@@ -231,6 +228,10 @@ The script installs, in this order:
 2. The CNPG operator release, with [`values/cloudnative-pg.yaml`](../values/cloudnative-pg.yaml).
 3. The Secret `grafana-secret-key`, when it is missing.
 4. The observability-platform chart, with your `values.yaml`.
+
+Your `values.yaml` is the only values file you write. The other releases take the values in
+[`values/`](../values/). The Grafana backup settings are platform chart values: the CNPG
+operator and the barman-cloud plugin need none of their own.
 
 Each optional feature adds its own releases, such as Envoy Gateway or cert-manager and the
 barman-cloud plugin. Pass the flags of the features you picked.
