@@ -54,7 +54,7 @@ backups on; the render fails until you do.
   with one AgentCredential per backend in namespace `agents` (`hack/local/agentcredentials.yaml`).
   See [AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md).
 
-`make local-up` then writes `tests/ats/target.env`, the target file of `make verify`. See [Test](#test).
+`make local-up` then writes `.env.verify`, the target file of `make verify`. See [Test](#test).
 
 ## Verify
 
@@ -185,7 +185,7 @@ make local-ats
 ```
 
 `make local-ats` runs the app-test-suite smoke checks in `tests/ats` on a new kind cluster
-named `ats`, then deletes the cluster and `tests/ats/target.env`. The app-test-suite pre-hook
+named `ats`, then deletes the cluster and `.env.verify`. The app-test-suite pre-hook
 installs the platform with `hack/local/install.sh`. The `execute-chart-tests` CI job runs the
 same checks. It needs Docker and ports 8080 and 8443 free: run `make local-down` first.
 
@@ -195,7 +195,7 @@ same checks. It needs Docker and ports 8080 and 8443 free: run `make local-down`
 make local-down
 ```
 
-`make local-down` deletes the kind cluster, the local certificate and `tests/ats/target.env`.
+`make local-down` deletes the kind cluster, the local certificate and `.env.verify`.
 
 ## Chart unit tests
 
