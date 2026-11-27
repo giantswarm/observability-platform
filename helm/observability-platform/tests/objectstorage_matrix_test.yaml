@@ -40,7 +40,7 @@ tests:
   - it: sets all 14 OBS_* keys with values-local.yaml and the azure backend
     values:
       - ../values-local.yaml
-    # The override hack/local/install.sh applies with LOCAL_BACKEND=azure.
+    # The override setup/scripts/install.sh applies with LOCAL_BACKEND=azure.
     set:
       global.objectStorage.backend: azure
     asserts:

@@ -5,7 +5,7 @@ workflows:
   build:
     jobs:
       # End-to-end test on kind with app-test-suite: the pre-hook installs the
-      # platform with hack/local/install.sh, then tests/ats checks workloads
+      # platform with setup/scripts/install.sh, then tests/ats checks workloads
       # ready, Grafana up, one write/read round trip per signal through the
       # external API.
       - architect/run-tests-with-ats:

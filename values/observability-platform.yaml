@@ -1,8 +1,8 @@
 # ---------------------------------------------------------------------------
 # Platform chart values: the configuration of the chart and its features.
 #
-# hack/local/install.sh installs the chart with the files PLATFORM_VALUES lists in
-# hack/local/config.env, this one by default. To change it, copy it outside the
+# setup/scripts/install.sh installs the chart with the files PLATFORM_VALUES lists in
+# setup/config/config.env, this one by default. To change it, copy it outside the
 # repository, point PLATFORM_VALUES at the copy, and add more values files after it for
 # specific settings. See docs/INSTALL.md.
 #

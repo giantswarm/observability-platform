@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Loki runs in Distributed mode by default.
+- Move `hack/local/` to `setup/`: the scripts go to `setup/scripts/` and their configuration, `config.env` included, to `setup/config/`. Run `setup/scripts/install.sh`.
 - Rename the target file of `make verify` from `tests/ats/target.env` to `.env.verify` at the repository root.
 - The Platform chart values of the local setup move from `hack/local/values.yaml` to `values/observability-platform.yaml`. `hack/local/values-azure.yaml` is gone: `LOCAL_BACKEND=azure` sets the backend itself.
 - Run Mimir ingesters and store-gateways without zones.
@@ -45,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Back up Grafana's PostgreSQL database to the platform's `s3` object storage with the barman-cloud plugin release. Require cert-manager.
 - Add the `global.objectStorage.buckets.grafanaPostgresql` bucket, default `grafana-postgresql`. The local Garage and Azurite stores create it.
 - The local kind setup installs cert-manager and the barman-cloud plugin, and backs Grafana up to Garage.
-- `hack/local/install.sh` installs the platform on any cluster with `values/observability-platform.yaml`, plus only the prerequisites turned on in `hack/local/config.env`. `docs/INSTALL.md` uses it.
+- `setup/scripts/install.sh` installs the platform on any cluster with `values/observability-platform.yaml`, plus only the prerequisites turned on in `setup/config/config.env`. `docs/INSTALL.md` uses it.
 - Add the CNPG operator release to the local kind setup.
 - The values schema covers `grafana.postgresqlCluster` and the SQLite opt-out's `null` values.
 - Add `make verify` to check a running platform on any cluster.

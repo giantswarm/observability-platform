@@ -52,11 +52,11 @@ backups on; the render fails until you do.
   on the `s3` backend with Garage
 - the external API, with Envoy Gateway and a JWKS server. See [EXTERNAL_API.md](./EXTERNAL_API.md).
 - the agent write routes, at `mimir.localhost`, `write.loki.localhost` and `tempo.localhost`,
-  with one AgentCredential per backend in namespace `agents` (`hack/local/agentcredentials.yaml`).
-  `make local-up` applies them after `hack/local/install.sh`. See [AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md).
+  with one AgentCredential per backend in namespace `agents` (`setup/config/agentcredentials.yaml`).
+  `make local-up` applies them after `setup/scripts/install.sh`. See [AGENT_CREDENTIALS.md](./AGENT_CREDENTIALS.md).
 
-`make local-up` runs `hack/local/install.sh` with every toggle of `hack/local/config.env` on.
-The comments in `hack/local/config.env` describe each toggle.
+`make local-up` runs `setup/scripts/install.sh` with every toggle of `setup/config/config.env` on.
+The comments in `setup/config/config.env` describe each toggle.
 
 `make local-up` then writes `.env.verify`, the target file of `make verify`. See [Test](#test).
 
@@ -93,10 +93,10 @@ kubectl get secret grafana -n monitoring -o jsonpath='{.data.admin-password}' | 
 
 The `https` listener serves a self-signed certificate, so browsers show a security warning.
 A signer pod in the `jwt-issuer` namespace generates it, and `make local-up` copies it to
-`hack/local/.keys/`. For `curl`, pass the certificate:
+`setup/config/.keys/`. For `curl`, pass the certificate:
 
 ```bash
-curl --cacert hack/local/.keys/tls.crt https://grafana.localhost:8443/api/health
+curl --cacert setup/config/.keys/tls.crt https://grafana.localhost:8443/api/health
 ```
 
 The signer creates the certificate once, when its pod starts, and keeps it. A cluster created
@@ -113,7 +113,7 @@ discards both. The dev key survives: Garage creates it again on every start.
 make local-up LOCAL_BACKEND=azure
 ```
 
-`LOCAL_BACKEND` defaults to `s3`. With `LOCAL_BACKEND=azure`, `hack/local/install.sh` sets
+`LOCAL_BACKEND` defaults to `s3`. With `LOCAL_BACKEND=azure`, `setup/scripts/install.sh` sets
 `global.objectStorage.backend=azure` and turns Grafana's backups off. The rest of the setup is
 the same.
 
@@ -143,7 +143,7 @@ to `curl`:
 
 ```bash
 API=https://observability.localhost:8443
-AUTH=(--cacert hack/local/.keys/tls.crt -H "Authorization: Bearer $(make -s local-token)" -H "X-Scope-OrgID: default")
+AUTH=(--cacert setup/config/.keys/tls.crt -H "Authorization: Bearer $(make -s local-token)" -H "X-Scope-OrgID: default")
 ```
 
 The requests in [EXTERNAL_API.md](./EXTERNAL_API.md#send-data) then run as written.
@@ -163,7 +163,7 @@ CRED="$(kubectl get secret logs -n agents -o jsonpath='{.data.username}' | base6
 Push a log line with it:
 
 ```bash
-curl -sS -o /dev/null -w '%{http_code}\n' --cacert hack/local/.keys/tls.crt -u "$CRED" \
+curl -sS -o /dev/null -w '%{http_code}\n' --cacert setup/config/.keys/tls.crt -u "$CRED" \
   -H "X-Scope-OrgID: default" -H "Content-Type: application/json" https://write.loki.localhost:8443/loki/api/v1/push \
   -d '{"streams":[{"stream":{"job":"basic-auth-test"},"values":[["'"$(date +%s)"'000000000","hello"]]}]}'
 ```
@@ -191,7 +191,7 @@ make local-ats
 
 `make local-ats` runs the app-test-suite smoke checks in `tests/ats` on a new kind cluster
 named `ats`, then deletes the cluster and `.env.verify`. The app-test-suite pre-hook
-installs the platform with `hack/local/install.sh`. The `execute-chart-tests` CI job runs the
+installs the platform with `setup/scripts/install.sh`. The `execute-chart-tests` CI job runs the
 same checks. It needs Docker and ports 8080 and 8443 free: run `make local-down` first.
 
 ## Teardown

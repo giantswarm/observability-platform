@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Local JWT issuer for the external API. The `signer` container in jwks.yaml runs it,
+# Local JWT issuer for the external API. The `signer` container in setup/config/jwks.yaml runs it,
 # and `make local-token` runs it there through `kubectl exec`.
 # Do not use this anywhere real.
 #
